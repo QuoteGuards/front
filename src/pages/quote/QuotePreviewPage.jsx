@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import QuoteDocument from '../../components/quote/QuoteDocument'
 import { MOCK_QUOTE } from '../../constants/mockQuote'
@@ -13,12 +13,20 @@ const EmailModal = ({ quote, onClose, onSend }) => {
     attachPdf: true,
   })
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState(null)
 
   const handleSend = async () => {
     setSending(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setSending(false)
-    onSend(form)
+    setSendError(null)
+    try {
+      await new Promise((r) => setTimeout(r, 1200))
+      onSend(form)
+    } catch (e) {
+      console.error('이메일 발송 실패:', e)
+      setSendError('이메일 발송 중 오류가 발생했습니다. 다시 시도해 주세요.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -102,6 +110,9 @@ const EmailModal = ({ quote, onClose, onSend }) => {
             {sending ? '발송 중...' : '발송'}
           </button>
         </div>
+        {sendError && (
+          <p className="px-6 pb-4 text-xs text-red-500">{sendError}</p>
+        )}
       </div>
     </div>
   )
@@ -127,23 +138,27 @@ const now = () => {
 }
 
 const saveToHistory = (quote, form) => {
-  const prev = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
-  const entry = {
-    id: `EH-${Date.now()}`,
-    sentAt: now(),
-    quoteId: quote.id,
-    buyer: quote.buyer.companyName,
-    to: form.to,
-    cc: form.cc,
-    subject: form.subject,
-    attachPdf: form.attachPdf,
-    status: '성공',
+  try {
+    const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+    const prev = raw ? JSON.parse(raw) : []
+    const entry = {
+      id: `EH-${Date.now()}`,
+      sentAt: now(),
+      quoteId: quote.id,
+      buyer: quote.buyer.companyName,
+      to: form.to,
+      cc: form.cc,
+      subject: form.subject,
+      attachPdf: form.attachPdf,
+      status: '성공',
+    }
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([entry, ...prev]))
+  } catch (e) {
+    console.error('이메일 발송 이력 저장 실패:', e)
   }
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([entry, ...prev]))
 }
 
 const QuotePreviewPage = () => {
-  const { id } = useParams()
   const navigate = useNavigate()
   const [emailOpen, setEmailOpen] = useState(false)
   const [toast, setToast] = useState(null)
@@ -158,8 +173,9 @@ const QuotePreviewPage = () => {
     setTimeout(() => setToast(null), 4000)
   }
 
+  const currentQuoteId = quote.id ?? quote.id
   const handleExcelDownload = () => {
-    navigate(`/quotes/${quote.id}/excel`)
+    navigate(`/quotes/${currentQuoteId}/excel`)
   }
 
   return (
