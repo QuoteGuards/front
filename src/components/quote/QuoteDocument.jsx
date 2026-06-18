@@ -1,4 +1,4 @@
-import { calcQuoteSummary } from '../../constants/mockQuote'
+import { calcQuoteSummary, formatKRW } from '../../constants/mockQuote'
 
 const QuoteDocument = ({ quote }) => {
 
@@ -49,10 +49,10 @@ const QuoteDocument = ({ quote }) => {
               <td className="py-3 px-3 text-gray-500 text-xs">{item.spec}</td>
               <td className="py-3 px-3 text-center text-gray-700">{item.qty}</td>
               <td className="py-3 px-3 text-right text-gray-700">
-                ₩ {item.unitPrice.toLocaleString()}
+                ₩ {formatKRW(item.unitPrice)}
               </td>
               <td className="py-3 px-3 text-right text-gray-800 font-medium">
-                ₩ {(item.unitPrice * item.qty).toLocaleString()}
+                ₩ {formatKRW(item.unitPrice * item.qty)}
               </td>
             </tr>
           ))}
@@ -64,7 +64,7 @@ const QuoteDocument = ({ quote }) => {
               합계 금액 (VAT 포함)
             </td>
             <td className="py-3 px-3 text-right font-bold text-gray-900 text-base">
-              ₩ {total.toLocaleString()}
+              {formatKRW(total)}
             </td>
           </tr>
         </tfoot>
