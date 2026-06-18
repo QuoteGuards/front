@@ -22,15 +22,29 @@
     size: A4;
     margin: 15mm 20mm;
   }
-  body {
-    background: white !important;
+
+  /* 모든 요소 숨기고 .print-area만 표시 */
+  body * {
+    visibility: hidden !important;
   }
-  .no-print {
-    display: none !important;
+  .print-area,
+  .print-area * {
+    visibility: visible !important;
   }
+
+  /* .print-area를 페이지 최상단에 전체 너비로 배치 */
   .print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
     box-shadow: none !important;
     border: none !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+
+  body {
+    background: white !important;
     margin: 0 !important;
     padding: 0 !important;
   }
