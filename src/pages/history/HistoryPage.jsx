@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { MOCK_EMAIL_HISTORY, HISTORY_STORAGE_KEY } from '../../constants/mockHistory'
 
 const StatusBadge = ({ status }) => {
@@ -17,21 +17,18 @@ const StatusBadge = ({ status }) => {
 }
 
 const HistoryPage = () => {
-  const [history, setHistory] = useState([])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('전체')
-
-  useEffect(() => {
+  const [history] = useState(() => {
     const stored = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
     const merged = [...stored, ...MOCK_EMAIL_HISTORY]
     const seen = new Set()
-    const deduped = merged.filter((h) => {
+    return merged.filter((h) => {
       if (seen.has(h.id)) return false
       seen.add(h.id)
       return true
     })
-    setHistory(deduped)
-  }, [])
+  })
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('전체')
 
   const filtered = history
     .filter((h) => statusFilter === '전체' || h.status === statusFilter)

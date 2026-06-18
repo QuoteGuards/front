@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx'
 import { calcQuoteSummary } from '../constants/mockQuote'
 
+const sanitizeFilePart = (v = '') => String(v).replace(/[\\/:*?"<>|]/g, '-').trim()
+
 export const downloadQuoteExcel = (quote) => {
   const { subtotal, tax, total } = calcQuoteSummary(quote.items)
 
@@ -63,5 +65,6 @@ export const downloadQuoteExcel = (quote) => {
   ]
   XLSX.utils.book_append_sheet(wb, ws2, '견적 품목')
 
-  XLSX.writeFile(wb, `견적서_${quote.id}_${quote.createdAt}.xlsx`)
+  const fileName = `견적서_${sanitizeFilePart(quote.id)}_${sanitizeFilePart(quote.createdAt)}.xlsx`
+  XLSX.writeFile(wb, fileName)
 }
