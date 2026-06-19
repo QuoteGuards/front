@@ -37,8 +37,10 @@ export const getQuotes = async () => {
 }
 
 const toPdfPayload = (quote) => {
-  const { subtotal, tax, total } = calcQuoteSummary(quote.items)
-  
+  const { subtotal, tax } = calcQuoteSummary(quote.items)
+  const discountAmount = quote.discountAmount ?? 0
+  const totalAmount = subtotal - discountAmount + tax
+
   return {
     quoteNumber: quote.id,
     issuedDate: quote.createdAt,
@@ -67,9 +69,9 @@ const toPdfPayload = (quote) => {
       unitPrice,
     })),
     subtotal,
-    discountAmount: quote.discountAmount ?? 0,
+    discountAmount,
     taxAmount: tax,
-    totalAmount: total,
+    totalAmount,
     internalMemo: quote.note || null,
   }
 }
