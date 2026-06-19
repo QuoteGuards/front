@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { calcQuoteSummary } from '../constants/mockQuote'
+import { calcQuoteSummary } from './quoteUtils'
 
 const sanitizeFilePart = (v = '') => String(v).replace(/[\\/:*?"<>|]/g, '-').trim()
 
