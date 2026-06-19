@@ -10,16 +10,17 @@ const NAV_ITEMS = [
 
 const Sidebar = () => (
   <aside className="w-36 shrink-0 bg-white border-r border-gray-200 min-h-screen flex flex-col">
-    
+
     <div className="px-4 py-5 border-b border-gray-100">
       <span className="text-base font-bold text-gray-800 tracking-tight">QuoteGuard</span>
     </div>
-    
+
     <nav className="flex-1 py-4 flex flex-col gap-0.5">
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.path}
           to={item.path}
+          end
           className={({ isActive }) =>
             [
               'block px-4 py-2.5 text-sm rounded-md mx-2 transition-colors duration-100',
