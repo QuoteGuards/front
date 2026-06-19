@@ -4,7 +4,7 @@ import { SHEET_CONFIGS } from '../constants/excelConfig'
 export const useExcelPreview = (sheets) => {
   const [activeSheet, setActiveSheet] = useState(0)
   const [activeCell, setActiveCell] = useState('0-0')
-  const [formulaVal, setFormulaVal] = useState('')
+  const [formulaVal, setFormulaVal] = useState(() => String(sheets?.[0]?.[0]?.[0] ?? ''))
 
   const handleCellClick = (key, val) => {
     setActiveCell(key)

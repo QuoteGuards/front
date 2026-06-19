@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { HISTORY_STORAGE_KEY } from '../constants/mockHistory'
 
 export const useHistoryFilter = () => {
-  const [history] = useState(() =>
-    JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
-  )
+  const [history] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
+    } catch {
+      return []
+    }
+  })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('전체')
 

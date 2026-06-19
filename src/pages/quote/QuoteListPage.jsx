@@ -99,7 +99,9 @@ const QuoteListPage = () => {
                     <tr
                       key={q.id}
                       onClick={() => navigate(`/quotes/${q.id}/preview`)}
-                      className="hover:bg-violet-50 cursor-pointer transition-colors"
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/quotes/${q.id}/preview`) }}
+                      tabIndex={0}
+                      className="hover:bg-violet-50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500"
                     >
                       <td className="px-4 py-3">
                         <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">

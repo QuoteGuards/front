@@ -25,7 +25,7 @@ const QuotePreviewPage = () => {
     setPdfLoading(true)
     try {
       await downloadQuotePdf(quote)
-    } catch (e) {
+    } catch {
       showToast('PDF 다운로드 중 오류가 발생했습니다.', 'error')
     } finally {
       setPdfLoading(false)

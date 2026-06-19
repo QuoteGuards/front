@@ -7,10 +7,12 @@ export const useQuotes = () => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
     getQuotes()
-      .then(setQuotes)
-      .catch(setError)
-      .finally(() => setLoading(false))
+      .then((data) => { if (!cancelled) setQuotes(data) })
+      .catch((err) => { if (!cancelled) setError(err) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [])
 
   return { quotes, loading, error }
