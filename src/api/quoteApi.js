@@ -17,7 +17,7 @@ const toQuote = (data) => ({
 })
 
 export const getQuote = async (id) => {
-  const { data } = await apiClient.get(`/api/quotes/${id}`)
+  const { data } = await apiClient.get(`/api/quotes/${encodeURIComponent(id)}`)
   return toQuote(data)
 }
 
@@ -88,5 +88,5 @@ export const downloadQuotePdf = async (quote) => {
 }
 
 export const sendQuoteEmail = async (quoteId, form) => {
-  await apiClient.post(`/api/quotes/${quoteId}/email`, form)
+  await apiClient.post(`/api/quotes/${encodeURIComponent(quoteId)}/email`, form)
 }
