@@ -1,8 +1,8 @@
-import { calcQuoteSummary, formatKRW } from '../../constants/mockQuote'
+import { calcQuoteSummary, formatKRW } from '../../utils/quoteUtils'
 
 const QuoteDocument = ({ quote }) => {
 
-  const { subtotal, tax, total } = calcQuoteSummary(quote.items)
+  const { total } = calcQuoteSummary(quote.items)
 
   return (
     <div className="print-area bg-white w-full px-12 py-10 font-sans">
