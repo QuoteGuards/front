@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { HISTORY_STORAGE_KEY } from '../constants/mockHistory'
+import { useState, useEffect } from 'react'
+import { getEmailHistory } from '../api/emailApi'
 
 export const useHistoryFilter = () => {
-  const [history] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
-    } catch {
-      return []
-    }
-  })
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('전체')
+
+  useEffect(() => {
+    let cancelled = false
+    getEmailHistory()
+      .then((data) => { if (!cancelled) setHistory(data) })
+      .catch((err) => { if (!cancelled) setError(err) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const filtered = history
     .filter((h) => statusFilter === '전체' || h.status === statusFilter)
@@ -19,7 +24,7 @@ export const useHistoryFilter = () => {
         !search ||
         h.to.includes(search) ||
         h.quoteId.includes(search) ||
-        h.buyer.includes(search) ||
+        (h.buyer ?? '').includes(search) ||
         h.subject.includes(search)
     )
     .sort((a, b) => b.sentAt.localeCompare(a.sentAt))
@@ -30,6 +35,8 @@ export const useHistoryFilter = () => {
   return {
     history,
     filtered,
+    loading,
+    error,
     search,
     setSearch,
     statusFilter,
