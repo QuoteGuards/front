@@ -1,7 +1,8 @@
 import apiClient from './apiClient'
 import { calcQuoteSummary } from '../utils/quoteUtils'
 
-// Backend response → frontend model
+// Backend QuoteDetailResponse → frontend model
+// 백엔드는 고객 정보를 평탄화(companyName 등 최상위)하고, 자사 정보만 company로 중첩한다.
 const toQuote = (data) => ({
   id: data.quoteNumber,
   status: data.status,
@@ -10,14 +11,35 @@ const toQuote = (data) => ({
   approvedAt: data.approvedAt ?? null,
   deliveryTerm: data.deliveryTerm,
   discountAmount: data.discountAmount ?? 0,
-  seller: data.company,
-  buyer: data.customer,
-  items: data.items.map((item, idx) => ({ ...item, id: idx + 1 })),
+  seller: {
+    companyName: data.company?.name ?? '',
+    representative: '', // 백엔드 스냅샷 미제공
+    businessNumber: data.company?.businessNumber ?? '',
+    address: data.company?.address ?? '',
+    tel: data.company?.phone ?? '',
+    email: data.company?.email ?? '',
+  },
+  buyer: {
+    companyName: data.companyName ?? '',
+    contactName: data.contactName ?? '',
+    department: '', // 백엔드 스냅샷 미제공
+    tel: data.phone ?? '',
+    email: data.email ?? '',
+    address: data.address ?? '',
+  },
+  items: (data.items ?? []).map((item, idx) => ({
+    id: item.id ?? idx + 1,
+    name: item.productName,
+    spec: item.spec ?? '',
+    unit: 'EA', // 백엔드 견적 항목에 단위 미보관
+    qty: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+  })),
   note: data.internalMemo ?? '',
 })
 
 export const getQuote = async (id) => {
-  const { data } = await apiClient.get(`/api/quotes/${encodeURIComponent(id)}`)
+  const { data } = await apiClient.get(`/api/quotes/number/${encodeURIComponent(id)}`)
   return toQuote(data)
 }
 
@@ -45,28 +67,29 @@ const toPdfPayload = (quote) => {
     quoteNumber: quote.id,
     issuedDate: quote.createdAt,
     validUntil: quote.validUntil,
-    deliveryTerm: quote.deliveryTerm,
+    deliveryTerm: quote.deliveryTerm || '협의',
     customer: {
       companyName: quote.buyer.companyName,
       contactName: quote.buyer.contactName,
-      department: quote.buyer.department,
-      tel: quote.buyer.tel,
       email: quote.buyer.email,
+      phone: quote.buyer.tel,
+      address: quote.buyer.address,
     },
     company: {
-      companyName: quote.seller.companyName,
-      representative: quote.seller.representative,
-      businessNumber: quote.seller.businessNumber,
+      name: quote.seller.companyName,
       address: quote.seller.address,
-      tel: quote.seller.tel,
+      phone: quote.seller.tel,
       email: quote.seller.email,
+      businessNumber: quote.seller.businessNumber,
     },
-    items: quote.items.map(({ name, spec, unit, qty, unitPrice }) => ({
-      name,
-      spec,
-      unit,
-      qty,
-      unitPrice,
+    items: quote.items.map((item, idx) => ({
+      sortOrder: idx,
+      productName: item.name,
+      spec: item.spec || '',
+      quantity: item.qty,
+      unitPrice: item.unitPrice,
+      discountRate: 0,
+      lineTotal: item.unitPrice * item.qty,
     })),
     subtotal,
     discountAmount,
