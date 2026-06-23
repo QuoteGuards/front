@@ -1,20 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useReducer } from 'react'
 import { getQuote } from '../api/quoteApi'
 
+function fetchReducer(state, action) {
+  switch (action.type) {
+    case 'FETCH_START':   return { quote: null, loading: true, error: null }
+    case 'FETCH_SUCCESS': return { quote: action.data, loading: false, error: null }
+    case 'FETCH_ERROR':   return { quote: null, loading: false, error: action.error }
+    default: return state
+  }
+}
+
 export const useQuote = (id) => {
-  const [quote, setQuote] = useState(null)
-  const [loading, setLoading] = useState(!!id)
-  const [error, setError] = useState(null)
+  const [{ quote, loading, error }, dispatch] = useReducer(
+    fetchReducer,
+    { quote: null, loading: !!id, error: null }
+  )
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    dispatch({ type: 'FETCH_START' })
     getQuote(id)
-      .then((data) => { if (!cancelled) setQuote(data) })
-      .catch((err) => { if (!cancelled) setError(err) })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .then((data) => { if (!cancelled) dispatch({ type: 'FETCH_SUCCESS', data }) })
+      .catch((error) => { if (!cancelled) dispatch({ type: 'FETCH_ERROR', error }) })
     return () => { cancelled = true }
   }, [id])
 
