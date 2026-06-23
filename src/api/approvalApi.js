@@ -1,5 +1,17 @@
 import apiClient from './apiClient'
 
+// 승인 요청 가능한 내 견적 목록 (APPROVAL_PENDING 상태)
+export const getMyPendingApprovalQuotes = () =>
+  apiClient.get('/api/quotes/me', { params: { status: 'APPROVAL_PENDING' } })
+
+// 재요청 가능한 내 견적 목록 (REVISING 상태 = 반려 후 수정 중)
+export const getMyRevisingQuotes = () =>
+  apiClient.get('/api/quotes/me', { params: { status: 'REVISING' } })
+
+// 내 전체 견적 목록 (이력 조회용)
+export const getMyAllQuotes = () =>
+  apiClient.get('/api/quotes/me')
+
 // 승인 요청 생성
 export const requestApproval = (quoteId, requestMemo) =>
   apiClient.post(`/api/quotes/${quoteId}/approval-requests`, { requestMemo })

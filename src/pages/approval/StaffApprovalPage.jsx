@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Button from '../../components/common/Button'
+import { useAuth } from '../../hooks/useAuth'
 import {
   requestApproval,
   reRequestApproval,
   getApprovalHistories,
   getApprovalReasons,
+  getMyPendingApprovalQuotes,
+  getMyRevisingQuotes,
+  getMyAllQuotes,
 } from '../../api/approvalApi'
 
 const REASON_LABEL = {
@@ -30,18 +34,50 @@ const ACTION_COLOR = {
 }
 
 export default function StaffApprovalPage() {
+  const { user } = useAuth()
+
+  const [myQuotes, setMyQuotes] = useState([])
   const [quoteId, setQuoteId] = useState('')
   const [requestMemo, setRequestMemo] = useState('')
 
+  const [revisingQuotes, setRevisingQuotes] = useState([])
   const [reQuoteId, setReQuoteId] = useState('')
   const [approvalRequestId, setApprovalRequestId] = useState('')
   const [reRequestMemo, setReRequestMemo] = useState('')
 
+  const [allQuotes, setAllQuotes] = useState([])
   const [historyQuoteId, setHistoryQuoteId] = useState('')
   const [histories, setHistories] = useState([])
   const [reasons, setReasons] = useState([])
 
   const [toast, setToast] = useState('')
+
+  useEffect(() => {
+    getMyPendingApprovalQuotes()
+      .then((res) => setMyQuotes(res.data?.data ?? []))
+      .catch(() => {})
+    getMyRevisingQuotes()
+      .then((res) => setRevisingQuotes(res.data?.data ?? []))
+      .catch(() => {})
+    getMyAllQuotes()
+      .then((res) => setAllQuotes(res.data?.data ?? []))
+      .catch(() => {})
+  }, [])
+
+  const handleReQuoteSelect = async (selectedQuoteId) => {
+    setReQuoteId(selectedQuoteId)
+    setApprovalRequestId('')
+    if (!selectedQuoteId) return
+    try {
+      const hRes = await getApprovalHistories(selectedQuoteId)
+      const histories = hRes.data ?? []
+      // 가장 최근 REJECTED 이력에서 승인 요청 ID 추출
+      const rejected = histories.find((h) => h.action === 'REJECTED')
+      if (rejected) setApprovalRequestId(String(rejected.approvalRequestId))
+    } catch {
+      // 조회 실패 시 수동 입력으로 fallback
+    }
+  }
 
   const showToast = (msg) => {
     setToast(msg)
@@ -55,6 +91,9 @@ export default function StaffApprovalPage() {
       showToast(`✅ 승인 요청 완료 (요청 ID: ${res.data.id})`)
       setQuoteId('')
       setRequestMemo('')
+      // 목록 새로고침
+      const updated = await getMyPendingApprovalQuotes()
+      setMyQuotes(updated.data?.data ?? [])
     } catch (e) {
       showToast('❌ ' + (e.response?.data?.message ?? '요청 실패'))
     }
@@ -68,28 +107,32 @@ export default function StaffApprovalPage() {
       setReQuoteId('')
       setApprovalRequestId('')
       setReRequestMemo('')
+      const updated = await getMyRevisingQuotes()
+      setRevisingQuotes(updated.data?.data ?? [])
     } catch (e) {
       showToast('❌ ' + (e.response?.data?.message ?? '재요청 실패'))
     }
   }
 
-  const handleLoadHistory = async (e) => {
-    e.preventDefault()
-    try {
-      const [hRes, rRes] = await Promise.all([
-        getApprovalHistories(historyQuoteId),
-        getApprovalReasons(historyQuoteId),
-      ])
-      setHistories(hRes.data ?? [])
-      setReasons(rRes.data ?? [])
-    } catch (e) {
-      showToast('❌ ' + (e.response?.data?.message ?? '조회 실패'))
-    }
+  const handleHistoryQuoteSelect = async (selectedQuoteId) => {
+    setHistoryQuoteId(selectedQuoteId)
+    setHistories([])
+    setReasons([])
+    if (!selectedQuoteId) return
+    const [hRes, rRes] = await Promise.allSettled([
+      getApprovalHistories(selectedQuoteId),
+      getApprovalReasons(selectedQuoteId),
+    ])
+    if (hRes.status === 'fulfilled') setHistories(hRes.value.data ?? [])
+    if (rRes.status === 'fulfilled') setReasons(rRes.value.data ?? [])
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-bold text-gray-800 mb-6">승인 요청</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-gray-800">승인 요청</h1>
+        {user && <span className="text-sm text-gray-500">{user.email} · {user.role}</span>}
+      </div>
 
       {toast && (
         <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
@@ -103,14 +146,23 @@ export default function StaffApprovalPage() {
           <h2 className="font-semibold text-gray-700 mb-4">신규 승인 요청</h2>
           <form onSubmit={handleRequest} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">견적 ID</label>
-              <input
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                placeholder="견적 ID 입력"
+              <label className="text-xs text-gray-500">견적 선택</label>
+              <select
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white"
                 value={quoteId}
                 onChange={(e) => setQuoteId(e.target.value)}
                 required
-              />
+              >
+                <option value="">견적을 선택하세요</option>
+                {myQuotes.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    #{q.quoteNumber} · {q.customerName ?? '고객명 없음'} · {q.totalAmount?.toLocaleString()}원
+                  </option>
+                ))}
+              </select>
+              {myQuotes.length === 0 && (
+                <p className="text-xs text-gray-400">승인 요청 가능한 견적이 없습니다.</p>
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs text-gray-500">요청 메모 (선택)</label>
@@ -130,25 +182,27 @@ export default function StaffApprovalPage() {
           <h2 className="font-semibold text-gray-700 mb-4">재요청 <span className="text-xs font-normal text-gray-400">(반려 후)</span></h2>
           <form onSubmit={handleReRequest} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">견적 ID</label>
-              <input
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                placeholder="견적 ID 입력"
+              <label className="text-xs text-gray-500">견적 선택</label>
+              <select
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white"
                 value={reQuoteId}
-                onChange={(e) => setReQuoteId(e.target.value)}
+                onChange={(e) => handleReQuoteSelect(e.target.value)}
                 required
-              />
+              >
+                <option value="">반려된 견적을 선택하세요</option>
+                {revisingQuotes.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    #{q.quoteNumber} · {q.customerName ?? '고객명 없음'} · {q.totalAmount?.toLocaleString()}원
+                  </option>
+                ))}
+              </select>
+              {revisingQuotes.length === 0 && (
+                <p className="text-xs text-gray-400">재요청 가능한 견적이 없습니다.</p>
+              )}
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">승인 요청 ID</label>
-              <input
-                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                placeholder="승인 요청 ID 입력"
-                value={approvalRequestId}
-                onChange={(e) => setApprovalRequestId(e.target.value)}
-                required
-              />
-            </div>
+            {approvalRequestId && (
+              <p className="text-xs text-gray-400">승인 요청 ID: {approvalRequestId} (자동 조회됨)</p>
+            )}
             <div className="flex flex-col gap-1">
               <label className="text-xs text-gray-500">재요청 메모 (선택)</label>
               <textarea
@@ -158,7 +212,7 @@ export default function StaffApprovalPage() {
                 onChange={(e) => setReRequestMemo(e.target.value)}
               />
             </div>
-            <Button type="submit" variant="secondary">재요청</Button>
+            <Button type="submit" variant="secondary" disabled={!approvalRequestId}>재요청</Button>
           </form>
         </div>
       </div>
@@ -166,16 +220,20 @@ export default function StaffApprovalPage() {
       {/* 이력 조회 */}
       <div className="border border-gray-200 rounded-xl p-5 bg-white">
         <h2 className="font-semibold text-gray-700 mb-4">승인 이력 / 사유 조회</h2>
-        <form onSubmit={handleLoadHistory} className="flex gap-2 mb-4">
-          <input
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-            placeholder="견적 ID 입력"
+        <div className="mb-4">
+          <select
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white"
             value={historyQuoteId}
-            onChange={(e) => setHistoryQuoteId(e.target.value)}
-            required
-          />
-          <Button type="submit" variant="secondary">조회</Button>
-        </form>
+            onChange={(e) => handleHistoryQuoteSelect(e.target.value)}
+          >
+            <option value="">견적을 선택하세요</option>
+            {allQuotes.map((q) => (
+              <option key={q.id} value={q.id}>
+                #{q.quoteNumber} · {q.customerName ?? '고객명 없음'} · {q.status}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {reasons.length > 0 && (
           <div className="mb-4">

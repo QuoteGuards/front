@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Button from '../../components/common/Button'
+import { useAuth } from '../../hooks/useAuth'
 import {
   getPendingList,
   approveQuote,
@@ -31,6 +32,7 @@ const ACTION_COLOR = {
 }
 
 export default function AdminApprovalPage() {
+  const { user } = useAuth()
   const [pendingList, setPendingList] = useState([])
   const [selected, setSelected] = useState(null)
   const [histories, setHistories] = useState([])
@@ -92,7 +94,10 @@ export default function AdminApprovalPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-xl font-bold text-gray-800 mb-6">승인 대기 목록</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-gray-800">승인 대기 목록</h1>
+        {user && <span className="text-sm text-gray-500">{user.email} · {user.role}</span>}
+      </div>
 
       {toast && (
         <div className="mb-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
