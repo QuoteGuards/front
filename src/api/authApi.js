@@ -23,7 +23,6 @@ export async function signUpApi({ email, password, name, department, position, p
   const result = response.data;
 
   // 방어 코드: 인터셉터가 4xx를 resolve로 처리한 경우에도 오류를 throw
-  // (response.data.status === 'fail'이면 성공 응답이 아님)
   if (result?.status === 'fail') {
     const err = new Error(result.message ?? '회원가입에 실패했습니다.');
     err.response = { data: result };

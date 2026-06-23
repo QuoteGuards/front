@@ -22,6 +22,5 @@ export function buildUser(token) {
     id: payload.sub,
     email: payload.email,
     role: payload.role,
-    name: payload.name,
   };
 }

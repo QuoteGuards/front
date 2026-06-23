@@ -35,10 +35,8 @@ export default function AppRouter() {
       <Route path="/analysis" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">내부 견적 분석 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
-      <Route path="/approval/staff" element={<ProtectedRoute><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
-      <Route path="/approval/admin" element={<ProtectedRoute><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
-
-      {/* 정의되지 않은 경로 → 홈으로 */}
+      <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
+      <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

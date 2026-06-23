@@ -69,7 +69,7 @@ const Sidebar = () => {
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M13 7l3 3m0 0l-3 3m3-3H8m5-9H5a2 2 0 00-2 2v14a2 2 0 002 2h8" />
+            <path d="M13 10H3M3 10L6 7M3 10L6 13M10 3h4a1 1 0 011 1v12a1 1 0 01-1 1h-4" />
           </svg>
           로그아웃
         </button>
