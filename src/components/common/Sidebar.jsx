@@ -6,6 +6,8 @@ const NAV_ITEMS = [
   { label: '내 견적 목록', path: '/quotes' },
   { label: '제품 담당', path: '/products' },
   { label: '발송 이력', path: '/history' },
+  { label: '승인 요청', path: '/approval/staff' },
+  { label: '승인 관리', path: '/approval/admin' },
 ]
 
 const Sidebar = () => (

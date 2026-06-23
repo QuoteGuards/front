@@ -4,6 +4,8 @@ import QuotePreviewPage from './pages/quote/QuotePreviewPage'
 import QuoteListPage from './pages/quote/QuoteListPage'
 import ExcelDownloadPage from './pages/quote/ExcelDownloadPage'
 import HistoryPage from './pages/history/HistoryPage'
+import AdminApprovalPage from './pages/approval/AdminApprovalPage'
+import StaffApprovalPage from './pages/approval/StaffApprovalPage'
 
 const Layout = ({ children }) => (
   <div className="flex min-h-screen">
@@ -23,6 +25,8 @@ const App = () => (
       <Route path="/analysis" element={<Layout><div className="p-8 text-gray-400">내부 견적 분석 (준비 중)</div></Layout>} />
       <Route path="/products" element={<Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout>} />
       <Route path="/history" element={<Layout><HistoryPage /></Layout>} />
+      <Route path="/approval/staff" element={<Layout><StaffApprovalPage /></Layout>} />
+      <Route path="/approval/admin" element={<Layout><AdminApprovalPage /></Layout>} />
     </Routes>
   </BrowserRouter>
 )
