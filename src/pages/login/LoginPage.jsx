@@ -2,9 +2,7 @@ import { useState, useCallback, useId } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { loginApi } from '../../api/authApi';
 import { useAuth } from '../../hooks/useAuth';
-import styles from './LoginPage.module.css';
 
-// 서버 오류 코드별 분류
 const AUTH_STATUS_CODES = new Set(['AUTH_004', 'AUTH_005', 'AUTH_006']);
 const AUTH_CREDENTIAL_CODES = new Set(['AUTH_002', 'AUTH_003']);
 
@@ -21,7 +19,7 @@ function validateForm(email, password) {
   return errors;
 }
 
-export function LoginPage() {
+export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,7 +31,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
-  const [formError, setFormError] = useState(null); // { type: 'status'|'general', message }
+  const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clearErrors = useCallback(() => {
@@ -48,7 +46,6 @@ export function LoginPage() {
 
       clearErrors();
 
-      // 클라이언트 유효성 검사
       const errors = validateForm(email, password);
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
@@ -58,35 +55,28 @@ export function LoginPage() {
       setIsSubmitting(true);
 
       try {
-        const { ok, body } = await loginApi(email, password);
+        const resData = await loginApi(email, password);
 
-        if (ok && body?.data?.accessToken) {
-          login(body.data.accessToken);
-          const from = location.state?.from?.pathname ?? '/';
+        if (resData?.data?.accessToken) {
+          login(resData.data.accessToken);
+          const from = location.state?.from?.pathname ?? '/quotes';
           navigate(from, { replace: true });
           return;
         }
 
-        // 서버 오류 처리
-        const code = body?.code ?? '';
-        const message = body?.message ?? '로그인에 실패했습니다.';
+        setFormError({ type: 'general', message: '로그인에 실패했습니다.' });
+      } catch (err) {
+        const code = err?.response?.data?.code ?? '';
+        const message = err?.response?.data?.message ?? '로그인에 실패했습니다.';
 
         if (AUTH_CREDENTIAL_CODES.has(code)) {
-          // 인증 정보 오류 - 필드 오류로 표시 (보안상 구체적 원인 미구분)
           setFieldErrors({ form: '이메일 또는 비밀번호가 올바르지 않습니다.' });
         } else if (AUTH_STATUS_CODES.has(code)) {
-          // 사용자 상태 오류
           setFormError({ type: 'status', code, message });
+        } else if (!err?.response) {
+          setFormError({ type: 'general', message: '서버에 연결할 수 없습니다. 네트워크를 확인해주세요.' });
         } else {
-          // 그 외 서버 오류
           setFormError({ type: 'general', message });
-        }
-      } catch (err) {
-        // 네트워크 오류
-        if (err?.type === 'NETWORK_ERROR') {
-          setFormError({ type: 'general', message: err.message });
-        } else {
-          setFormError({ type: 'general', message: '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' });
         }
       } finally {
         setIsSubmitting(false);
@@ -103,13 +93,21 @@ export function LoginPage() {
   );
 
   return (
-    <div className={styles.page}>
-      <main className={styles.card} aria-label="로그인">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <main
+        className="w-full max-w-sm bg-white rounded-lg shadow-md p-8"
+        aria-label="로그인"
+      >
         {/* 로고 영역 */}
-        <div className={styles.header}>
-          <div className={styles.logo} aria-hidden="true">QG</div>
-          <h1 className={styles.title}>QuoteGuard</h1>
-          <p className={styles.subtitle}>견적 관리 시스템</p>
+        <div className="text-center mb-6">
+          <div
+            className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-lg font-bold mb-3"
+            aria-hidden="true"
+          >
+            QG
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900">QuoteGuard</h1>
+          <p className="text-sm text-gray-500 mt-1">견적 관리 시스템</p>
         </div>
 
         {/* 사용자 상태 오류 배너 */}
@@ -119,29 +117,25 @@ export function LoginPage() {
 
         {/* 일반 오류 */}
         {formError?.type === 'general' && (
-          <div role="alert" className={styles.alertError}>
-            <svg className={styles.alertIcon} aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-            </svg>
-            {formError.message}
+          <div role="alert" className="flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">
+            <ErrorIcon />
+            <span>{formError.message}</span>
           </div>
         )}
 
         {/* 폼 수준 인증 오류 */}
         {fieldErrors.form && (
-          <div role="alert" className={styles.alertError}>
-            <svg className={styles.alertIcon} aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-            </svg>
-            {fieldErrors.form}
+          <div role="alert" className="flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">
+            <ErrorIcon />
+            <span>{fieldErrors.form}</span>
           </div>
         )}
 
         {/* 로그인 폼 */}
-        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate>
           {/* 이메일 */}
-          <div className={styles.field}>
-            <label htmlFor={emailId} className={styles.label}>
+          <div className="mb-4">
+            <label htmlFor={emailId} className="block text-sm font-medium text-gray-700 mb-1">
               이메일
             </label>
             <input
@@ -149,7 +143,14 @@ export function LoginPage() {
               type="email"
               autoComplete="email"
               inputMode="email"
-              className={`${styles.input} ${fieldErrors.email ? styles.inputError : ''}`}
+              className={[
+                'w-full px-3 py-2 border rounded-md text-sm outline-none transition-colors',
+                'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                fieldErrors.email
+                  ? 'border-red-400 bg-red-50'
+                  : 'border-gray-300 bg-white',
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : '',
+              ].join(' ')}
               value={email}
               onChange={(e) => { setEmail(e.target.value); clearErrors(); }}
               onKeyDown={handleKeyDown}
@@ -159,23 +160,30 @@ export function LoginPage() {
               placeholder="example@company.com"
             />
             {fieldErrors.email && (
-              <span id={`${emailId}-error`} role="alert" className={styles.fieldError}>
+              <span id={`${emailId}-error`} role="alert" className="mt-1 text-xs text-red-600 block">
                 {fieldErrors.email}
               </span>
             )}
           </div>
 
           {/* 비밀번호 */}
-          <div className={styles.field}>
-            <label htmlFor={passwordId} className={styles.label}>
+          <div className="mb-6">
+            <label htmlFor={passwordId} className="block text-sm font-medium text-gray-700 mb-1">
               비밀번호
             </label>
-            <div className={styles.passwordWrapper}>
+            <div className="relative">
               <input
                 id={passwordId}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                className={`${styles.input} ${styles.passwordInput} ${fieldErrors.password ? styles.inputError : ''}`}
+                className={[
+                  'w-full px-3 py-2 pr-10 border rounded-md text-sm outline-none transition-colors',
+                  'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+                  fieldErrors.password
+                    ? 'border-red-400 bg-red-50'
+                    : 'border-gray-300 bg-white',
+                  isSubmitting ? 'opacity-50 cursor-not-allowed' : '',
+                ].join(' ')}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); clearErrors(); }}
                 onKeyDown={handleKeyDown}
@@ -186,7 +194,7 @@ export function LoginPage() {
               />
               <button
                 type="button"
-                className={styles.togglePassword}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
                 aria-pressed={showPassword}
@@ -196,7 +204,7 @@ export function LoginPage() {
               </button>
             </div>
             {fieldErrors.password && (
-              <span id={`${passwordId}-error`} role="alert" className={styles.fieldError}>
+              <span id={`${passwordId}-error`} role="alert" className="mt-1 text-xs text-red-600 block">
                 {fieldErrors.password}
               </span>
             )}
@@ -205,7 +213,13 @@ export function LoginPage() {
           {/* 로그인 버튼 */}
           <button
             type="submit"
-            className={styles.submitBtn}
+            className={[
+              'w-full py-2 px-4 rounded-md text-sm font-medium text-white transition-colors',
+              'flex items-center justify-center gap-2',
+              isSubmitting
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
+            ].join(' ')}
             disabled={isSubmitting}
             aria-busy={isSubmitting}
           >
@@ -229,21 +243,17 @@ function StatusAlert({ code, message }) {
   const isPending = code === 'AUTH_004';
   const isRejected = code === 'AUTH_005';
 
-  const cls = isPending ? styles.alertWarning : styles.alertError;
+  const cls = isPending
+    ? 'flex items-start gap-2 mb-4 p-3 rounded-md bg-yellow-50 text-yellow-800 text-sm'
+    : 'flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm';
 
   return (
     <div role="alert" className={cls}>
-      <svg className={styles.alertIcon} aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
-        {isPending ? (
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-        ) : (
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-        )}
-      </svg>
+      {isPending ? <ClockIcon /> : <ErrorIcon />}
       <div>
-        <p className={styles.alertMessage}>{message}</p>
+        <p className="font-medium">{message}</p>
         {isRejected && (
-          <p className={styles.alertHint}>관리자에게 문의하거나 재가입을 신청해주세요.</p>
+          <p className="mt-0.5 text-xs opacity-80">관리자에게 문의하거나 재가입을 신청해주세요.</p>
         )}
       </div>
     </div>
@@ -268,10 +278,26 @@ function EyeOffIcon() {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 function Spinner() {
   return (
     <svg
-      className={styles.spinner}
+      className="animate-spin"
       width="16"
       height="16"
       viewBox="0 0 24 24"

@@ -6,21 +6,21 @@ export const AuthContext = createContext(null);
 export const TOKEN_KEY = 'qg_access_token';
 
 export function getStoredToken() {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token || isTokenExpired(token)) {
-        localStorage.removeItem(TOKEN_KEY);
-        return null;
-    }
-    return token;
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token || isTokenExpired(token)) {
+    localStorage.removeItem(TOKEN_KEY);
+    return null;
+  }
+  return token;
 }
 
 export function buildUser(token) {
-    if (!token) return null;
-    const payload = decodeJwt(token);
-    if (!payload) return null;
-    return {
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role, // SUPER_ADMIN | SALES_MANAGER | SALES_STAFF
-    };
+  if (!token) return null;
+  const payload = decodeJwt(token);
+  if (!payload) return null;
+  return {
+    id: payload.sub,
+    email: payload.email,
+    role: payload.role,
+  };
 }
