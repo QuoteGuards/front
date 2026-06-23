@@ -17,7 +17,7 @@ const HistoryTable = ({ rows }) => (
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            {['발송일시', '견적번호', '구매처', '수신자', '제목', 'PDF첨부', '상태'].map((h) => (
+            {['발송일시', '견적번호', '구매처', '수신자', '제목', '상태'].map((h) => (
               <th
                 key={h}
                 className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap"
@@ -30,7 +30,7 @@ const HistoryTable = ({ rows }) => (
         <tbody className="divide-y divide-gray-100">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
+              <td colSpan={6} className="text-center py-16 text-gray-400 text-sm">
                 발송 이력이 없습니다.
               </td>
             </tr>
@@ -47,14 +47,12 @@ const HistoryTable = ({ rows }) => (
                 <td className="px-4 py-3 text-gray-500 text-xs">{h.to}</td>
                 <td className="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">{h.subject}</td>
                 <td className="px-4 py-3 text-center">
-                  {h.attachPdf ? (
-                    <span className="text-blue-500 text-xs font-medium">첨부</span>
-                  ) : (
-                    <span className="text-gray-300 text-xs">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center">
                   <StatusBadge status={h.status} />
+                  {h.status === '실패' && h.failureReason && (
+                    <p className="text-[10px] text-red-400 mt-1 max-w-[160px] truncate" title={h.failureReason}>
+                      {h.failureReason}
+                    </p>
+                  )}
                 </td>
               </tr>
             ))

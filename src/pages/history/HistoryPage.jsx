@@ -7,6 +7,8 @@ const HistoryPage = () => {
   const {
     history,
     filtered,
+    loading,
+    error,
     search,
     setSearch,
     statusFilter,
@@ -29,7 +31,13 @@ const HistoryPage = () => {
         onStatusChange={setStatusFilter}
         resultCount={filtered.length}
       />
-      <HistoryTable rows={filtered} />
+      {loading ? (
+        <p className="px-8 py-16 text-center text-sm text-gray-400">발송 이력을 불러오는 중...</p>
+      ) : error ? (
+        <p className="px-8 py-16 text-center text-sm text-red-400">발송 이력을 불러올 수 없습니다.</p>
+      ) : (
+        <HistoryTable rows={filtered} />
+      )}
     </div>
   )
 }

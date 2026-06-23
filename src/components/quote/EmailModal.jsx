@@ -1,34 +1,7 @@
 import { useState } from 'react'
 import { sendQuoteEmail } from '../../api/quoteApi'
-import { HISTORY_STORAGE_KEY } from '../../constants/mockHistory'
 
-const now = () => {
-  const d = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-const saveToHistory = (quote, form) => {
-  try {
-    const prev = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || '[]')
-    const entry = {
-      id: `EH-${Date.now()}`,
-      sentAt: now(),
-      quoteId: quote.id,
-      buyer: quote.buyer.companyName,
-      to: form.to,
-      cc: form.cc,
-      subject: form.subject,
-      attachPdf: form.attachPdf,
-      status: '성공',
-    }
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify([entry, ...prev]))
-  } catch (e) {
-    console.error('이메일 발송 이력 저장 실패:', e)
-  }
-}
-
-const EmailModal = ({ 
+const EmailModal = ({
   quote, 
   onClose, 
   onSent 
@@ -51,7 +24,6 @@ const EmailModal = ({
 
     try {
       await sendQuoteEmail(quote.id, form)
-      saveToHistory(quote, form)
       onSent(form)
     } catch (e) {
       console.error('이메일 발송 실패:', e)
