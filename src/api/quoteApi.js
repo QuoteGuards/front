@@ -46,16 +46,16 @@ export const getQuote = async (id) => {
 const toQuoteSummary = (data) => ({
   id: data.quoteNumber,
   status: data.status,
-  createdAt: data.issuedDate,
+  createdAt: data.createdAt,
   validUntil: data.validUntil,
-  buyerName: data.customer?.companyName ?? '',
-  contactName: data.customer?.contactName ?? '',
+  buyerName: data.customerName ?? '',
+  contactName: data.contactName ?? '',
   totalAmount: data.totalAmount ?? 0,
 })
 
 export const getQuotes = async () => {
-  const { data } = await apiClient.get('/api/quotes')
-  return data.map(toQuoteSummary)
+  const { data } = await apiClient.get('/api/quotes/me')
+  return (data.data ?? []).map(toQuoteSummary)
 }
 
 const toPdfPayload = (quote) => {
