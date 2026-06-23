@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { AuthContext, TOKEN_KEY, getStoredToken, buildUser } from './AuthContext';
+import { isTokenExpired } from '../utils/jwt';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => getStoredToken());
@@ -17,7 +18,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ token, user, login, logout, isAuthenticated: !!token }),
+    () => ({
+      token,
+      user,
+      login,
+      logout,
+      isAuthenticated: !!token && !isTokenExpired(token),
+    }),
     [token, user, login, logout]
   );
 

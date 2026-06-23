@@ -59,7 +59,10 @@ export default function LoginPage() {
 
         if (resData?.data?.accessToken) {
           login(resData.data.accessToken);
-          const from = location.state?.from?.pathname ?? '/quotes';
+          const prev = location.state?.from;
+          const from = prev
+            ? prev.pathname + (prev.search ?? '') + (prev.hash ?? '')
+            : '/quotes';
           navigate(from, { replace: true });
           return;
         }
@@ -83,13 +86,6 @@ export default function LoginPage() {
       }
     },
     [isSubmitting, email, password, clearErrors, login, navigate, location.state]
-  );
-
-  const handleKeyDown = useCallback(
-    (e) => {
-      if (e.key === 'Enter') handleSubmit();
-    },
-    [handleSubmit]
   );
 
   return (
@@ -146,14 +142,11 @@ export default function LoginPage() {
               className={[
                 'w-full px-3 py-2 border rounded-md text-sm outline-none transition-colors',
                 'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                fieldErrors.email
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-gray-300 bg-white',
+                fieldErrors.email ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
                 isSubmitting ? 'opacity-50 cursor-not-allowed' : '',
               ].join(' ')}
               value={email}
               onChange={(e) => { setEmail(e.target.value); clearErrors(); }}
-              onKeyDown={handleKeyDown}
               disabled={isSubmitting}
               aria-invalid={!!fieldErrors.email}
               aria-describedby={fieldErrors.email ? `${emailId}-error` : undefined}
@@ -179,14 +172,11 @@ export default function LoginPage() {
                 className={[
                   'w-full px-3 py-2 pr-10 border rounded-md text-sm outline-none transition-colors',
                   'focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                  fieldErrors.password
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-gray-300 bg-white',
+                  fieldErrors.password ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
                   isSubmitting ? 'opacity-50 cursor-not-allowed' : '',
                 ].join(' ')}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); clearErrors(); }}
-                onKeyDown={handleKeyDown}
                 disabled={isSubmitting}
                 aria-invalid={!!fieldErrors.password}
                 aria-describedby={fieldErrors.password ? `${passwordId}-error` : undefined}
@@ -296,14 +286,7 @@ function ErrorIcon() {
 
 function Spinner() {
   return (
-    <svg
-      className="animate-spin"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
       <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
     </svg>
