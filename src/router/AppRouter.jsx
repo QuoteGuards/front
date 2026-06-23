@@ -4,6 +4,8 @@ import QuoteListPage from '../pages/quote/QuoteListPage'
 import QuotePreviewPage from '../pages/quote/QuotePreviewPage'
 import ExcelDownloadPage from '../pages/quote/ExcelDownloadPage'
 import HistoryPage from '../pages/history/HistoryPage'
+import AdminApprovalPage from '../pages/approval/AdminApprovalPage'
+import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import LoginPage from '../pages/login/LoginPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 
@@ -29,6 +31,8 @@ export default function AppRouter() {
       <Route path="/analysis" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">내부 견적 분석 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
+      <Route path="/approval/staff" element={<ProtectedRoute><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
+      <Route path="/approval/admin" element={<ProtectedRoute><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
 
       {/* 정의되지 않은 경로 → 홈으로 */}
       <Route path="*" element={<Navigate to="/" replace />} />
