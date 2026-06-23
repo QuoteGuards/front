@@ -7,6 +7,8 @@ import HistoryPage from '../pages/history/HistoryPage'
 import AdminApprovalPage from '../pages/approval/AdminApprovalPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import LoginPage from '../pages/login/LoginPage'
+import SignupPage from '../pages/signup/SignupPage'
+import SignupPendingPage from '../pages/signup/SignupPendingPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 
 const Layout = ({ children }) => (
@@ -21,6 +23,8 @@ export default function AppRouter() {
     <Routes>
       {/* 공개 라우트 */}
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
+      <Route path="/signup/pending" element={<SignupPendingPage />} />
 
       {/* 보호 라우트 */}
       <Route path="/" element={<ProtectedRoute><Navigate to="/quotes" replace /></ProtectedRoute>} />
