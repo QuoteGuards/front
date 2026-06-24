@@ -7,6 +7,7 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[700px] flex flex-col overflow-hidden">
+                {/* 헤더 */}
                 <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0">
                     <div>
                         <h3 className="font-bold text-lg text-gray-800">견적 작성 가이드</h3>
@@ -15,6 +16,7 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
                 </div>
 
+                {/* 탭 */}
                 <div className="flex border-b border-gray-200 px-8">
                     {TABS.map((t, idx) => (
                         <button key={t} onClick={() => setTab(idx)} className={`px-6 py-4 text-sm font-bold border-b-2 -mb-px transition-colors ${tab === idx ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-400'}`}>
@@ -23,6 +25,7 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                     ))}
                 </div>
 
+                {/* 본문 */}
                 <div className="px-8 py-6 overflow-y-auto flex-1 bg-gray-50/50">
                     {tab === 0 && (
                         <div className="space-y-4">
@@ -64,6 +67,7 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                     )}
                 </div>
 
+                {/* 하단 확인 버튼 */}
                 <div className="px-8 py-5 border-t border-gray-200 flex justify-between items-center shrink-0">
                     <span className="text-xs text-gray-400">{alreadyConfirmed ? '✓ 확인 완료' : '내용 확인 후 버튼을 눌러주세요.'}</span>
                     <button onClick={onConfirm} disabled={confirming || alreadyConfirmed} className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:bg-gray-400">
