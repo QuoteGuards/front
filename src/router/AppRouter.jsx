@@ -9,9 +9,8 @@ import HistoryPage from '../pages/history/HistoryPage'
 import TrainingPage from '../pages/training/TrainingPage'
 import AdminApprovalPage from '../pages/approval/AdminApprovalPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
+import UserManagementPage from '../pages/admin/UserManagementPage'
 import LoginPage from '../pages/login/LoginPage'
-import SignupPage from '../pages/signup/SignupPage'
-import SignupPendingPage from '../pages/signup/SignupPendingPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 
 const Layout = ({ children }) => (
@@ -26,8 +25,6 @@ export default function AppRouter() {
     <Routes>
       {/* 공개 라우트 */}
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
-      <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
-      <Route path="/signup/pending" element={<SignupPendingPage />} />
 
       {/* 보호 라우트 */}
       <Route path="/" element={<ProtectedRoute><Navigate to="/quotes" replace /></ProtectedRoute>} />
@@ -41,6 +38,7 @@ export default function AppRouter() {
       <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
       <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
