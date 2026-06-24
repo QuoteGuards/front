@@ -1,5 +1,5 @@
 import { useState, useCallback, useId } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginApi } from '../../api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -223,6 +223,16 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+        {/* 회원가입 이동 */}
+        <p className="mt-5 text-center text-sm text-gray-500">
+          계정이 없으신가요?{' '}
+          <Link
+            to="/signup"
+            className="text-blue-600 hover:text-blue-700 font-medium focus:outline-none focus:underline"
+          >
+            회원가입
+          </Link>
+        </p>
       </main>
     </div>
   );
@@ -287,8 +297,8 @@ function ErrorIcon() {
 function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.3" />
-      <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
-  );
+  )
 }

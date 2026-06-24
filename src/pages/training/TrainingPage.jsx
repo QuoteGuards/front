@@ -29,13 +29,22 @@ const TrainingPage = () => {
         saveProgress(payload).catch(() => { })
     }
 
+    // 영상 수동 완료 처리 핸들러
+    const handleManualVideoComplete = () => {
+        saveProgress({
+            progressRate: 100,
+            watchedSeconds: 300, // 임시값
+            lastWatchedSeconds: 300,
+        }).catch(() => alert("진도 저장 실패"));
+    };
+
     const handleConfirmGuide = async () => {
         setConfirming(true)
         try {
             await confirmGuide()
             setGuideOpen(false)
         } catch {
-            // 실패 시 모달 유지, 별도 에러 처리는 토스트 등으로 확장 가능
+            // 에러 처리
         } finally {
             setConfirming(false)
         }
@@ -56,6 +65,7 @@ const TrainingPage = () => {
 
     return (
         <div className="flex-1 bg-gray-50 min-h-screen">
+            {/* 헤더 섹션 */}
             <div className="px-8 pt-8 pb-6 border-b border-gray-200 bg-white">
                 <div className="flex items-start justify-between">
                     <div>
@@ -64,9 +74,7 @@ const TrainingPage = () => {
                                 {trainingContent?.title || '견적 작성 교육 이수'}
                             </h1>
                             {trainingContent?.required && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">
-                                    필수
-                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">필수</span>
                             )}
                         </div>
                         <p className="text-sm text-gray-400">
@@ -90,9 +98,22 @@ const TrainingPage = () => {
                 </div>
             </div>
 
+            {/* 메인 컨텐츠 */}
             <div className="px-8 py-6 max-w-4xl">
+                {/* 영상 영역 */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-semibold text-gray-700 mb-4">📹 견적 작성 가이드 영상</h2>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-sm font-semibold text-gray-700">📹 견적 작성 가이드 영상</h2>
+                        <button
+                            onClick={handleManualVideoComplete}
+                            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${trainingStatus?.progressRate >= 100
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-violet-300'
+                                }`}
+                        >
+                            {trainingStatus?.progressRate >= 100 ? '✓ 영상 시청 완료' : '영상 시청 완료 처리'}
+                        </button>
+                    </div>
                     <TrainingVideoPlayer
                         videoUrl={trainingContent?.videoUrl}
                         initialStatus={trainingStatus}
@@ -101,50 +122,38 @@ const TrainingPage = () => {
                     />
                 </div>
 
+                {/* 가이드 확인 영역 */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mt-5 flex items-center justify-between">
                     <div className="text-sm text-gray-600">
                         <p className="font-semibold text-gray-700 mb-1">견적 작성 가이드 확인</p>
-                        <p className="text-gray-400 text-xs">
-                            견적 작성 절차, 할인율 적용 기준, 승인 요청 조건, 작성 예시를 확인하세요.
-                        </p>
+                        <p className="text-gray-400 text-xs">견적 작성 절차, 할인율 기준, 승인 요청 조건 등을 확인하세요.</p>
                     </div>
                     <button
                         onClick={() => setGuideOpen(true)}
-                        className="px-4 py-2 text-sm rounded-lg border border-violet-300 text-violet-700 hover:bg-violet-50 transition-colors shrink-0"
+                        className={`px-4 py-2 text-sm rounded-lg border transition-colors ${trainingStatus?.guideConfirmed
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'border-violet-300 text-violet-700 hover:bg-violet-50'
+                            }`}
                     >
-                        {trainingStatus?.guideConfirmed ? '✓ 가이드 다시 보기' : '견적 작성 가이드 확인하기'}
+                        {trainingStatus?.guideConfirmed ? '✓ 가이드 확인 완료' : '견적 작성 가이드 확인하기'}
                     </button>
                 </div>
 
+                {/* 이수 완료 버튼 (조건 충족 시에만 활성화) */}
                 <div className="mt-6 flex items-center justify-end gap-3">
-                    {canWriteQuote ? (
-                        <button
-                            onClick={handleGoToQuoteWrite}
-                            className="px-6 py-2.5 text-sm font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-                        >
-                            견적 작성 화면으로 이동하기 →
-                        </button>
-                    ) : (
-                        <button
-                            disabled={!canClickComplete || actionLoading}
-                            onClick={handleGoToQuoteWrite}
-                            className="px-6 py-2.5 text-sm font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            ✓ 이수 완료
-                        </button>
-                    )}
+                    <button
+                        disabled={!canClickComplete || actionLoading}
+                        onClick={handleGoToQuoteWrite}
+                        className="px-8 py-3 text-sm font-bold rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        {canWriteQuote ? '견적 작성 화면으로 이동하기 →' : '이수 완료 처리하기'}
+                    </button>
                 </div>
-
-                {!canClickComplete && !canWriteQuote && (
-                    <p className="text-right text-xs text-gray-400 mt-2">
-                        영상 시청률 {TRAINING_COMPLETE_THRESHOLD}% 이상과 가이드 확인을 모두 완료해야 이수 완료 버튼이 활성화됩니다.
-                    </p>
-                )}
             </div>
 
+            {/* 가이드 모달 */}
             {guideOpen && (
                 <TrainingGuideModal
-                    guideContent={trainingContent?.guideContent}
                     alreadyConfirmed={!!trainingStatus?.guideConfirmed}
                     confirming={confirming}
                     onConfirm={handleConfirmGuide}
