@@ -7,6 +7,8 @@ const Sidebar = () => {
   const navigate = useNavigate()
   const { canWriteQuote, loading } = useTrainingStatus()
 
+  const isAdmin = user?.role === 'SUPER_ADMIN'
+
   const NAV_ITEMS = [
     { label: '내부 견적 분석', path: '/analysis' },
     {
@@ -19,6 +21,7 @@ const Sidebar = () => {
     { label: '발송 이력', path: '/history' },
     { label: '승인 요청', path: '/approval/staff' },
     { label: '승인 관리', path: '/approval/admin' },
+    ...(isAdmin ? [{ label: '사용자 관리', path: '/admin/users' }] : []),
     {
       label: '교육 이수',
       path: '/training',
