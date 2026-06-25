@@ -19,14 +19,9 @@ const Sidebar = () => {
     { label: '내 견적 목록', path: '/quotes' },
     { label: '제품 담당', path: '/products' },
     { label: '발송 이력', path: '/history' },
-<<<<<<< HEAD
     { label: '승인 요청', path: '/staff/approval' },
     { label: '승인 관리', path: '/admin/approval' },
-=======
-    { label: '승인 요청', path: '/approval/staff' },
-    { label: '승인 관리', path: '/approval/admin' },
     ...(isAdmin ? [{ label: '사용자 관리', path: '/admin/users' }] : []),
->>>>>>> 8c6a7e2aa918c7463d20b00ebc0f84c1adea7ced
     {
       label: '교육 이수',
       path: '/training',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
-  requestApproval,
   reRequestApproval,
+  updateApprovalMemo,
   getApprovalHistories,
   getApprovalReasons,
   getMyPendingApprovalQuotes,
@@ -62,10 +62,13 @@ function RequestTab() {
   const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
-  const [memo, setMemo] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [detailMap, setDetailMap] = useState({})
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [editingId, setEditingId] = useState(null)   // 메모 수정 중인 quoteId
+  const [editMemo, setEditMemo] = useState('')
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -81,20 +84,71 @@ function RequestTab() {
     }
   }
 
-  const handleRequest = async (quoteId) => {
-    setError('')
-    setSuccess('')
-    setSubmitting(true)
-    try {
-      await requestApproval(quoteId, memo.trim())
-      setSuccess('승인 요청이 완료되었습니다.')
+  const handleToggle = async (q) => {
+    if (selectedId === q.id) {
       setSelectedId(null)
-      setMemo('')
-      load()
+      setEditingId(null)
+      return
+    }
+    setSelectedId(q.id)
+    setEditingId(null)
+    setSaveError('')
+    setSaveSuccess('')
+    if (!detailMap[q.id]) {
+      setDetailLoading(true)
+      try {
+        const [histRes, reasonRes] = await Promise.all([
+          getApprovalHistories(q.id),
+          getApprovalReasons(q.id),
+        ])
+        setDetailMap((prev) => ({
+          ...prev,
+          [q.id]: { histories: histRes.data ?? [], reasons: reasonRes.data ?? [] },
+        }))
+      } catch {
+        setDetailMap((prev) => ({ ...prev, [q.id]: { histories: [], reasons: [] } }))
+      } finally {
+        setDetailLoading(false)
+      }
+    }
+  }
+
+  const startEdit = (currentMemo) => {
+    setEditMemo(currentMemo ?? '')
+    setSaveError('')
+    setSaveSuccess('')
+    setEditingId(selectedId)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setSaveError('')
+  }
+
+  const handleSaveMemo = async (q, approvalRequestId) => {
+    setSaveError('')
+    setSaveSuccess('')
+    setSaveLoading(true)
+    try {
+      await updateApprovalMemo(q.id, approvalRequestId, editMemo.trim())
+      // 로컬 detailMap의 메모 업데이트 (리로드 없이 반영)
+      const saved = editMemo.trim()
+      setDetailMap((prev) => {
+        const prevDetail = prev[q.id]
+        const target = [...prevDetail.histories]
+          .reverse()
+          .find((h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED')
+        const updatedHistories = prevDetail.histories.map((h) =>
+          h.id === target?.id ? { ...h, memo: saved } : h
+        )
+        return { ...prev, [q.id]: { ...prevDetail, histories: updatedHistories } }
+      })
+      setSaveSuccess('메모가 수정되었습니다.')
+      setEditingId(null)
     } catch (e) {
-      setError(e.response?.data?.message ?? '요청 중 오류가 발생했습니다.')
+      setSaveError(e.response?.data?.message ?? '수정 중 오류가 발생했습니다.')
     } finally {
-      setSubmitting(false)
+      setSaveLoading(false)
     }
   }
 
@@ -104,77 +158,168 @@ function RequestTab() {
 
   return (
     <div>
-      {success && (
+      {saveSuccess && (
         <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
-          {success}
+          {saveSuccess}
         </div>
       )}
 
       {quotes.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-sm text-gray-400">승인 요청 대기 중인 견적이 없습니다.</p>
+          <p className="text-sm text-gray-400">승인 대기 중인 견적이 없습니다.</p>
           <p className="text-xs text-gray-300 mt-1">
             승인이 필요한 견적은 견적 목록에서 먼저 제출하세요.
           </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {quotes.map((q) => (
-            <div
-              key={q.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
-            >
+          {quotes.map((q) => {
+            const detail = detailMap[q.id]
+            const lastRequest = detail?.histories
+              ? [...detail.histories].reverse().find(
+                  (h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED'
+                )
+              : null
+            const requestCount = detail?.histories?.filter(
+              (h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED'
+            ).length ?? 0
+            const approvalRequestId = lastRequest?.approvalRequestId
+            const isEditing = editingId === q.id
+
+            return (
               <div
-                className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => {
-                  setSelectedId(selectedId === q.id ? null : q.id)
-                  setError('')
-                  setSuccess('')
-                  setMemo('')
-                }}
+                key={q.id}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
               >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                    #{q.id}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">
-                      {q.customerName ?? '—'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      작성일: {formatDateShort(q.createdAt)}
-                    </p>
+                <div
+                  className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => handleToggle(q)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                      #{q.id}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{q.customerName ?? '—'}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        제출일: {formatDateShort(q.submittedAt ?? q.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+                      승인 대기 중
+                    </span>
+                    <span className="text-xs text-gray-300">{selectedId === q.id ? '↑' : '↓'}</span>
                   </div>
                 </div>
-                <span className="text-xs text-violet-600 font-medium">
-                  {selectedId === q.id ? '접기 ↑' : '승인 요청 →'}
-                </span>
-              </div>
 
-              {selectedId === q.id && (
-                <div className="px-5 pb-5 border-t border-gray-100 bg-gray-50">
-                  <p className="text-xs font-medium text-gray-600 mt-4 mb-1.5">
-                    요청 메모 (선택)
-                  </p>
-                  <textarea
-                    value={memo}
-                    onChange={(e) => setMemo(e.target.value)}
-                    placeholder="관리자에게 전달할 메모를 입력하세요."
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                  />
-                  {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                  <button
-                    onClick={() => handleRequest(q.id)}
-                    disabled={submitting}
-                    className="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? '요청 중...' : '승인 요청하기'}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                {selectedId === q.id && (
+                  <div className="px-5 pb-5 border-t border-gray-100 bg-gray-50">
+                    {detailLoading && !detail ? (
+                      <p className="text-xs text-gray-400 py-6 text-center">불러오는 중...</p>
+                    ) : (
+                      <div className="pt-4 flex flex-col gap-3">
+                        {/* 요청 정보 */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
+                            <p className="text-xs text-gray-400">요청일시</p>
+                            <p className="text-sm font-medium text-gray-800 mt-0.5">
+                              {formatDate(lastRequest?.actedAt ?? q.submittedAt)}
+                            </p>
+                          </div>
+                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
+                            <p className="text-xs text-gray-400">요청 횟수</p>
+                            <p className="text-sm font-medium text-gray-800 mt-0.5">
+                              {requestCount > 0 ? `${requestCount}회` : '1회'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* 승인 필요 사유 */}
+                        {detail?.reasons?.length > 0 && (
+                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
+                            <p className="text-xs text-gray-400 mb-2">승인 필요 사유</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {detail.reasons.map((r) => (
+                                <span
+                                  key={r.id}
+                                  className="px-2.5 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700 border border-amber-200"
+                                >
+                                  {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 전달한 메모 */}
+                        <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-xs text-gray-400">전달한 메모</p>
+                            {!isEditing && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); startEdit(lastRequest?.memo) }}
+                                className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                              >
+                                메모 수정
+                              </button>
+                            )}
+                          </div>
+
+                          {isEditing ? (
+                            <>
+                              <textarea
+                                value={editMemo}
+                                onChange={(e) => setEditMemo(e.target.value)}
+                                placeholder="관리자에게 전달할 메모를 입력하세요."
+                                rows={3}
+                                className="w-full border border-violet-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              {saveError && (
+                                <p className="text-xs text-red-500 mt-1.5">{saveError}</p>
+                              )}
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleSaveMemo(q, approvalRequestId)
+                                  }}
+                                  disabled={saveLoading}
+                                  className="flex-1 py-2 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400"
+                                >
+                                  {saveLoading ? '저장 중...' : '저장'}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelEdit() }}
+                                  disabled={saveLoading}
+                                  className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap min-h-[1.5rem]">
+                              {lastRequest?.memo || <span className="text-gray-300">작성된 메모가 없습니다.</span>}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 px-1 pt-1">
+                          <p className="text-xs text-amber-600">
+                            관리자 검토를 기다리고 있습니다. 승인되면 고객에게 견적을 발송할 수 있습니다.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

@@ -46,13 +46,9 @@ export default function AppRouter() {
       <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
-<<<<<<< HEAD
       <Route path="/admin/approval/:approvalRequestId" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalDetailPage /></Layout></ProtectedRoute>} />
-      <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
-=======
       <Route path="/admin/users" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><UserManagementPage /></Layout></ProtectedRoute>} />
       <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
->>>>>>> 8c6a7e2aa918c7463d20b00ebc0f84c1adea7ced
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>
