@@ -21,6 +21,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem(TOKEN_KEY, accessToken);
     if (refreshToken) {
       localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
     }
     setToken(accessToken);
     if (mustChange) {
