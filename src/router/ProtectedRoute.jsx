@@ -17,8 +17,8 @@ export function ProtectedRoute({ children, roles }) {
 }
 
 export function PublicOnlyRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) {
+  const { isAuthenticated, mustChangePassword } = useAuth();
+  if (isAuthenticated && !mustChangePassword) {
     return <Navigate to="/quotes" replace />;
   }
   return children;

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/common/Sidebar'
 import QuoteListPage from '../pages/quote/QuoteListPage'
 import QuoteWritePage from '../pages/quote/QuoteWritePage'
@@ -12,6 +12,8 @@ import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
 import LoginPage from '../pages/login/LoginPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
+import ChangePasswordModal from '../components/common/ChangePasswordModal'
+import { useAuth } from '../hooks/useAuth'
 
 const Layout = ({ children }) => (
   <div className="flex min-h-screen">
@@ -21,8 +23,13 @@ const Layout = ({ children }) => (
 )
 
 export default function AppRouter() {
+  const { isAuthenticated, mustChangePassword } = useAuth()
+  const location = useLocation()
+
   return (
-    <Routes>
+    <>
+      {isAuthenticated && mustChangePassword && location.pathname !== '/login' && <ChangePasswordModal />}
+      <Routes>
       {/* 공개 라우트 */}
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
 
@@ -42,5 +49,6 @@ export default function AppRouter() {
       <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }
