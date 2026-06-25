@@ -29,9 +29,22 @@ export default function UserCreateModal({ onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false)
   const [created, setCreated] = useState(null)
 
+  const formatPhone = (raw) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.startsWith('010')) {
+      if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+    } else {
+      if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    const next = name === 'phone' ? formatPhone(value) : value
+    setForm((prev) => ({ ...prev, [name]: next }))
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
@@ -39,6 +52,11 @@ export default function UserCreateModal({ onClose, onCreated }) {
     const next = {}
     if (!form.name.trim()) next.name = '이름은 필수입니다.'
     if (!form.role) next.role = '권한은 필수입니다.'
+    if (!form.phone.trim()) {
+      next.phone = '연락처는 필수입니다.'
+    } else if (!/^01[016789]-\d{3,4}-\d{4}$/.test(form.phone.trim())) {
+      next.phone = '올바른 휴대폰 번호를 입력해주세요. (예: 010-1234-5678)'
+    }
     return next
   }
 
@@ -94,7 +112,7 @@ export default function UserCreateModal({ onClose, onCreated }) {
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
-            <p className="text-xs font-medium text-amber-700 mb-1">임시 비밀번호 (최초 1회 공개)</p>
+            <p className="text-xs font-medium text-amber-700 mb-1">임시 비밀번호</p>
             <p className="text-sm font-mono font-semibold text-amber-900 break-all select-all">
               {created.temporaryPassword}
             </p>
@@ -158,9 +176,9 @@ export default function UserCreateModal({ onClose, onCreated }) {
           </div>
 
           <Field
-            id={id('phone')} label="연락처"
+            id={id('phone')} label="연락처" required
             name="phone" value={form.phone}
-            onChange={handleChange}
+            onChange={handleChange} error={errors.phone}
             placeholder="010-0000-0000"
             type="tel"
           />

@@ -58,13 +58,7 @@ export default function LoginPage() {
         const resData = await loginApi(email, password);
 
         if (resData?.data?.accessToken) {
-          login(resData.data.accessToken);
-
-          // 최초 로그인(임시 비밀번호) 시 비밀번호 변경 화면으로 강제 이동
-          if (resData.data.mustChangePassword) {
-            navigate('/change-password', { replace: true });
-            return;
-          }
+          login(resData.data.accessToken, resData.data.mustChangePassword ?? false);
 
           const prev = location.state?.from;
           const from = prev
