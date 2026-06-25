@@ -1,9 +1,9 @@
 import { useState, useCallback, useId } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { loginApi } from '../../api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 
-const AUTH_STATUS_CODES = new Set(['AUTH_004', 'AUTH_005', 'AUTH_006']);
+const AUTH_STATUS_CODES = new Set(['AUTH_004', 'AUTH_005']);
 const AUTH_CREDENTIAL_CODES = new Set(['AUTH_002', 'AUTH_003']);
 
 function validateForm(email, password) {
@@ -58,7 +58,8 @@ export default function LoginPage() {
         const resData = await loginApi(email, password);
 
         if (resData?.data?.accessToken) {
-          login(resData.data.accessToken);
+          login(resData.data.accessToken, resData.data.mustChangePassword ?? false);
+
           const prev = location.state?.from;
           const from = prev
             ? prev.pathname + (prev.search ?? '') + (prev.hash ?? '')
@@ -90,36 +91,27 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <main
-        className="w-full max-w-sm bg-white rounded-lg shadow-md p-8"
-        aria-label="로그인"
-      >
-        {/* 로고 영역 */}
+      <main className="w-full max-w-sm bg-white rounded-lg shadow-md p-8" aria-label="로그인">
         <div className="text-center mb-6">
-          <div
-            className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-lg font-bold mb-3"
-            aria-hidden="true"
-          >
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white text-lg font-bold mb-3" aria-hidden="true">
             QG
           </div>
           <h1 className="text-xl font-semibold text-gray-900">QuoteGuard</h1>
           <p className="text-sm text-gray-500 mt-1">견적 관리 시스템</p>
         </div>
 
-        {/* 사용자 상태 오류 배너 */}
         {formError?.type === 'status' && (
-          <StatusAlert code={formError.code} message={formError.message} />
+          <div role="alert" className="flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">
+            <ErrorIcon />
+            <p className="font-medium">{formError.message}</p>
+          </div>
         )}
-
-        {/* 일반 오류 */}
         {formError?.type === 'general' && (
           <div role="alert" className="flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">
             <ErrorIcon />
             <span>{formError.message}</span>
           </div>
         )}
-
-        {/* 폼 수준 인증 오류 */}
         {fieldErrors.form && (
           <div role="alert" className="flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm">
             <ErrorIcon />
@@ -127,9 +119,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* 로그인 폼 */}
         <form onSubmit={handleSubmit} noValidate>
-          {/* 이메일 */}
           <div className="mb-4">
             <label htmlFor={emailId} className="block text-sm font-medium text-gray-700 mb-1">
               이메일
@@ -150,7 +140,7 @@ export default function LoginPage() {
               disabled={isSubmitting}
               aria-invalid={!!fieldErrors.email}
               aria-describedby={fieldErrors.email ? `${emailId}-error` : undefined}
-              placeholder="example@company.com"
+              placeholder="이메일"
             />
             {fieldErrors.email && (
               <span id={`${emailId}-error`} role="alert" className="mt-1 text-xs text-red-600 block">
@@ -159,7 +149,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* 비밀번호 */}
           <div className="mb-6">
             <label htmlFor={passwordId} className="block text-sm font-medium text-gray-700 mb-1">
               비밀번호
@@ -180,14 +169,13 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 aria-invalid={!!fieldErrors.password}
                 aria-describedby={fieldErrors.password ? `${passwordId}-error` : undefined}
-                placeholder="비밀번호 입력"
+                placeholder="비밀번호 (8~20, 영문+숫자+특수문자)"
               />
               <button
                 type="button"
                 className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
-                aria-pressed={showPassword}
                 tabIndex={0}
               >
                 {showPassword ? <EyeOffIcon /> : <EyeIcon />}
@@ -200,67 +188,23 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* 로그인 버튼 */}
           <button
             type="submit"
             className={[
-              'w-full py-2 px-4 rounded-md text-sm font-medium text-white transition-colors',
-              'flex items-center justify-center gap-2',
-              isSubmitting
-                ? 'bg-blue-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
+              'w-full py-2 px-4 rounded-md text-sm font-medium text-white transition-colors flex items-center justify-center gap-2',
+              isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
             ].join(' ')}
             disabled={isSubmitting}
             aria-busy={isSubmitting}
           >
-            {isSubmitting ? (
-              <>
-                <Spinner />
-                로그인 중...
-              </>
-            ) : (
-              '로그인'
-            )}
+            {isSubmitting ? <><Spinner />로그인 중...</> : '로그인'}
           </button>
         </form>
-        {/* 회원가입 이동 */}
-        <p className="mt-5 text-center text-sm text-gray-500">
-          계정이 없으신가요?{' '}
-          <Link
-            to="/signup"
-            className="text-blue-600 hover:text-blue-700 font-medium focus:outline-none focus:underline"
-          >
-            회원가입
-          </Link>
-        </p>
       </main>
     </div>
   );
 }
 
-/* ===== 사용자 상태 오류 배너 ===== */
-function StatusAlert({ code, message }) {
-  const isPending = code === 'AUTH_004';
-  const isRejected = code === 'AUTH_005';
-
-  const cls = isPending
-    ? 'flex items-start gap-2 mb-4 p-3 rounded-md bg-yellow-50 text-yellow-800 text-sm'
-    : 'flex items-start gap-2 mb-4 p-3 rounded-md bg-red-50 text-red-700 text-sm';
-
-  return (
-    <div role="alert" className={cls}>
-      {isPending ? <ClockIcon /> : <ErrorIcon />}
-      <div>
-        <p className="font-medium">{message}</p>
-        {isRejected && (
-          <p className="mt-0.5 text-xs opacity-80">관리자에게 문의하거나 재가입을 신청해주세요.</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ===== 아이콘 ===== */
 function EyeIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -269,7 +213,6 @@ function EyeIcon() {
     </svg>
   );
 }
-
 function EyeOffIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -277,15 +220,6 @@ function EyeOffIcon() {
     </svg>
   );
 }
-
-function ClockIcon() {
-  return (
-    <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
 function ErrorIcon() {
   return (
     <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -293,12 +227,11 @@ function ErrorIcon() {
     </svg>
   );
 }
-
 function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
-  )
+  );
 }
