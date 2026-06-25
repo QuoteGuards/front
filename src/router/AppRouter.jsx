@@ -17,6 +17,7 @@ import CategoryManagePage from '../pages/category/CategoryManagePage'
 import ProductManagePage from '../pages/product/ProductManagePage'
 import DiscountManagePage from '../pages/discount/DiscountManagePage'
 import ProductSearchPage from '../pages/catalog/ProductSearchPage'
+import ProductDetailPage from '../pages/catalog/ProductDetailPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 import ChangePasswordModal from '../components/common/ChangePasswordModal'
 import { useAuth } from '../hooks/useAuth'
@@ -52,6 +53,7 @@ export default function AppRouter() {
         <Route path="/categories" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><CategoryManagePage /></Layout></ProtectedRoute>} />
         <Route path="/discounts" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><DiscountManagePage /></Layout></ProtectedRoute>} />
         <Route path="/catalog" element={<ProtectedRoute><Layout><ProductSearchPage /></Layout></ProtectedRoute>} />
+        <Route path="/catalog/:productId" element={<ProtectedRoute><Layout><ProductDetailPage /></Layout></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
         <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
         <Route path="/admin/approval/:approvalRequestId" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalDetailPage /></Layout></ProtectedRoute>} />
