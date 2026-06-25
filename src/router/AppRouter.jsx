@@ -12,6 +12,7 @@ import AdminApprovalDetailPage from '../pages/approval/AdminApprovalDetailPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
 import LoginPage from '../pages/login/LoginPage'
+import CategoryManagePage from '../pages/category/CategoryManagePage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 import ChangePasswordModal from '../components/common/ChangePasswordModal'
 import { useAuth } from '../hooks/useAuth'
@@ -44,6 +45,7 @@ export default function AppRouter() {
       <Route path="/quotes/:id/excel" element={<ProtectedRoute><Layout><ExcelDownloadPage /></Layout></ProtectedRoute>} />
       <Route path="/analysis" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">내부 견적 분석 (준비 중)</div></Layout></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
+      <Route path="/categories" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><CategoryManagePage /></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/approval/:approvalRequestId" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalDetailPage /></Layout></ProtectedRoute>} />
