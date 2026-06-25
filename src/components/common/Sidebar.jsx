@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
+import { logoutApi } from '../../api/authApi'
 
 const Sidebar = () => {
   const { user, logout } = useAuth()
@@ -29,9 +30,15 @@ const Sidebar = () => {
     },
   ]
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
+  const handleLogout = async () => {
+    try {
+      await logoutApi()
+    } catch {
+      // proceed with client-side logout even if server call fails
+    } finally {
+      logout()
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
