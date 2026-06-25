@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { searchCustomers } from '../../api/customerApi'
+import { searchCustomers, getCustomerDetail } from '../../api/customerApi'
 import CustomerCreateModal from './CustomerCreateModal'
 
 const SEARCH_DEBOUNCE_MS = 300
@@ -10,7 +10,7 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
     const [searching, setSearching] = useState(false)
     const [showResults, setShowResults] = useState(false)
     const [createOpen, setCreateOpen] = useState(false)
-    const [locked, setLocked] = useState(true)
+    const [locked, setLocked] = useState(true) // 선택 후 자동입력 필드는 기본 잠금, "변경하기"로 해제
     const debounceRef = useRef(null)
 
     const runSearch = useCallback(async (name) => {
@@ -35,18 +35,37 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
         return () => clearTimeout(debounceRef.current)
     }, [keyword, runSearch])
 
-    const handlePick = (item) => {
-        onSelect({
-            id: item.id,
-            companyName: item.companyName,
-            contactName: item.contactName,
-            email: item.email ?? '',
-            phone: item.phone ?? '',
-            address: item.address ?? '',
-        })
-        setShowResults(false)
-        setKeyword('')
-        setLocked(true)
+    const [pickingId, setPickingId] = useState(null)
+
+    const handlePick = async (item) => {
+        setPickingId(item.id)
+        try {
+            // CustomerSearchResponse에는 address가 없어서 상세조회로 보강
+            const detail = await getCustomerDetail(item.id)
+            onSelect({
+                id: detail.id,
+                companyName: detail.companyName,
+                contactName: detail.contactName,
+                email: detail.email ?? '',
+                phone: detail.phone ?? '',
+                address: detail.address ?? '',
+            })
+        } catch {
+            // 상세조회 실패 시 검색 결과 값만이라도 채움 (address는 빈 값)
+            onSelect({
+                id: item.id,
+                companyName: item.companyName,
+                contactName: item.contactName,
+                email: item.email ?? '',
+                phone: item.phone ?? '',
+                address: '',
+            })
+        } finally {
+            setPickingId(null)
+            setShowResults(false)
+            setKeyword('')
+            setLocked(true)
+        }
     }
 
     const handleCreated = (created) => {
@@ -117,9 +136,10 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
                                             <td className="px-3 py-2 text-right">
                                                 <button
                                                     onClick={() => handlePick(item)}
-                                                    className="text-violet-600 hover:underline font-medium"
+                                                    disabled={pickingId === item.id}
+                                                    className="text-violet-600 hover:underline font-medium disabled:opacity-50"
                                                 >
-                                                    선택
+                                                    {pickingId === item.id ? '불러오는 중...' : '선택'}
                                                 </button>
                                             </td>
                                         </tr>
@@ -145,6 +165,7 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
 
             <div className="grid grid-cols-2 gap-3">
                 <Field label="고객명" value={customer.companyName} onChange={(v) => onFieldChange('companyName', v)} disabled={locked} />
+                <Field label="담당자명" value={customer.contactName} onChange={(v) => onFieldChange('contactName', v)} disabled={locked} />
                 <Field label="연락처" value={customer.phone} onChange={(v) => onFieldChange('phone', v)} disabled={locked} />
                 <Field label="이메일" value={customer.email} onChange={(v) => onFieldChange('email', v)} disabled={locked} />
                 <Field label="주소" value={customer.address} onChange={(v) => onFieldChange('address', v)} disabled={locked} />

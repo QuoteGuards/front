@@ -5,9 +5,9 @@ import { formatKRW } from '../../utils/quoteUtils'
 
 const STATUS_STYLES = {
   '작성중': 'bg-gray-100 text-gray-600',
-  '발행':   'bg-blue-100 text-blue-700',
-  '승인':   'bg-emerald-100 text-emerald-700',
-  '만료':   'bg-red-100 text-red-500',
+  '발행': 'bg-blue-100 text-blue-700',
+  '승인': 'bg-emerald-100 text-emerald-700',
+  '만료': 'bg-red-100 text-red-500',
 }
 
 const StatusBadge = ({ status }) => (
@@ -55,11 +55,10 @@ const QuoteListPage = () => {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${
-                statusFilter === s
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${statusFilter === s
+                ? 'bg-violet-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'
+                }`}
             >
               {s}
             </button>
@@ -98,8 +97,8 @@ const QuoteListPage = () => {
                   filtered.map((q) => (
                     <tr
                       key={q.id}
-                      onClick={() => navigate(`/quotes/${q.id}/preview`)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/quotes/${q.id}/preview`) }}
+                      onClick={() => navigate(`/quotes/${q.dbId}/detail`)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/quotes/${q.dbId}/detail`) }}
                       tabIndex={0}
                       className="hover:bg-violet-50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500"
                     >
