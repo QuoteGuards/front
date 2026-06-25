@@ -13,6 +13,7 @@ import LoginPage from '../pages/login/LoginPage'
 import SignupPage from '../pages/signup/SignupPage'
 import SignupPendingPage from '../pages/signup/SignupPendingPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
+import DashboardPage from '../pages/dashboard/DashboardPage'
 
 const Layout = ({ children }) => (
   <div className="flex min-h-screen">
@@ -38,7 +39,7 @@ export default function AppRouter() {
       <Route path="/quotes/:id/preview" element={<ProtectedRoute><Layout><QuotePreviewPage /></Layout></ProtectedRoute>} />
       <Route path="/quotes/:id/excel" element={<ProtectedRoute><Layout><ExcelDownloadPage /></Layout></ProtectedRoute>} />
       <Route path="/analysis" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">내부 견적 분석 (준비 중)</div></Layout></ProtectedRoute>} />
-      <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} />
+      <Route path="/products" element={<ProtectedRoute><Layout><div className="p-8 text-gray-400">제품 담당 (준비 중)</div></Layout></ProtectedRoute>} /><Route path="/dashboard" element={<ProtectedRoute><Layout><DashboardPage /></Layout></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Layout><HistoryPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/approval" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><AdminApprovalPage /></Layout></ProtectedRoute>} />
       <Route path="/staff/approval" element={<ProtectedRoute roles={['SALES_STAFF']}><Layout><StaffApprovalPage /></Layout></ProtectedRoute>} />

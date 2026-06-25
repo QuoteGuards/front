@@ -8,6 +8,7 @@ const Sidebar = () => {
   const { canWriteQuote, loading } = useTrainingStatus()
 
   const NAV_ITEMS = [
+    { label: '대시보드', path: '/dashboard' },
     { label: '내부 견적 분석', path: '/analysis' },
     {
       label: '견적 작성',
