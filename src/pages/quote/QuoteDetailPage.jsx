@@ -31,6 +31,23 @@ const STATUS_STYLE = {
     CANCELLED: 'bg-gray-100 text-gray-400',
 }
 
+// APPROVAL_PENDING 상태는 "승인이 필요하다고 판정됨"만 의미하고
+// 실제 승인 요청(ApprovalRequest)을 보냈는지는 별도로 이력을 봐야 알 수 있음
+const hasSubmittedApprovalRequest = (histories) => {
+    if (!histories || histories.length === 0) return false
+    const sorted = [...histories].sort((a, b) => new Date(a.actedAt) - new Date(b.actedAt))
+    const last = sorted[sorted.length - 1]
+    return last.action === 'REQUESTED' || last.action === 'RE_REQUESTED'
+}
+
+// REVISING 상태일 때, 정말 반려를 거쳐서 왔는지 + 반려 사유 확인용
+const getLastRejection = (histories) => {
+    if (!histories || histories.length === 0) return null
+    const sorted = [...histories].sort((a, b) => new Date(a.actedAt) - new Date(b.actedAt))
+    const last = sorted[sorted.length - 1]
+    return last.action === 'REJECTED' ? last : null
+}
+
 const ACTION_LABEL = {
     REQUESTED: '승인 요청',
     APPROVED: '승인 완료',
@@ -159,13 +176,26 @@ const QuoteDetailPage = () => {
                             견적번호: {quote.quoteNumber} · 작성일: {quote.createdAt?.slice(0, 10)} · 유효기간: {quote.validUntil ?? '-'}
                         </p>
                     </div>
-                    <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${STATUS_STYLE[quote.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                        {STATUS_LABEL[quote.status] ?? quote.status}
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${quote.status === 'REVISING' && getLastRejection(histories)
+                        ? 'bg-red-100 text-red-600'
+                        : STATUS_STYLE[quote.status] ?? 'bg-gray-100 text-gray-500'
+                        }`}>
+                        {quote.status === 'APPROVAL_PENDING'
+                            ? (hasSubmittedApprovalRequest(histories) ? '승인 대기중 (요청됨)' : '승인 필요 (요청 전)')
+                            : quote.status === 'REVISING' && getLastRejection(histories)
+                                ? '반려됨 (수정 필요)'
+                                : (STATUS_LABEL[quote.status] ?? quote.status)}
                     </span>
                 </div>
             </div>
 
             <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+                {quote.status === 'REVISING' && getLastRejection(histories) && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                        <p className="font-semibold">✗ 반려 사유</p>
+                        <p className="mt-0.5 text-xs">{getLastRejection(histories).memo || '사유 없음'}</p>
+                    </div>
+                )}
                 {quote.approvalRequired && (quote.approvalReasons ?? []).length > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
                         <p className="font-semibold">⚠ 승인 필요 사유</p>
@@ -284,7 +314,7 @@ const QuoteDetailPage = () => {
                 <div className="flex flex-wrap justify-center gap-3 pt-2">
                     {isEditable && (
                         <button onClick={() => navigate(`/quotes/new?id=${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
-                            이어 작성
+                            다시 작성
                         </button>
                     )}
                     <button onClick={() => navigate(`/quotes/analysis/${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
