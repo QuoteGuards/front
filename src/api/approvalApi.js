@@ -36,6 +36,10 @@ export const rejectQuote = (quoteId, approvalRequestId, rejectReason) =>
 export const reRequestApproval = (quoteId, approvalRequestId, requestMemo) =>
   apiClient.post(`/api/quotes/${quoteId}/resubmit`, { approvalRequestId, requestMemo })
 
+// 승인 요청 메모 수정 (PENDING 상태일 때만)
+export const updateApprovalMemo = (quoteId, approvalRequestId, requestMemo) =>
+  apiClient.patch(`/api/quotes/${quoteId}/approval-requests/${approvalRequestId}/memo`, { requestMemo })
+
 // 승인 이력 조회
 export const getApprovalHistories = (quoteId) =>
   apiClient.get(`/api/quotes/${quoteId}/approval-histories`)
@@ -43,3 +47,4 @@ export const getApprovalHistories = (quoteId) =>
 // 승인 사유 조회
 export const getApprovalReasons = (quoteId) =>
   apiClient.get(`/api/quotes/${quoteId}/approval-reasons`)
+
