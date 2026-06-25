@@ -136,7 +136,8 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
                                             <td className="px-3 py-2 text-right">
                                                 <button
                                                     onClick={() => handlePick(item)}
-                                                    disabled={pickingId === item.id}
+                                                    //pickingId가 null이 아니면(무언가를 로딩 중이라면) 모든 선택 버튼 비활성화
+                                                    disabled={pickingId !== null}
                                                     className="text-violet-600 hover:underline font-medium disabled:opacity-50"
                                                 >
                                                     {pickingId === item.id ? '불러오는 중...' : '선택'}

@@ -8,7 +8,11 @@ import { getQuoteWritingGuide, confirmQuoteWritingGuide } from '../../api/guideA
 import { createQuote, updateQuote, completeQuote, getQuoteById } from '../../api/quoteApi'
 
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+}
 
 // 제품 탐색 연동 전 임시 단일 항목 ( 제품 API 연동 시 실제 제품탐색으로 교체)
 // ⚠️ 팀원 각자 로컬 DB에 아래 productId/discountPolicyId가 맞는 데이터로 존재해야 함.
@@ -285,7 +289,20 @@ const QuoteWritePage = () => {
                                         max={100}
                                         step={0.1}
                                         value={discountRate}
-                                        onChange={(e) => setDiscountRate(e.target.value)}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+
+                                            if (val === '') {
+                                                setDiscountRate('');
+                                                return;
+                                            }
+
+                                            const num = parseFloat(val);
+                                            if (!Number.isFinite(num)) return;
+
+                                            const clamped = Math.min(100, Math.max(0, num));
+                                            setDiscountRate(clamped);
+                                        }}
                                         className={`w-16 border rounded text-center px-1 py-1 ${hasDiscount ? 'border-amber-400 bg-amber-50' : ''}`}
                                     />
                                     <p className="text-[10px] text-gray-300 mt-0.5">최대 {TEMP_ITEM.maxDiscountRate}%</p>

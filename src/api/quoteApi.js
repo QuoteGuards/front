@@ -7,7 +7,7 @@ import { calcQuoteSummary } from '../utils/quoteUtils'
  */
 const toQuoteCreatePayload = (form) => ({
   customerId: form.customer.id,
-  discountPolicyId: 1, // TODO: 제품 탐색 연동 전 임시 고정값 (product_id=6용 테스트 정책 id). 연동 후 선택된 제품의 정책으로 교체 필요
+  discountPolicyId: form.discountPolicyId, // form에서 받은 값을 사용하도록 변경
   issuedDate: form.issuedDate,
   validUntil: form.validUntil || null,
   deliveryTerm: form.deliveryTerm,

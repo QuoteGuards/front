@@ -273,8 +273,8 @@ const QuoteDetailPage = () => {
                         <p className="text-sm text-gray-400">승인 요청 이력이 없습니다.</p>
                     ) : (
                         <ul className="space-y-2">
-                            {histories.map((h, idx) => (
-                                <li key={idx} className="flex items-start justify-between text-sm border-b border-gray-100 pb-2 last:border-0">
+                            {histories.map((h) => (
+                                <li key={h.id} className="flex items-start justify-between text-sm border-b border-gray-100 pb-2 last:border-0">
                                     <div>
                                         <span className="font-medium text-gray-700">{ACTION_LABEL[h.action] ?? h.action}</span>
                                         {h.memo && <p className="text-xs text-gray-500 mt-0.5">{h.memo}</p>}

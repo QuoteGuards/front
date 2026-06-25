@@ -89,12 +89,14 @@ const QuoteInternalAnalysisPage = () => {
             }
             setApprovalStatus('PENDING')
         } catch (e) {
-            const message = e?.response?.data?.message ?? '승인 요청 중 오류가 발생했습니다.'
-            if (message.includes('이미 승인 대기 중')) {
-                // 이미 요청이 가 있는 상태 — 에러가 아니라 정상적인 "이미 요청됨" 상태로 처리
-                setApprovalStatus('PENDING')
+            const status = e.response?.status;
+            const message = e.response?.data?.message;
+
+            // 예: 409 Conflict 상태 코드라면 승인 대기 중으로 판단
+            if (status === 409) {
+                setApprovalStatus('PENDING');
             } else {
-                setError(message)
+                setError(message || '승인 요청 중 오류가 발생했습니다.');
             }
         } finally {
             setSubmitting(false)
@@ -159,7 +161,7 @@ const QuoteInternalAnalysisPage = () => {
                             <tr>{['제품명', '판매가', '원가', '수량', '할인율', '공급가', '이익금/이익률'].map((h) => <th key={h} className="py-3 font-medium">{h}</th>)}</tr>
                         </thead>
                         <tbody>
-                            {analysis.items.map((item) => {
+                            {(analysis.items ?? []).map((item) => {
                                 const lineCost = item.costPrice * item.quantity
                                 const lineProfit = item.lineSupplyAmount - lineCost
                                 const lineProfitRate = item.lineSupplyAmount === 0 ? 0 : (lineProfit / item.lineSupplyAmount) * 100
