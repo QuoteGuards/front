@@ -1,0 +1,48 @@
+import apiClient from './apiClient';
+
+/**
+ * POST /api/admin/users
+ * 관리자가 신규 사원 계정을 생성합니다.
+ * @param {{ name, department, position, phone, role }} payload
+ */
+export async function createUserApi(payload) {
+  const response = await apiClient.post('/api/admin/users', payload);
+  return response.data;
+}
+
+/**
+ * GET /api/admin/users
+ * 사용자 목록 조회 (role, status, keyword 필터 + 페이징)
+ */
+export async function getUserListApi({ role, status, keyword, page = 0, size = 20 } = {}) {
+  const params = { page, size };
+  if (role) params.role = role;
+  if (status) params.status = status;
+  if (keyword) params.keyword = keyword;
+  const response = await apiClient.get('/api/admin/users', { params });
+  return response.data;
+}
+
+/**
+ * PATCH /api/admin/users/:userId/suspend
+ */
+export async function suspendUserApi(userId) {
+  const response = await apiClient.patch(`/api/admin/users/${userId}/suspend`);
+  return response.data;
+}
+
+/**
+ * PATCH /api/admin/users/:userId/reactivate
+ */
+export async function reactivateUserApi(userId) {
+  const response = await apiClient.patch(`/api/admin/users/${userId}/reactivate`);
+  return response.data;
+}
+
+/**
+ * PATCH /api/admin/users/:userId/role
+ */
+export async function changeUserRoleApi(userId, role) {
+  const response = await apiClient.patch(`/api/admin/users/${userId}/role`, { role });
+  return response.data;
+}
