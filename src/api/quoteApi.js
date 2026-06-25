@@ -1,9 +1,112 @@
 import apiClient from './apiClient'
 import { calcQuoteSummary } from '../utils/quoteUtils'
 
+/**
+ * 프론트 견적 작성 폼 상태 → QuoteCreateRequest payload 변환
+ * @param {{customer: object, items: Array, issuedDate: string, validUntil: string, deliveryTerm: string, memo: string}} form
+ */
+const toQuoteCreatePayload = (form) => ({
+  customerId: form.customer.id,
+  discountPolicyId: form.discountPolicyId, // form에서 받은 값을 사용하도록 변경
+  issuedDate: form.issuedDate,
+  validUntil: form.validUntil || null,
+  deliveryTerm: form.deliveryTerm,
+  internalMemo: form.memo || null,
+  items: form.items.map((item) => ({
+    productId: item.productId ?? null,
+    productName: item.productName,
+    productCode: item.productCode || null,
+    spec: item.spec || '-',
+    unitPrice: item.unitPrice,
+    costPrice: item.costPrice,
+    quantity: item.quantity,
+    discountRate: item.discountRate ?? 0,
+    vatApplicable: item.vatApplicable,
+    discountReason: item.discountReason || null,
+  })),
+})
+
+/**
+ * POST /api/quotes - 견적 작성(임시저장)
+ * @returns {Promise<object>} QuoteDetailResponse (id, quoteNumber 포함)
+ */
+export const createQuote = async (form) => {
+  const { data } = await apiClient.post('/api/quotes', toQuoteCreatePayload(form))
+  return data?.data
+}
+
+/**
+ * PATCH /api/quotes/{quoteId} - 견적 수정 (DRAFT/REVISING 상태만 가능)
+ * QuoteUpdateRequest는 discountPolicyId가 없음 (생성 시에만 지정)
+ */
+export const updateQuote = async (quoteId, form) => {
+  const payload = {
+    customerId: form.customer.id,
+    internalMemo: form.memo || null,
+    issuedDate: form.issuedDate,
+    validUntil: form.validUntil || null,
+    deliveryTerm: form.deliveryTerm,
+    items: form.items.map((item) => ({
+      productId: item.productId ?? null,
+      productName: item.productName,
+      productCode: item.productCode || null,
+      spec: item.spec || '-',
+      unitPrice: item.unitPrice,
+      costPrice: item.costPrice,
+      quantity: item.quantity,
+      discountRate: item.discountRate ?? 0,
+      vatApplicable: item.vatApplicable,
+      discountReason: item.discountReason || null,
+    })),
+  }
+  const { data } = await apiClient.patch(`/api/quotes/${quoteId}`, payload)
+  return data?.data
+}
+
+/**
+ * GET /api/quotes/{quoteId} - 견적 상세 조회 (원본 응답 그대로 반환, 폼 복원용)
+ * toQuote()처럼 화면 표시용으로 가공하지 않고 discountRate/discountReason 등 원본 필드 유지
+ */
+export const getQuoteById = async (quoteId) => {
+  const { data } = await apiClient.get(`/api/quotes/${quoteId}`)
+  return data?.data
+}
+
+/**
+ * GET /api/quotes/{quoteId}/internal-analysis - 내부 견적 분석 (원가/이익률/승인사유 포함)
+ */
+export const getInternalAnalysis = async (quoteId) => {
+  const { data } = await apiClient.get(`/api/quotes/${quoteId}/internal-analysis`)
+  return data?.data
+}
+
+/**
+ * POST /api/quotes/{quoteId}/reuse - 최근 견적 재사용 (동일 내용, 새 견적번호)
+ */
+export const reuseQuote = async (quoteId) => {
+  const { data } = await apiClient.post(`/api/quotes/${quoteId}/reuse`)
+  return data?.data
+}
+
+/**
+ * POST /api/quotes/{quoteId}/rewrite - 만료 견적 재작성 (버전 증가, 최신 단가로 재계산)
+ */
+export const rewriteQuote = async (quoteId) => {
+  const { data } = await apiClient.post(`/api/quotes/${quoteId}/rewrite`)
+  return data?.data
+}
+
+/**
+ * POST /api/quotes/{quoteId}/complete - 견적 제출(승인 필요 판단 포함)
+ */
+export const completeQuote = async (quoteId) => {
+  const { data } = await apiClient.post(`/api/quotes/${quoteId}/complete`)
+  return data?.data
+}
+
 // Backend QuoteDetailResponse → frontend model
 // 백엔드는 고객 정보를 평탄화(companyName 등 최상위)하고, 자사 정보만 company로 중첩한다.
-const toQuote = (data) => ({
+export const toQuote = (data) => ({
   id: data.quoteNumber,
   status: data.status,
   createdAt: data.issuedDate,
@@ -45,6 +148,7 @@ export const getQuote = async (id) => {
 
 const toQuoteSummary = (data) => ({
   id: data.quoteNumber,
+  dbId: data.id, // 숫자 PK - 내부분석/상세조회 API에 필요
   status: data.status,
   createdAt: data.createdAt,
   validUntil: data.validUntil,
