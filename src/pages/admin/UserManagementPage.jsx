@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react'
 import Button from '../../components/common/Button'
 import UserCreateModal from '../../components/admin/UserCreateModal'
-import { getUserListApi, suspendUserApi, reactivateUserApi } from '../../api/userManagementApi'
+import UserDetailModal from '../../components/admin/UserDetailModal'
+import { getUserListApi } from '../../api/userManagementApi'
 
 const STATUS_LABEL = {
-  APPROVED: '활성',
-  PENDING: '승인 대기',
+  ACTIVE: '활성',
   SUSPENDED: '정지',
-  REJECTED: '반려',
+  DELETED: '삭제됨',
 }
 const STATUS_CLASS = {
-  APPROVED: 'bg-emerald-50 text-emerald-700',
-  PENDING: 'bg-yellow-50 text-yellow-700',
+  ACTIVE: 'bg-emerald-50 text-emerald-700',
   SUSPENDED: 'bg-red-50 text-red-600',
-  REJECTED: 'bg-gray-100 text-gray-500',
+  DELETED: 'bg-gray-100 text-gray-400',
 }
 const ROLE_LABEL = {
   SUPER_ADMIN: '최고 관리자',
@@ -21,17 +20,25 @@ const ROLE_LABEL = {
   SALES_STAFF: '영업 사원',
 }
 
+const SEARCH_TYPE_OPTIONS = [
+  { value: 'all', label: '통합 검색' },
+  { value: 'name', label: '이름' },
+  { value: 'email', label: '이메일' },
+  { value: 'memberNumber', label: '사원번호' },
+]
+
 export default function UserManagementPage() {
   const [users, setUsers] = useState([])
   const [totalPages, setTotalPages] = useState(0)
   const [page, setPage] = useState(0)
+  const [searchType, setSearchType] = useState('all')
   const [keyword, setKeyword] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [actionLoading, setActionLoading] = useState(null)
-  // refetch 카운터: increment 시 useEffect가 재실행됨
+  const [selectedUser, setSelectedUser] = useState(null)
   const [fetchTick, setFetchTick] = useState(0)
 
   const refetch = () => setFetchTick((t) => t + 1)
@@ -43,12 +50,12 @@ export default function UserManagementPage() {
       setLoading(true)
       setError('')
       try {
-        const res = await getUserListApi({
-          keyword,
-          status: statusFilter || undefined,
-          page,
-          size: 20,
-        })
+        const params = { page, size: 20 }
+        if (statusFilter) params.status = statusFilter
+        if (roleFilter) params.role = roleFilter
+        if (keyword.trim()) params.keyword = keyword.trim()
+
+        const res = await getUserListApi(params)
         if (!cancelled) {
           setUsers(res.data?.content ?? [])
           setTotalPages(res.data?.totalPages ?? 0)
@@ -64,28 +71,27 @@ export default function UserManagementPage() {
 
     load()
     return () => { cancelled = true }
-  }, [keyword, statusFilter, page, fetchTick])
+  }, [keyword, roleFilter, statusFilter, page, fetchTick])
 
-  const handleToggleStatus = async (user) => {
-    const isSuspended = user.status === 'SUSPENDED'
-    setActionLoading(user.id)
-    try {
-      if (isSuspended) {
-        await reactivateUserApi(user.id)
-      } else {
-        await suspendUserApi(user.id)
-      }
-      refetch()
-    } catch (err) {
-      alert(err?.response?.data?.message ?? '처리에 실패했습니다.')
-    } finally {
-      setActionLoading(null)
-    }
+  const handleKeywordChange = (e) => {
+    setKeyword(e.target.value)
+    setPage(0)
   }
+
+  const handleSearchTypeChange = (e) => {
+    setSearchType(e.target.value)
+    setKeyword('')
+    setPage(0)
+  }
+
+  const searchPlaceholder =
+    searchType === 'name' ? '이름 검색' :
+    searchType === 'email' ? '이메일 검색' :
+    searchType === 'memberNumber' ? '사원번호 검색' :
+    '이름, 이메일, 사원번호'
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-lg font-semibold text-gray-800">사용자 관리</h1>
         <Button
@@ -102,16 +108,42 @@ export default function UserManagementPage() {
         </Button>
       </div>
 
-      {/* 필터 */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <input
-          type="search"
-          placeholder="이름 또는 이메일 검색"
-          value={keyword}
-          onChange={(e) => { setKeyword(e.target.value); setPage(0) }}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="사용자 검색"
-        />
+        <div className="flex">
+          <label htmlFor="search-type" className="sr-only">검색 기준</label>
+          <select
+            id="search-type"
+            value={searchType}
+            onChange={handleSearchTypeChange}
+            className="border border-gray-300 border-r-0 rounded-l-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10"
+          >
+            {SEARCH_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <label htmlFor="keyword-input" className="sr-only">검색어</label>
+          <input
+            id="keyword-input"
+            type="search"
+            placeholder={searchPlaceholder}
+            value={keyword}
+            onChange={handleKeywordChange}
+            className="border border-gray-300 rounded-r-lg px-3 py-1.5 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <select
+          value={roleFilter}
+          onChange={(e) => { setRoleFilter(e.target.value); setPage(0) }}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="권한 필터"
+        >
+          <option value="">전체 권한</option>
+          <option value="SUPER_ADMIN">최고 관리자</option>
+          <option value="SALES_MANAGER">영업 관리자</option>
+          <option value="SALES_STAFF">영업 사원</option>
+        </select>
+
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(0) }}
@@ -119,20 +151,18 @@ export default function UserManagementPage() {
           aria-label="상태 필터"
         >
           <option value="">전체 상태</option>
-          <option value="APPROVED">활성</option>
-          <option value="PENDING">승인 대기</option>
+          <option value="ACTIVE">활성</option>
           <option value="SUSPENDED">정지</option>
+          <option value="DELETED">삭제됨</option>
         </select>
       </div>
 
-      {/* 에러 */}
       {error && (
         <div role="alert" className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
           {error}
         </div>
       )}
 
-      {/* 테이블 */}
       {loading ? (
         <div className="text-center py-16 text-gray-400 text-sm">불러오는 중...</div>
       ) : users.length === 0 ? (
@@ -148,12 +178,15 @@ export default function UserManagementPage() {
                 <th className="text-left px-4 py-3 font-medium hidden md:table-cell">부서 / 직급</th>
                 <th className="text-left px-4 py-3 font-medium">권한</th>
                 <th className="text-left px-4 py-3 font-medium">상태</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                <tr
+                  key={u.id}
+                  onClick={() => setSelectedUser(u)}
+                  className="hover:bg-blue-50 cursor-pointer transition-colors"
+                >
                   <td className="px-4 py-3 font-medium text-gray-800">{u.name}</td>
                   <td className="px-4 py-3 text-gray-600 font-mono text-xs">{u.memberNumber ?? '-'}</td>
                   <td className="px-4 py-3 text-gray-600 truncate max-w-[180px]" title={u.email}>{u.email}</td>
@@ -162,26 +195,9 @@ export default function UserManagementPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{ROLE_LABEL[u.role] ?? u.role}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASS[u.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                    <span className={'inline-block px-2 py-0.5 rounded-full text-xs font-medium ' + (STATUS_CLASS[u.status] ?? 'bg-gray-100 text-gray-500')}>
                       {STATUS_LABEL[u.status] ?? u.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {(u.status === 'APPROVED' || u.status === 'SUSPENDED') && (
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(u)}
-                        disabled={actionLoading === u.id}
-                        className={[
-                          'text-xs px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50',
-                          u.status === 'SUSPENDED'
-                            ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                            : 'text-red-600 bg-red-50 hover:bg-red-100',
-                        ].join(' ')}
-                      >
-                        {actionLoading === u.id ? '...' : u.status === 'SUSPENDED' ? '재활성화' : '정지'}
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -190,7 +206,6 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* 페이지네이션 */}
       {totalPages > 1 && (
         <div className="flex justify-center gap-1 mt-4">
           <button
@@ -213,11 +228,18 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* 계정 생성 모달 */}
       {showCreateModal && (
         <UserCreateModal
           onClose={() => setShowCreateModal(false)}
           onCreated={refetch}
+        />
+      )}
+
+      {selectedUser && (
+        <UserDetailModal
+          user={selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onUpdated={() => { refetch(); setSelectedUser(null) }}
         />
       )}
     </div>
