@@ -24,6 +24,10 @@ export const getApprovalDetail = (approvalRequestId) =>
 export const getPendingList = () =>
   apiClient.get('/api/admin/approval-requests')
 
+// 이달 승인/반려 통계 (관리자)
+export const getApprovalMonthlyStats = () =>
+  apiClient.get('/api/admin/approval-requests/stats')
+
 // 승인 처리 (관리자)
 export const approveQuote = (quoteId, approvalRequestId, memo) =>
   apiClient.post(`/api/admin/quotes/${quoteId}/approve`, { approvalRequestId, memo })
