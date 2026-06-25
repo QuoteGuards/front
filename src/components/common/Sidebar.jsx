@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
+import { logoutApi } from '../../api/authApi'
 
 const Sidebar = () => {
   const { user, logout } = useAuth()
@@ -18,8 +19,8 @@ const Sidebar = () => {
     { label: '내 견적 목록', path: '/quotes' },
     { label: '제품 담당', path: '/products' },
     { label: '발송 이력', path: '/history' },
-    { label: '승인 요청', path: '/approval/staff' },
-    { label: '승인 관리', path: '/approval/admin' },
+    { label: '승인 요청', path: '/staff/approval' },
+    { label: '승인 관리', path: '/admin/approval' },
     ...(isAdmin ? [{ label: '사용자 관리', path: '/admin/users' }] : []),
     {
       label: '교육 이수',
@@ -28,9 +29,15 @@ const Sidebar = () => {
     },
   ]
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
+  const handleLogout = async () => {
+    try {
+      await logoutApi()
+    } catch {
+      // proceed with client-side logout even if server call fails
+    } finally {
+      logout()
+      navigate('/login', { replace: true })
+    }
   }
 
   return (

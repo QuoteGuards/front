@@ -1,5 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
-import { AuthContext, TOKEN_KEY, MUST_CHANGE_PASSWORD_KEY, getStoredToken, buildUser } from './AuthContext';
+import {
+  AuthContext,
+  TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  MUST_CHANGE_PASSWORD_KEY,
+  getStoredToken,
+  buildUser,
+} from './AuthContext';
 import { isTokenExpired } from '../utils/jwt';
 
 export function AuthProvider({ children }) {
@@ -10,8 +17,13 @@ export function AuthProvider({ children }) {
 
   const user = useMemo(() => buildUser(token), [token]);
 
-  const login = useCallback((accessToken, mustChange = false) => {
+  const login = useCallback((accessToken, refreshToken, mustChange = false) => {
     localStorage.setItem(TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
     setToken(accessToken);
     if (mustChange) {
       localStorage.setItem(MUST_CHANGE_PASSWORD_KEY, 'true');
@@ -21,8 +33,14 @@ export function AuthProvider({ children }) {
     setMustChangePassword(mustChange);
   }, []);
 
+  const updateAccessToken = useCallback((newAccessToken) => {
+    localStorage.setItem(TOKEN_KEY, newAccessToken);
+    setToken(newAccessToken);
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(MUST_CHANGE_PASSWORD_KEY);
     setToken(null);
     setMustChangePassword(false);
@@ -39,11 +57,12 @@ export function AuthProvider({ children }) {
       user,
       login,
       logout,
+      updateAccessToken,
       isAuthenticated: !!token && !isTokenExpired(token),
       mustChangePassword,
       clearMustChangePassword,
     }),
-    [token, user, login, logout, mustChangePassword, clearMustChangePassword]
+    [token, user, login, logout, updateAccessToken, mustChangePassword, clearMustChangePassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

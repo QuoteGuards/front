@@ -58,7 +58,11 @@ export default function LoginPage() {
         const resData = await loginApi(email, password);
 
         if (resData?.data?.accessToken) {
-          login(resData.data.accessToken, resData.data.mustChangePassword ?? false);
+          login(
+            resData.data.accessToken,
+            resData.data.refreshToken ?? null,
+            resData.data.mustChangePassword ?? false
+          );
 
           const prev = location.state?.from;
           const from = prev
@@ -213,6 +217,7 @@ function EyeIcon() {
     </svg>
   );
 }
+
 function EyeOffIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -220,6 +225,7 @@ function EyeOffIcon() {
     </svg>
   );
 }
+
 function ErrorIcon() {
   return (
     <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -227,6 +233,7 @@ function ErrorIcon() {
     </svg>
   );
 }
+
 function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
