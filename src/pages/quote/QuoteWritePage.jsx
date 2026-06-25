@@ -10,23 +10,52 @@ import { createQuote, updateQuote, completeQuote, getQuoteById } from '../../api
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
 const today = () => new Date().toISOString().slice(0, 10)
 
-// 제품 탐색 연동 전 임시 단일 항목 (수량만 편집 가능, 나머지는 2번 팀원 API 연동 시 교체)
-// 제품 탐색 연동 전 임시 단일 항목 (2번 팀원 API 연동 시 실제 제품 데이터로 교체)
-// originalDiscountRate: DB(discount_policy 등)에 저장된 해당 제품의 기본 할인율 — 영업사원이 변경해도 DB엔 반영 안 됨
-// maxStock: 해당 제품의 재고/최대 주문 가능 수량 (연동 전 임시값) => 본인 DB에 있는 제품 아이디로 테스트
-const TEMP_ITEM = {
-    productId: 6,
-    productName: '제품 A',
-    productCode: '',
-    spec: '-',
-    unitPrice: 100000,
-    costPrice: 70000,
-    originalDiscountRate: 10, // DB 기본 할인율 (참고 표시용)
-    maxDiscountRate: 10,
-    minProfitRate: 20,
-    maxStock: 50,
-    vatApplicable: true,
-}
+// 제품 탐색 연동 전 임시 하드코딩 목록 (2번 팀원 API 연동 시 실제 제품탐색으로 교체)
+// discountPolicyId는 discount_policies 테이블 확인 결과 기준:
+//   - productId=1 (엔터프라이즈 서버 S1) → 단독 정책(id=1, "기본 영업 정책", PRODUCT 타입)
+//   - productId=2 (보안 패키지 V2)        → 소프트웨어 카테고리 정책(id=2, CATEGORY 타입, category_id=2)
+//   - productId=4 (ERP 솔루션 라이선스)    → 위와 동일하게 소프트웨어 카테고리 정책(id=2) 공유
+const PRODUCTS = [
+    {
+        productId: 1,
+        productName: '엔터프라이즈 서버 S1',
+        productCode: 'SRV-001',
+        spec: 'Intel Xeon 32Core / 128GB RAM',
+        unitPrice: 5000000.00,
+        costPrice: 3500000.00,
+        maxDiscountRate: 15.00,
+        minProfitRate: 20.00,
+        discountPolicyId: 1, // 기본 영업 정책 (PRODUCT, product_id=1)
+        maxStock: 50,
+        vatApplicable: true,
+    },
+    {
+        productId: 2,
+        productName: '보안 패키지 V2',
+        productCode: 'SEC-V2',
+        spec: '200 유저 라이센스 / 1년 갱신형',
+        unitPrice: 1500000.00,
+        costPrice: 900000.00,
+        maxDiscountRate: 15.00,
+        minProfitRate: 20.00,
+        discountPolicyId: 2, // 소프트웨어 카테고리 정책 (CATEGORY, category_id=2)
+        maxStock: 50,
+        vatApplicable: true,
+    },
+    {
+        productId: 4,
+        productName: 'ERP 솔루션 라이선스',
+        productCode: 'ERP-LIC',
+        spec: '50 유저 라이센스 / 영구형',
+        unitPrice: 3000000.00,
+        costPrice: 1800000.00,
+        maxDiscountRate: 15.00,
+        minProfitRate: 20.00,
+        discountPolicyId: 2, // 소프트웨어 카테고리 정책 (CATEGORY, category_id=2) - 제품2와 동일 정책 공유
+        maxStock: 50,
+        vatApplicable: true,
+    },
+]
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 
@@ -46,16 +75,28 @@ const QuoteWritePage = () => {
     const [issuedDate, setIssuedDate] = useState(today())
     const [validUntil, setValidUntil] = useState('')
     const [deliveryTerm, setDeliveryTerm] = useState('')
+
+    const [selectedProductId, setSelectedProductId] = useState(PRODUCTS[0].productId)
+    const selectedProduct = PRODUCTS.find((p) => p.productId === selectedProductId) ?? PRODUCTS[0]
+
     const [quantity, setQuantity] = useState(1)
-    const [discountRate, setDiscountRate] = useState(TEMP_ITEM.originalDiscountRate)
+    const [discountRate, setDiscountRate] = useState(0)
     const [discountReason, setDiscountReason] = useState('')
 
-    const lineSupplyPreview = TEMP_ITEM.unitPrice * quantity * (1 - Number(discountRate) / 100)
-    const lineCostPreview = TEMP_ITEM.costPrice * quantity
+    // 제품을 바꾸면 할인율/사유는 새 제품 기준으로 초기화
+    const handleProductChange = (productId) => {
+        setSelectedProductId(Number(productId))
+        setQuantity(1)
+        setDiscountRate(0)
+        setDiscountReason('')
+    }
+
+    const lineSupplyPreview = selectedProduct.unitPrice * quantity * (1 - Number(discountRate) / 100)
+    const lineCostPreview = selectedProduct.costPrice * quantity
     const profitRatePreview = lineSupplyPreview === 0 ? 0 : ((lineSupplyPreview - lineCostPreview) / lineSupplyPreview) * 100
 
-    const exceedsMaxDiscount = Number(discountRate) > TEMP_ITEM.maxDiscountRate
-    const belowMinProfit = profitRatePreview < TEMP_ITEM.minProfitRate
+    const exceedsMaxDiscount = Number(discountRate) > selectedProduct.maxDiscountRate
+    const belowMinProfit = profitRatePreview < selectedProduct.minProfitRate
     const hasDiscount = exceedsMaxDiscount || belowMinProfit
 
     const [saving, setSaving] = useState(false)
@@ -90,8 +131,10 @@ const QuoteWritePage = () => {
 
                 const firstItem = (data.items ?? [])[0]
                 if (firstItem) {
+                    const matched = PRODUCTS.find((p) => p.productId === firstItem.productId)
+                    if (matched) setSelectedProductId(matched.productId)
                     setQuantity(Number(firstItem.quantity) || 1)
-                    setDiscountRate(Number(firstItem.discountRate ?? TEMP_ITEM.originalDiscountRate))
+                    setDiscountRate(Number(firstItem.discountRate ?? 0))
                     setDiscountReason(firstItem.discountReason ?? '')
                 }
 
@@ -149,8 +192,9 @@ const QuoteWritePage = () => {
         try {
             const form = {
                 customer,
+                discountPolicyId: selectedProduct.discountPolicyId,
                 items: [{
-                    ...TEMP_ITEM,
+                    ...selectedProduct,
                     quantity,
                     discountRate,
                     discountReason: hasDiscount ? discountReason : null,
@@ -192,8 +236,8 @@ const QuoteWritePage = () => {
     if (!canWriteQuote) return <QuoteAccessRestricted reason="TRAINING_NOT_COMPLETED" />
     if (restoring) return <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">이전 견적을 불러오는 중...</div>
 
-    const lineSupply = TEMP_ITEM.unitPrice * quantity * (1 - Number(discountRate) / 100)
-    const lineVat = TEMP_ITEM.vatApplicable ? Math.round(lineSupply * 0.1) : 0
+    const lineSupply = selectedProduct.unitPrice * quantity * (1 - Number(discountRate) / 100)
+    const lineVat = selectedProduct.vatApplicable ? Math.round(lineSupply * 0.1) : 0
     const lineTotal = lineSupply + lineVat
 
     const isLocked = !!savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)
@@ -229,20 +273,37 @@ const QuoteWritePage = () => {
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-sm font-bold text-gray-800">② 제품 선택</h2>
-                        <button disabled className="text-sm bg-gray-200 text-gray-400 px-4 py-1.5 rounded-lg font-medium cursor-not-allowed" title="제품 탐색 기능 연동 준비 중">
-                            + 제품 추가
-                        </button>
                     </div>
                     <p className="text-[11px] text-gray-400 mb-3">
-                        ※ 제품 탐색 연동 전 임시 항목입니다. 연동 후 "+ 제품 추가"로 DB 제품을 선택하면 수량/단가/할인율이 자동 채워지고, 수량은 재고 한도 내에서, 할인율은 자유롭게 조정 가능해집니다.
+                        ※ 제품 탐색 연동 전 임시 하드코딩 목록입니다. 연동 후 실제 제품탐색 화면으로 교체됩니다.
                     </p>
+
+                    <div className="mb-4">
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">제품 선택</label>
+                        <select
+                            value={selectedProductId}
+                            onChange={(e) => handleProductChange(e.target.value)}
+                            disabled={isLocked}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:bg-gray-100"
+                        >
+                            {PRODUCTS.map((p) => (
+                                <option key={p.productId} value={p.productId}>
+                                    {p.productName} ({p.productCode}) — {p.unitPrice.toLocaleString('ko-KR')}원
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     <table className="w-full text-sm text-center">
                         <thead className="bg-gray-50 text-gray-500">
-                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계', '삭제'].map((h) => <th key={h} className="py-3 font-medium">{h}</th>)}</tr>
+                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계'].map((h) => <th key={h} className="py-3 font-medium">{h}</th>)}</tr>
                         </thead>
                         <tbody>
                             <tr className="border-t border-gray-100">
-                                <td className="py-3 text-left">{TEMP_ITEM.productName}</td>
+                                <td className="py-3 text-left">
+                                    {selectedProduct.productName}
+                                    <p className="text-[10px] text-gray-400">{selectedProduct.spec}</p>
+                                </td>
                                 <td>
                                     <div className="inline-flex items-center gap-1">
                                         <button
@@ -255,25 +316,25 @@ const QuoteWritePage = () => {
                                         <input
                                             type="number"
                                             min={1}
-                                            max={TEMP_ITEM.maxStock}
+                                            max={selectedProduct.maxStock}
                                             value={quantity}
                                             onChange={(e) =>
-                                                setQuantity(Math.min(TEMP_ITEM.maxStock, Math.max(1, Number(e.target.value) || 1)))
+                                                setQuantity(Math.min(selectedProduct.maxStock, Math.max(1, Number(e.target.value) || 1)))
                                             }
                                             className="w-12 border rounded text-center px-1 py-1"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => setQuantity((q) => Math.min(TEMP_ITEM.maxStock, q + 1))}
-                                            disabled={quantity >= TEMP_ITEM.maxStock}
+                                            onClick={() => setQuantity((q) => Math.min(selectedProduct.maxStock, q + 1))}
+                                            disabled={quantity >= selectedProduct.maxStock}
                                             className="w-6 h-6 rounded border border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
                                         >
                                             +
                                         </button>
                                     </div>
-                                    <p className="text-[10px] text-gray-300 mt-0.5">최대 {TEMP_ITEM.maxStock}개</p>
+                                    <p className="text-[10px] text-gray-300 mt-0.5">최대 {selectedProduct.maxStock}개</p>
                                 </td>
-                                <td>{TEMP_ITEM.unitPrice.toLocaleString('ko-KR')}</td>
+                                <td>{selectedProduct.unitPrice.toLocaleString('ko-KR')}</td>
                                 <td>
                                     <input
                                         type="number"
@@ -284,12 +345,11 @@ const QuoteWritePage = () => {
                                         onChange={(e) => setDiscountRate(e.target.value)}
                                         className={`w-16 border rounded text-center px-1 py-1 ${hasDiscount ? 'border-amber-400 bg-amber-50' : ''}`}
                                     />
-                                    <p className="text-[10px] text-gray-300 mt-0.5">최대 {TEMP_ITEM.maxDiscountRate}%</p>
+                                    <p className="text-[10px] text-gray-300 mt-0.5">최대 {selectedProduct.maxDiscountRate}%</p>
                                 </td>
                                 <td>{Math.round(lineSupply).toLocaleString('ko-KR')}</td>
                                 <td>{lineVat.toLocaleString('ko-KR')}</td>
                                 <td>{Math.round(lineTotal).toLocaleString('ko-KR')}</td>
-                                <td className="text-gray-300 font-bold">X</td>
                             </tr>
                         </tbody>
                     </table>
@@ -299,9 +359,9 @@ const QuoteWritePage = () => {
                             <label className="block text-xs font-semibold text-gray-500 mb-1">
                                 할인율 조정 사유 <span className="text-red-500">*</span>
                                 <span className="text-gray-400 font-normal ml-1">
-                                    {exceedsMaxDiscount && `할인율 ${discountRate}%가 최대 ${TEMP_ITEM.maxDiscountRate}%를 초과`}
+                                    {exceedsMaxDiscount && `할인율 ${discountRate}%가 최대 ${selectedProduct.maxDiscountRate}%를 초과`}
                                     {exceedsMaxDiscount && belowMinProfit && ', '}
-                                    {belowMinProfit && `이익률 ${profitRatePreview.toFixed(1)}%가 최소 ${TEMP_ITEM.minProfitRate}% 미달`}
+                                    {belowMinProfit && `이익률 ${profitRatePreview.toFixed(1)}%가 최소 ${selectedProduct.minProfitRate}% 미달`}
                                     {' — 사유 필수'}
                                 </span>
                             </label>
@@ -332,8 +392,8 @@ const QuoteWritePage = () => {
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                     <h2 className="text-sm font-bold text-gray-800 mb-4">④ 금액 자동 계산</h2>
                     <div className="space-y-2 text-sm">
-                        <div className="flex justify-between text-gray-500"><span>공급가액 (할인 전)</span><span>{Math.round(TEMP_ITEM.unitPrice * quantity).toLocaleString('ko-KR')}원</span></div>
-                        <div className="flex justify-between text-red-500"><span>할인 금액</span><span>- {Math.round(TEMP_ITEM.unitPrice * quantity - lineSupply).toLocaleString('ko-KR')}원</span></div>
+                        <div className="flex justify-between text-gray-500"><span>공급가액 (할인 전)</span><span>{Math.round(selectedProduct.unitPrice * quantity).toLocaleString('ko-KR')}원</span></div>
+                        <div className="flex justify-between text-red-500"><span>할인 금액</span><span>- {Math.round(selectedProduct.unitPrice * quantity - lineSupply).toLocaleString('ko-KR')}원</span></div>
                         <div className="flex justify-between text-gray-500"><span>VAT</span><span>{lineVat.toLocaleString('ko-KR')}원</span></div>
                         <div className="flex justify-between border-t pt-2 font-bold text-base"><span>최종 견적 금액</span><span className="text-lg">{Math.round(lineTotal).toLocaleString('ko-KR')}원</span></div>
                     </div>

@@ -10,7 +10,6 @@ const Sidebar = () => {
   const isAdmin = user?.role === 'SUPER_ADMIN'
 
   const NAV_ITEMS = [
-    { label: '내부 견적 분석', path: '/analysis' },
     {
       label: '견적 작성',
       path: '/quotes/new',

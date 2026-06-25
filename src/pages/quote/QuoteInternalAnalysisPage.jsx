@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getInternalAnalysis } from '../../api/quoteApi'
-import { requestApproval, getApprovalHistories } from '../../api/approvalApi'
+import { requestApproval, reRequestApproval, getApprovalHistories } from '../../api/approvalApi'
 
 const REASON_LABEL = {
     DISCOUNT_EXCEEDED: '할인율 정책 초과',
@@ -23,14 +23,16 @@ const APPROVAL_STATUS_STYLE = {
     REJECTED: 'bg-red-100 text-red-600',
 }
 
+// approvalRequestId까지 같이 반환 (재요청 시 필요)
 const deriveApprovalStatus = (histories) => {
-    if (!histories || histories.length === 0) return { status: 'NONE', lastMemo: null }
+    if (!histories || histories.length === 0) return { status: 'NONE', lastMemo: null, approvalRequestId: null }
     const sorted = [...histories].sort((a, b) => new Date(a.actedAt) - new Date(b.actedAt))
     const last = sorted[sorted.length - 1]
-    if (last.action === 'APPROVED') return { status: 'APPROVED', lastMemo: last.memo }
-    if (last.action === 'REJECTED') return { status: 'REJECTED', lastMemo: last.memo }
-    if (last.action === 'REQUESTED' || last.action === 'RE_REQUESTED') return { status: 'PENDING', lastMemo: last.memo }
-    return { status: 'NONE', lastMemo: null }
+    const approvalRequestId = last.approvalRequestId ?? null
+    if (last.action === 'APPROVED') return { status: 'APPROVED', lastMemo: last.memo, approvalRequestId }
+    if (last.action === 'REJECTED') return { status: 'REJECTED', lastMemo: last.memo, approvalRequestId }
+    if (last.action === 'REQUESTED' || last.action === 'RE_REQUESTED') return { status: 'PENDING', lastMemo: last.memo, approvalRequestId }
+    return { status: 'NONE', lastMemo: null, approvalRequestId: null }
 }
 
 const formatKRW = (n) => `${Math.round(n ?? 0).toLocaleString('ko-KR')}원`
@@ -41,6 +43,7 @@ const QuoteInternalAnalysisPage = () => {
 
     const [analysis, setAnalysis] = useState(null)
     const [approvalStatus, setApprovalStatus] = useState('NONE')
+    const [approvalRequestId, setApprovalRequestId] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [submitting, setSubmitting] = useState(false)
@@ -59,7 +62,9 @@ const QuoteInternalAnalysisPage = () => {
                 ])
                 if (cancelled) return
                 setAnalysis(data)
-                setApprovalStatus(deriveApprovalStatus(historyRes).status)
+                const derived = deriveApprovalStatus(historyRes)
+                setApprovalStatus(derived.status)
+                setApprovalRequestId(derived.approvalRequestId)
                 setError(null)
             } catch (e) {
                 if (cancelled) return
@@ -77,12 +82,16 @@ const QuoteInternalAnalysisPage = () => {
         setSubmitting(true)
         setError(null)
         try {
-            await requestApproval(quoteId, requestMemo)
+            if (approvalStatus === 'REJECTED' && approvalRequestId) {
+                await reRequestApproval(quoteId, approvalRequestId, requestMemo)
+            } else {
+                await requestApproval(quoteId, requestMemo)
+            }
             setApprovalStatus('PENDING')
         } catch (e) {
             const message = e?.response?.data?.message ?? '승인 요청 중 오류가 발생했습니다.'
             if (message.includes('이미 승인 대기 중')) {
-
+                // 이미 요청이 가 있는 상태 — 에러가 아니라 정상적인 "이미 요청됨" 상태로 처리
                 setApprovalStatus('PENDING')
             } else {
                 setError(message)
