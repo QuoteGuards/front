@@ -339,6 +339,7 @@ export default function MyPage() {
       await updateProfile({ name: editForm.name.trim(), phone: editForm.phone || '' });
       setIsEditing(false);
       setToast({ message: '프로필이 수정되었습니다.', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
     } catch (err) {
       const message = err?.response?.data?.message ?? '저장에 실패했습니다.';
       const code = err?.response?.data?.code ?? '';
