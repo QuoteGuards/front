@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
 
       dispatch({ type: 'SUBMIT_START' });
       try {
-        await requestPasswordResetApi(email);
+        await requestPasswordResetApi(email.trim());
         dispatch({ type: 'SUBMIT_SUCCESS' });
       } catch (apiErr) {
         const message = apiErr?.response?.data?.message ?? '요청 중 오류가 발생했습니다.';

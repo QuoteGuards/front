@@ -1,4 +1,4 @@
-import { useState, useCallback, useId } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { confirmPasswordResetApi } from '../../api/authApi';
 
@@ -26,6 +26,7 @@ export default function ResetPasswordPage() {
   const confirmPasswordId = useId();
 
   const token = searchParams.get('token') ?? '';
+  const redirectTimerRef = useRef(null);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,6 +36,13 @@ export default function ResetPasswordPage() {
   const [formError, setFormError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
+
+  // 성공 후 3초 뒤 로그인 이동 - 언마운트 시 타이머 cleanup
+  useEffect(() => {
+    if (!succeeded) return undefined;
+    redirectTimerRef.current = setTimeout(() => navigate('/login', { replace: true }), 3000);
+    return () => clearTimeout(redirectTimerRef.current);
+  }, [succeeded, navigate]);
 
   // 토큰 없으면 즉시 안내
   const tokenMissing = !token;
@@ -56,9 +64,7 @@ export default function ResetPasswordPage() {
       setIsSubmitting(true);
       try {
         await confirmPasswordResetApi(token, newPassword);
-        setSucceeded(true);
-        // 3초 후 로그인 화면으로 이동
-        setTimeout(() => navigate('/login', { replace: true }), 3000);
+        setSucceeded(true); // useEffect가 3초 후 /login으로 이동 처리
       } catch (err) {
         const code = err?.response?.data?.code ?? '';
         const message = err?.response?.data?.message ?? '비밀번호 재설정에 실패했습니다.';
