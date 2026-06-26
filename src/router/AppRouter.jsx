@@ -19,6 +19,7 @@ import DiscountManagePage from '../pages/discount/DiscountManagePage'
 import ProductSearchPage from '../pages/catalog/ProductSearchPage'
 import ProductDetailPage from '../pages/catalog/ProductDetailPage'
 import FavoritesPage from '../pages/catalog/FavoritesPage'
+import MyPage from '../pages/mypage/MyPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 import ChangePasswordModal from '../components/common/ChangePasswordModal'
 import { useAuth } from '../hooks/useAuth'
@@ -43,6 +44,7 @@ export default function AppRouter() {
 
         {/* 보호 라우트 */}
         <Route path="/" element={<ProtectedRoute><Navigate to="/quotes" replace /></ProtectedRoute>} />
+        <Route path="/my-page" element={<ProtectedRoute><Layout><MyPage /></Layout></ProtectedRoute>} />
         <Route path="/training" element={<ProtectedRoute><Layout><TrainingPage /></Layout></ProtectedRoute>} />
         <Route path="/quotes" element={<ProtectedRoute><Layout><QuoteListPage /></Layout></ProtectedRoute>} />
         <Route path="/quotes/new" element={<ProtectedRoute><Layout><QuoteWritePage /></Layout></ProtectedRoute>} />
