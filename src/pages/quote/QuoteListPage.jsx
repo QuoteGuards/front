@@ -2,17 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuotes } from '../../hooks/useQuotes'
 import { formatKRW } from '../../utils/quoteUtils'
-
-const STATUS_STYLES = {
-  '작성중': 'bg-gray-100 text-gray-600',
-  '발행': 'bg-blue-100 text-blue-700',
-  '승인': 'bg-emerald-100 text-emerald-700',
-  '만료': 'bg-red-100 text-red-500',
-}
+import { QUOTE_STATUS_LABEL, QUOTE_STATUS_STYLE, QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'}`}>
-    {status}
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${QUOTE_STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-500'}`}>
+    {QUOTE_STATUS_LABEL[status] ?? status}
   </span>
 )
 
@@ -23,7 +17,10 @@ const QuoteListPage = () => {
   const [statusFilter, setStatusFilter] = useState('전체')
 
   const filtered = quotes
-    .filter((q) => statusFilter === '전체' || q.status === statusFilter)
+    .filter((q) => {
+      const allowed = QUOTE_STATUS_FILTERS[statusFilter]
+      return !allowed || allowed.includes(q.status)
+    })
     .filter(
       (q) =>
         !search ||
@@ -33,7 +30,7 @@ const QuoteListPage = () => {
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
-  const statuses = ['전체', ...Object.keys(STATUS_STYLES)]
+  const statuses = Object.keys(QUOTE_STATUS_FILTERS)
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
