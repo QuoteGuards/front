@@ -2,47 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuotes } from '../../hooks/useQuotes'
 import { formatKRW } from '../../utils/quoteUtils'
-
-// 실제 백엔드 QuoteStatus enum 기준 한글 라벨/색상 매핑
-const STATUS_LABEL = {
-  DRAFT: '작성중',
-  REVISING: '수정중',
-  SUBMITTED: '제출완료',
-  APPROVAL_NOT_REQUIRED: '발행가능',
-  APPROVAL_PENDING: '승인대기',
-  APPROVED: '승인완료',
-  REJECTED: '반려',
-  SENT: '발송완료',
-  EXPIRED: '만료',
-  CANCELLED: '취소',
-}
-
-const STATUS_STYLES = {
-  DRAFT: 'bg-gray-100 text-gray-600',
-  REVISING: 'bg-amber-100 text-amber-700',
-  SUBMITTED: 'bg-blue-100 text-blue-700',
-  APPROVAL_NOT_REQUIRED: 'bg-emerald-100 text-emerald-700',
-  APPROVAL_PENDING: 'bg-amber-100 text-amber-700',
-  APPROVED: 'bg-emerald-100 text-emerald-700',
-  REJECTED: 'bg-red-100 text-red-600',
-  SENT: 'bg-violet-100 text-violet-700',
-  EXPIRED: 'bg-red-100 text-red-500',
-  CANCELLED: 'bg-gray-100 text-gray-400',
-}
-
-// 필터 버튼 - 화면에 보일 한글 라벨과, 그 라벨이 실제로 포함하는 enum 상태들 매핑
-const FILTERS = {
-  '전체': null,
-  '작성중': ['DRAFT', 'REVISING'],
-  '발행': ['SUBMITTED', 'APPROVAL_NOT_REQUIRED', 'APPROVAL_PENDING', 'SENT'],
-  '승인': ['APPROVED'],
-  '반려': ['REJECTED'],
-  '만료': ['EXPIRED'],
-}
+import { QUOTE_STATUS_LABEL, QUOTE_STATUS_STYLE, QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
 
 const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-500'}`}>
-    {STATUS_LABEL[status] ?? status}
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${QUOTE_STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-500'}`}>
+    {QUOTE_STATUS_LABEL[status] ?? status}
   </span>
 )
 
@@ -54,7 +18,7 @@ const QuoteListPage = () => {
 
   const filtered = quotes
     .filter((q) => {
-      const allowed = FILTERS[statusFilter]
+      const allowed = QUOTE_STATUS_FILTERS[statusFilter]
       return !allowed || allowed.includes(q.status)
     })
     .filter(
@@ -66,7 +30,7 @@ const QuoteListPage = () => {
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
-  const statuses = Object.keys(FILTERS)
+  const statuses = Object.keys(QUOTE_STATUS_FILTERS)
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">

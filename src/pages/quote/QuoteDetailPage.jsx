@@ -4,32 +4,7 @@ import { getQuoteById, getInternalAnalysis, reuseQuote, rewriteQuote, downloadQu
 import { getApprovalHistories } from '../../api/approvalApi'
 import { getEmailHistory } from '../../api/emailApi'
 import EmailModal from '../../components/quote/EmailModal'
-
-const STATUS_LABEL = {
-    DRAFT: '임시저장',
-    SUBMITTED: '제출완료',
-    APPROVAL_NOT_REQUIRED: '승인불필요',
-    APPROVAL_PENDING: '승인대기',
-    APPROVED: '승인완료',
-    REJECTED: '반려',
-    REVISING: '수정중',
-    SENT: '발송완료',
-    EXPIRED: '만료',
-    CANCELLED: '취소',
-}
-
-const STATUS_STYLE = {
-    DRAFT: 'bg-gray-100 text-gray-600',
-    SUBMITTED: 'bg-blue-100 text-blue-700',
-    APPROVAL_NOT_REQUIRED: 'bg-emerald-100 text-emerald-700',
-    APPROVAL_PENDING: 'bg-amber-100 text-amber-700',
-    APPROVED: 'bg-emerald-100 text-emerald-700',
-    REJECTED: 'bg-red-100 text-red-600',
-    REVISING: 'bg-amber-100 text-amber-700',
-    SENT: 'bg-violet-100 text-violet-700',
-    EXPIRED: 'bg-gray-100 text-gray-400',
-    CANCELLED: 'bg-gray-100 text-gray-400',
-}
+import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE } from '../../constants/quoteStatus'
 
 // APPROVAL_PENDING 상태는 "승인이 필요하다고 판정됨"만 의미하고
 // 실제 승인 요청(ApprovalRequest)을 보냈는지는 별도로 이력을 봐야 알 수 있음
@@ -273,8 +248,8 @@ const QuoteDetailPage = () => {
                         <p className="text-sm text-gray-400">승인 요청 이력이 없습니다.</p>
                     ) : (
                         <ul className="space-y-2">
-                            {histories.map((h) => (
-                                <li key={h.id} className="flex items-start justify-between text-sm border-b border-gray-100 pb-2 last:border-0">
+                            {histories.map((h, idx) => (
+                                <li key={idx} className="flex items-start justify-between text-sm border-b border-gray-100 pb-2 last:border-0">
                                     <div>
                                         <span className="font-medium text-gray-700">{ACTION_LABEL[h.action] ?? h.action}</span>
                                         {h.memo && <p className="text-xs text-gray-500 mt-0.5">{h.memo}</p>}
@@ -314,7 +289,7 @@ const QuoteDetailPage = () => {
                 <div className="flex flex-wrap justify-center gap-3 pt-2">
                     {isEditable && (
                         <button onClick={() => navigate(`/quotes/new?id=${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
-                            다시 작성
+                            이어 작성
                         </button>
                     )}
                     <button onClick={() => navigate(`/quotes/analysis/${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
