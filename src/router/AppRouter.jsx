@@ -13,6 +13,8 @@ import AdminApprovalDetailPage from '../pages/approval/AdminApprovalDetailPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
 import LoginPage from '../pages/login/LoginPage'
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
 import CategoryManagePage from '../pages/category/CategoryManagePage'
 import ProductManagePage from '../pages/product/ProductManagePage'
 import DiscountManagePage from '../pages/discount/DiscountManagePage'
@@ -41,6 +43,8 @@ export default function AppRouter() {
       <Routes>
         {/* 공개 라우트 */}
         <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* 보호 라우트 */}
         <Route path="/" element={<ProtectedRoute><Navigate to="/quotes" replace /></ProtectedRoute>} />
