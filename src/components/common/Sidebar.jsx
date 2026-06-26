@@ -79,12 +79,34 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="px-3 py-4 border-t border-gray-100">
+      <div className="px-3 py-4 border-t border-gray-100 space-y-1">
         {user?.email && (
-          <p className="text-xs text-gray-400 truncate mb-3 px-1" title={user.email}>
+          <p className="text-xs text-gray-400 truncate mb-2 px-1" title={user.email}>
             {user.email}
           </p>
         )}
+        <NavLink
+          to="/my-page"
+          className={({ isActive }) =>
+            [
+              'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-100',
+              isActive
+                ? 'bg-violet-100 text-violet-700'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700',
+            ].join(' ')
+          }
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+          </svg>
+          마이페이지
+        </NavLink>
         <button
           type="button"
           onClick={handleLogout}
