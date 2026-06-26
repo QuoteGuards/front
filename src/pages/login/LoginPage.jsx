@@ -1,5 +1,5 @@
 import { useState, useCallback, useId } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginApi } from '../../api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -204,6 +204,12 @@ export default function LoginPage() {
             {isSubmitting ? <><Spinner />로그인 중...</> : '로그인'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-500">
+          <Link to="/forgot-password" className="text-blue-600 hover:underline">
+            비밀번호를 잊으셨나요?
+          </Link>
+        </p>
       </main>
     </div>
   );
