@@ -19,6 +19,9 @@ const QuoteWritePage = () => {
 
     const [customer, setCustomer] = useState(initialCustomer)
     const [memo, setMemo] = useState('')
+    const [memoSummary, setMemoSummary] = useState('')
+    const [summaryLoading, setSummaryLoading] = useState(false)
+    const [summaryError, setSummaryError] = useState('')
     const [issuedDate, setIssuedDate] = useState(today())
     const [validUntil, setValidUntil] = useState('')
     const [deliveryTerm, setDeliveryTerm] = useState('')
@@ -30,6 +33,44 @@ const QuoteWritePage = () => {
             setGuideData(data)
             setGuideOpen(true)
         } catch { alert("가이드 로드 실패") } finally { setLoadingGuide(false) }
+    }
+    const handleSummarizeMemo = async () => {
+        if (!memo.trim()) {
+            setSummaryError('상담 메모를 먼저 입력해주세요.')
+            return
+        }
+
+        setSummaryLoading(true)
+        setSummaryError('')
+
+        try {
+            const res = await fetch('/api/ai/consultation-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    consultationMemo: memo,
+                }),
+            })
+
+            if (!res.ok) {
+                throw new Error()
+            }
+
+            const result = await res.json()
+
+            setMemoSummary(
+                result.data?.summary ??
+                result.data?.consultationSummary ??
+                result.summary ??
+                ''
+            )
+        } catch {
+            setSummaryError('상담 메모 요약에 실패했습니다.')
+        } finally {
+            setSummaryLoading(false)
+        }
     }
 
     if (loading && !trainingStatus) return <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">로딩 중...</div>
@@ -81,8 +122,37 @@ const QuoteWritePage = () => {
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-3">③ 상담 메모</h2>
-                    <textarea value={memo} onChange={e => setMemo(e.target.value)} rows={2} className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none" />
+                    <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-sm font-bold text-gray-800">③ 상담 메모</h2>
+
+                        <button
+                            type="button"
+                            onClick={handleSummarizeMemo}
+                            disabled={summaryLoading}
+                            className="text-sm bg-violet-600 text-white px-4 py-1.5 rounded-lg font-medium hover:bg-violet-700 disabled:bg-gray-300"
+                        >
+                            {summaryLoading ? '요약 중...' : 'AI 요약'}
+                        </button>
+                    </div>
+
+                    <textarea
+                        value={memo}
+                        onChange={e => setMemo(e.target.value)}
+                        rows={3}
+                        placeholder="고객 상담 내용을 입력해주세요."
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none"
+                    />
+
+                    {summaryError && (
+                        <p className="mt-2 text-sm text-red-500">{summaryError}</p>
+                    )}
+
+                    {memoSummary && (
+                        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <p className="text-sm font-semibold text-gray-700 mb-2">AI 요약 결과</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-line">{memoSummary}</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
