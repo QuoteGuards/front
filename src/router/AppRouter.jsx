@@ -52,7 +52,7 @@ export default function AppRouter() {
         <Route path="/my-page" element={<ProtectedRoute><Layout><MyPage /></Layout></ProtectedRoute>} />
         <Route path="/training" element={<ProtectedRoute><Layout><TrainingPage /></Layout></ProtectedRoute>} />
         <Route path="/quotes" element={<ProtectedRoute><Layout><QuoteListPage /></Layout></ProtectedRoute>} />
-        <Route path="/quotes/new" element={<ProtectedRoute><Layout><QuoteWritePage /></Layout></ProtectedRoute>} />
+        <Route path="/quotes/new" element={<ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}><Layout><QuoteWritePage /></Layout></ProtectedRoute>} />
         <Route path="/quotes/:quoteId/detail" element={<ProtectedRoute><Layout><QuoteDetailPage /></Layout></ProtectedRoute>} />
         <Route path="/quotes/analysis/:quoteId" element={<ProtectedRoute><Layout><QuoteInternalAnalysisPage /></Layout></ProtectedRoute>} />
         <Route path="/quotes/:id/preview" element={<ProtectedRoute><Layout><QuotePreviewPage /></Layout></ProtectedRoute>} />
