@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchProductsApi, addFavoriteApi, removeFavoriteApi } from '../../api/catalogApi'
-import { getCategoriesApi } from '../../api/categoryApi'
+import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 
 export default function ProductSearchPage() {
   const navigate = useNavigate()
@@ -16,7 +16,7 @@ export default function ProductSearchPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { getCategoriesApi().then(setTree).catch(() => {}) }, [])
+  useEffect(() => { getActiveCategoryTreeApi().then(setTree).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
