@@ -21,6 +21,7 @@ import DiscountManagePage from '../pages/discount/DiscountManagePage'
 import ProductSearchPage from '../pages/catalog/ProductSearchPage'
 import ProductDetailPage from '../pages/catalog/ProductDetailPage'
 import FavoritesPage from '../pages/catalog/FavoritesPage'
+import DashboardPage from '../pages/dashboard/DashboardPage'
 import MyPage from '../pages/mypage/MyPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 import ChangePasswordModal from '../components/common/ChangePasswordModal'
@@ -59,6 +60,7 @@ export default function AppRouter() {
         <Route path="/products" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><ProductManagePage /></Layout></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><CategoryManagePage /></Layout></ProtectedRoute>} />
         <Route path="/discounts" element={<ProtectedRoute roles={['SUPER_ADMIN']}><Layout><DiscountManagePage /></Layout></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}><Layout><DashboardPage /></Layout></ProtectedRoute>} />
         <Route path="/catalog" element={<ProtectedRoute><Layout><ProductSearchPage /></Layout></ProtectedRoute>} />
         <Route path="/catalog/favorites" element={<ProtectedRoute><Layout><FavoritesPage /></Layout></ProtectedRoute>} />
         <Route path="/catalog/:productId" element={<ProtectedRoute><Layout><ProductDetailPage /></Layout></ProtectedRoute>} />
