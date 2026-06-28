@@ -9,6 +9,7 @@ const Sidebar = () => {
   const { canWriteQuote, loading } = useTrainingStatus()
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
+  const isManager = user?.role === 'SALES_MANAGER'
 
   const NAV_ITEMS = [
     {
@@ -17,11 +18,21 @@ const Sidebar = () => {
       locked: !loading && !canWriteQuote,
     },
     { label: '내 견적 목록', path: '/quotes' },
-    { label: '제품 담당', path: '/products' },
+    // 제품 탐색·즐겨찾기 (전체 인증 사용자 — /catalog 권한과 동일)
+    { label: '제품 탐색', path: '/catalog' },
+    { label: '즐겨찾기', path: '/catalog/favorites' },
     { label: '발송 이력', path: '/history' },
     { label: '승인 요청', path: '/staff/approval' },
     { label: '승인 관리', path: '/admin/approval' },
-    ...(isAdmin ? [{ label: '사용자 관리', path: '/admin/users' }] : []),
+    // 통계 대시보드 (/dashboard 권한 = SUPER_ADMIN + SALES_MANAGER)
+    ...((isAdmin || isManager) ? [{ label: '통계 대시보드', path: '/dashboard' }] : []),
+    // 관리자 전용 관리 화면 (/products·/categories·/discounts·/admin/users 권한 = SUPER_ADMIN)
+    ...(isAdmin ? [
+      { label: '제품 관리', path: '/products' },
+      { label: '카테고리 관리', path: '/categories' },
+      { label: '할인정책 관리', path: '/discounts' },
+      { label: '사용자 관리', path: '/admin/users' },
+    ] : []),
     {
       label: '교육 이수',
       path: '/training',
