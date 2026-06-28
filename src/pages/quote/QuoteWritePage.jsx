@@ -5,7 +5,7 @@ import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
 import CustomerSection from '../../components/quote/CustomerSection'
 import TrainingGuideModal from '../../components/training/TrainingGuideModal'
 import { getQuoteWritingGuide, confirmQuoteWritingGuide } from '../../api/guideApi'
-import { createQuote, updateQuote, completeQuote, getQuoteById, getQuoteProductContextApi } from '../../api/quoteApi'
+import { createQuote, updateQuote, completeQuote, getQuoteById, getInternalAnalysis, getQuoteProductContextApi } from '../../api/quoteApi'
 import {
     calcLineAmounts,
     calcQuoteTotals,
@@ -14,6 +14,7 @@ import {
     formatProfitRate,
     productToQuoteItem,
     itemsFromQuoteResponse,
+    costByItemIdFromAnalysis,
     saveQuoteWriteDraft,
     loadQuoteWriteDraft,
     clearQuoteWriteDraft,
@@ -135,8 +136,11 @@ const QuoteWritePage = () => {
         if (!idParam || location.state?.addProduct) return
 
         let cancelled = false
-        getQuoteById(idParam)
-            .then((data) => {
+        Promise.all([
+            getQuoteById(idParam),
+            getInternalAnalysis(idParam).catch(() => null),
+        ])
+            .then(([data, analysis]) => {
                 if (cancelled) return
                 setCustomer({
                     id: data.customerId,
@@ -150,7 +154,9 @@ const QuoteWritePage = () => {
                 setIssuedDate(data.issuedDate ?? today())
                 setValidUntil(data.validUntil ?? '')
                 setDeliveryTerm(data.deliveryTerm ?? '')
-                setItems(itemsFromQuoteResponse(data))
+                setItems(itemsFromQuoteResponse(data, {
+                    costByItemId: costByItemIdFromAnalysis(analysis),
+                }))
 
                 setSavedQuote({ id: data.id, quoteNumber: data.quoteNumber, status: data.status })
 
@@ -252,7 +258,7 @@ const QuoteWritePage = () => {
                 : await createQuote(form)
             setSavedQuote(result)
             if (result.items?.length) {
-                setItems(itemsFromQuoteResponse(result))
+                setItems((prev) => itemsFromQuoteResponse(result, { previousItems: prev }))
             }
             setSearchParams({ id: result.id }, { replace: false })
             setSubmitResult(null)

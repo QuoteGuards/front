@@ -250,9 +250,20 @@ export const quotePolicyFromResponse = (data) => ({
 
 
 
+/** internal-analysis items → quoteItemId별 원가 맵 (견적 작성 복원용) */
+export const costByItemIdFromAnalysis = (analysis) => {
+  const map = {}
+  for (const item of analysis?.items ?? []) {
+    if (item?.id != null && parseApiNumber(item.costPrice) != null) {
+      map[item.id] = parseApiNumber(item.costPrice)
+    }
+  }
+  return map
+}
+
 /** QuoteItemResponse + QuoteDetailResponse(견적 단위 정책) → 견적 항목 state */
 
-export const quoteItemFromApi = (item, index, quotePolicy = {}) => ({
+export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {}) => ({
 
   key: `saved-${item.id ?? index}`,
 
@@ -266,7 +277,7 @@ export const quoteItemFromApi = (item, index, quotePolicy = {}) => ({
 
   unitPrice: Number(item.unitPrice) || 0,
 
-  costPrice: parseApiNumber(item.costPrice),
+  costPrice: parseApiNumber(costByItemId[item.id] ?? item.costPrice),
 
   vatApplicable: item.vatApplicable ?? true,
 
@@ -286,13 +297,20 @@ export const quoteItemFromApi = (item, index, quotePolicy = {}) => ({
 
 
 
-/** 저장/복원 API 응답으로 items + 정책 기준값 동기화 */
+/** 저장/복원 API 응답으로 items + 정책 기준값 동기화 (원가는 costByItemId 또는 previousItems에서 보강) */
 
-export const itemsFromQuoteResponse = (data) => {
+export const itemsFromQuoteResponse = (data, { costByItemId = {}, previousItems = null } = {}) => {
 
   const quotePolicy = quotePolicyFromResponse(data)
 
-  return (data.items ?? []).map((item, index) => quoteItemFromApi(item, index, quotePolicy))
+  return (data.items ?? []).map((item, index) => {
+    const prev = previousItems?.[index] ?? previousItems?.find((p) => p.productId === item.productId)
+    const mergedCostMap = {
+      ...costByItemId,
+      ...(item.id != null && prev?.costPrice != null ? { [item.id]: prev.costPrice } : {}),
+    }
+    return quoteItemFromApi(item, index, quotePolicy, mergedCostMap)
+  })
 
 }
 
