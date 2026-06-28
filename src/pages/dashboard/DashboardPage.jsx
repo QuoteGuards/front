@@ -48,10 +48,11 @@ export default function DashboardPage() {
     }
   }
 
-  // 전체/1·3·6개월은 즉시 조회, CUSTOM은 from·to 둘 다 있을 때만
+  // 전체/1·3·6개월은 즉시 조회, CUSTOM은 from·to 둘 다 있고 from<=to일 때만
+  // (역순 범위는 백엔드가 400을 주므로 호출 전에 차단. from/to는 yyyy-MM-dd 문자열이라 사전식 비교=날짜순)
   useEffect(() => {
     if (period === 'CUSTOM') {
-      if (from && to) load({ period, from, to })
+      if (from && to && from <= to) load({ period, from, to })
     } else {
       load({ period })
     }
@@ -85,6 +86,9 @@ export default function DashboardPage() {
       {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
       {period === 'CUSTOM' && (!from || !to) && (
         <div className="mb-3 text-amber-600 text-sm">사용자 지정 기간은 시작일과 종료일을 모두 선택하세요.</div>
+      )}
+      {period === 'CUSTOM' && from && to && from > to && (
+        <div className="mb-3 text-amber-600 text-sm">종료일이 시작일보다 빠릅니다. 기간을 다시 선택하세요.</div>
       )}
       {loading && <div className="mb-3 text-gray-400 text-sm">불러오는 중…</div>}
 
