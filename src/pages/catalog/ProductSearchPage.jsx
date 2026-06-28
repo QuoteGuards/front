@@ -14,9 +14,14 @@ export default function ProductSearchPage() {
   const [tree, setTree] = useState([])
   const [expanded, setExpanded] = useState(new Set())
   const [error, setError] = useState(null)
+  const [catError, setCatError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { getActiveCategoryTreeApi().then(setTree).catch(() => {}) }, [])
+  useEffect(() => {
+    getActiveCategoryTreeApi()
+      .then(data => { setTree(data); setCatError(null) })
+      .catch(e => setCatError(e.response?.data?.message ?? '카테고리 조회 실패'))
+  }, [])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -136,7 +141,9 @@ export default function ProductSearchPage() {
             전체 제품
           </button>
           <div className="mt-1">{tree.map(n => renderCatNode(n))}</div>
-          {tree.length === 0 && <div className="text-gray-400 text-xs py-4">카테고리 없음</div>}
+          {catError
+            ? <div className="text-red-500 text-xs py-4">{catError}</div>
+            : tree.length === 0 && <div className="text-gray-400 text-xs py-4">카테고리 없음</div>}
         </aside>
 
         {/* ── 우측 결과 ── */}
