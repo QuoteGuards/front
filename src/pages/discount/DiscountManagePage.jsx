@@ -25,6 +25,9 @@ const EMPTY_FORM = {
 
 export default function DiscountManagePage() {
   const [tab, setTab] = useState('')           // '' | CATEGORY | PRODUCT
+  // 검색 필터: 정책명 키워드 + 상태(활성/비활성)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [search, setSearch] = useState({ keyword: '', active: '', categoryId: '' }) // 적용된 검색
   const [page, setPage] = useState(0)
   const [size] = useState(10)
   const [pageData, setPageData] = useState({ content: [], totalElements: 0, totalPages: 0 })
@@ -39,6 +42,7 @@ export default function DiscountManagePage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
+  const [saving, setSaving] = useState(false) // 저장 중(중복 클릭 방지)
 
   useEffect(() => {
     getCategoriesApi().then(t => setCats(flattenAll(t))).catch(() => {})
@@ -57,6 +61,9 @@ export default function DiscountManagePage() {
     try {
       const params = { page, size }
       if (tab) params.targetType = tab
+      if (search.keyword) params.keyword = search.keyword
+      if (search.active !== '') params.isActive = search.active === 'true'
+      if (search.categoryId) params.categoryId = search.categoryId
       const data = await getDiscountsApi(params)
       setPageData(data)
     } catch (e) {
@@ -65,7 +72,17 @@ export default function DiscountManagePage() {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [tab, page]) // eslint-disable-line
+  useEffect(() => { load() }, [tab, page, search]) // eslint-disable-line
+
+  const onSearch = () => {
+    setSearch(s => ({ ...s, keyword: keywordInput.trim() }))
+    setPage(0)
+  }
+  const onResetSearch = () => {
+    setKeywordInput('')
+    setSearch({ keyword: '', active: '', categoryId: '' })
+    setPage(0)
+  }
   useEffect(() => { loadActiveCount() }, []) // eslint-disable-line
 
   const rows = pageData.content ?? []
@@ -94,6 +111,7 @@ export default function DiscountManagePage() {
   }
 
   const onSubmit = async () => {
+    if (saving) return // 중복 클릭 방지
     setModalError(null)
     if (!form.name.trim()) { setModalError('정책명을 입력하세요.'); return }
     if (form.targetType === 'CATEGORY' && !form.categoryId) { setModalError('카테고리를 선택하세요.'); return }
@@ -101,17 +119,32 @@ export default function DiscountManagePage() {
     if (form.maxDiscountRate === '' || form.minProfitRate === '' || form.highAmountThreshold === '') {
       setModalError('할인율·최소이익률·고액 기준은 필수입니다.'); return
     }
+    // 할인율/이익률: 0~100, 고액기준: 0 이상, 전부 유효한 숫자
+    const maxDiscount = Number(form.maxDiscountRate)
+    const minProfit = Number(form.minProfitRate)
+    const highAmount = Number(form.highAmountThreshold)
+    if (![maxDiscount, minProfit, highAmount].every(Number.isFinite)) {
+      setModalError('할인율·최소이익률·고액 기준은 유효한 숫자여야 합니다.'); return
+    }
+    if (maxDiscount < 0 || maxDiscount > 100) { setModalError('할인율은 0~100 사이여야 합니다.'); return }
+    if (minProfit < 0 || minProfit > 100) { setModalError('최소 이익률은 0~100 사이여야 합니다.'); return }
+    if (highAmount < 0) { setModalError('고액 기준 금액은 0 이상이어야 합니다.'); return }
+    // 기간 역순 차단 (시작일 > 종료일)
+    if (form.effectiveFrom && form.effectiveTo && form.effectiveFrom > form.effectiveTo) {
+      setModalError('종료일이 시작일보다 빠를 수 없습니다.'); return
+    }
     const payload = {
       name: form.name.trim(),
       targetType: form.targetType,
       categoryId: form.targetType === 'CATEGORY' ? Number(form.categoryId) : null,
       productId: form.targetType === 'PRODUCT' ? Number(form.productId) : null,
-      maxDiscountRate: Number(form.maxDiscountRate),
-      minProfitRate: Number(form.minProfitRate),
-      highAmountThreshold: Number(form.highAmountThreshold),
+      maxDiscountRate: maxDiscount,
+      minProfitRate: minProfit,
+      highAmountThreshold: highAmount,
       effectiveFrom: form.effectiveFrom ? `${form.effectiveFrom}T00:00:00` : null,
       effectiveTo: form.effectiveTo ? `${form.effectiveTo}T23:59:59` : null,
     }
+    setSaving(true)
     try {
       if (editId == null) await createDiscountApi(payload)
       else await updateDiscountApi(editId, payload)
@@ -119,6 +152,8 @@ export default function DiscountManagePage() {
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setModalError(e.response?.data?.message ?? '저장 실패 (입력값 확인)')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -172,12 +207,37 @@ export default function DiscountManagePage() {
           ))}
         </div>
 
+        {/* 검색 바: 정책명 + 상태 */}
+        <div className="flex flex-wrap items-center gap-2 p-4 border-b">
+          <input className="border px-3 py-2 rounded text-sm flex-1 min-w-[180px]"
+            placeholder="정책명 검색"
+            value={keywordInput}
+            onChange={e => setKeywordInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onSearch()} />
+          <select className="border px-2 py-2 rounded text-sm max-w-[200px]"
+            value={search.categoryId}
+            onChange={e => { setSearch(s => ({ ...s, categoryId: e.target.value })); setPage(0) }}>
+            <option value="">카테고리 전체</option>
+            {cats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
+          </select>
+          <select className="border px-2 py-2 rounded text-sm"
+            value={search.active}
+            onChange={e => { setSearch(s => ({ ...s, active: e.target.value })); setPage(0) }}>
+            <option value="">상태 전체</option>
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+          <button onClick={onSearch} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">검색</button>
+          <button onClick={onResetSearch} className="border px-4 py-2 rounded text-sm">초기화</button>
+        </div>
+
         {error && <div className="px-4 pt-3 text-red-500 text-sm">{error}</div>}
 
         {/* 테이블 */}
         <table className="w-full text-sm">
           <thead className="text-gray-500 border-b">
             <tr>
+              <th className="px-4 py-3 text-left">정책명</th>
               <th className="px-4 py-3 text-left">적용 대상</th>
               <th className="px-4 py-3 text-right">할인율</th>
               <th className="px-4 py-3 text-right">최소 이익률</th>
@@ -189,13 +249,14 @@ export default function DiscountManagePage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-gray-400 py-10">등록된 정책이 없습니다</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-400 py-10">등록된 정책이 없습니다</td></tr>
             ) : rows.map(p => {
               const badge = TARGET_BADGE[p.targetType] ?? TARGET_BADGE.ALL
               return (
                 <tr key={p.id} className={`border-b hover:bg-gray-50 ${!isActiveOf(p) ? 'text-gray-400' : ''}`}>
+                  <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${badge.cls}`}>{badge.label}</span>
                     <div className="text-xs text-gray-400 mt-1">{targetText(p)}</div>
@@ -238,24 +299,21 @@ export default function DiscountManagePage() {
         )}
       </div>
 
-      {/* ── 정책 변경 이력 (백엔드 미구현) ── */}
-      <div className="border rounded-lg mt-6">
-        <div className="flex items-center gap-2 p-4 border-b">
-          <h2 className="font-bold">정책 변경 이력</h2>
-          <span className="text-xs text-gray-400">— 최근 변경 내역 순으로 표시됩니다</span>
-        </div>
-        <div className="p-8 text-center text-sm text-gray-400">
-          정책 변경 이력 API는 아직 준비 중입니다. (discount_policy_histories 테이블/엔티티 미구현)
-        </div>
-      </div>
-
       {/* ── 등록/수정 모달 ── */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setModalOpen(false)}>
+        /* 피드백 반영: saving 중일 때는 배경을 클릭해도 모달이 닫히지 않도록 방지 */
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !saving && setModalOpen(false)}>
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="bg-slate-700 text-white px-5 py-3 flex items-center justify-between rounded-t-lg">
               <h2 className="font-bold">정책 {editId == null ? '등록' : '수정'}</h2>
-              <button onClick={() => setModalOpen(false)} className="bg-blue-600 w-7 h-7 rounded">✕</button>
+              {/* 피드백 반영: saving 중일 때는 상단 X 버튼 비활성화 및 스타일 처리 */}
+              <button 
+                onClick={() => !saving && setModalOpen(false)} 
+                disabled={saving} 
+                className="bg-blue-600 w-7 h-7 rounded disabled:opacity-50"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="p-6">
@@ -311,7 +369,7 @@ export default function DiscountManagePage() {
                   <PctInput value={form.minProfitRate} onChange={v => setForm({ ...form, minProfitRate: v })} />
                 </Row>
                 <Row label="고액 견적 승인 기준 (원) *">
-                  <input type="number" className="border px-3 py-2 rounded w-full" value={form.highAmountThreshold}
+                  <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.highAmountThreshold}
                     onChange={e => setForm({ ...form, highAmountThreshold: e.target.value })} placeholder="5000000" />
                 </Row>
                 <div />
@@ -330,8 +388,11 @@ export default function DiscountManagePage() {
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setModalOpen(false)} className="border px-4 py-2 rounded">취소</button>
-                <button onClick={onSubmit} className="bg-blue-600 text-white px-4 py-2 rounded">정책 저장</button>
+                <button onClick={() => setModalOpen(false)} disabled={saving} className="border px-4 py-2 rounded disabled:opacity-50">취소</button>
+                <button onClick={onSubmit} disabled={saving}
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">
+                  {saving ? '저장 중…' : '정책 저장'}
+                </button>
               </div>
             </div>
           </div>
@@ -342,12 +403,10 @@ export default function DiscountManagePage() {
 }
 
 // ── 헬퍼 ──
-// DiscountPolicyResponse.isActive(Boolean) → JSON "isActive". 혹시 모를 직렬화차이 대비 둘 다 수용
 function isActiveOf(p) {
   return p?.isActive ?? p?.active ?? false
 }
 
-// 카테고리 트리 전체 평탄화 (대/중/소 모두 선택 가능, 경로 라벨)
 function flattenAll(tree) {
   const out = []
   const walk = (nodes, path) => {
@@ -374,7 +433,7 @@ function date(v) {
 function PctInput({ value, onChange }) {
   return (
     <div className="flex items-center gap-1">
-      <input type="number" step="0.01" className="border px-3 py-2 rounded w-full" value={value}
+      <input type="number" step="0.01" min="0" max="100" className="border px-3 py-2 rounded w-full" value={value}
         onChange={e => onChange(e.target.value)} placeholder="0" />
       <span className="text-gray-400 text-sm">%</span>
     </div>
