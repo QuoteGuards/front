@@ -25,6 +25,7 @@ export default function CategoryManagePage() {
   const [createCtx, setCreateCtx] = useState(null)
   const [form, setForm] = useState({ name: '', slug: '', sortOrder: 0 })
   const [error, setError] = useState(null)
+  const [search, setSearch] = useState('') // 카테고리명 검색
 
   const load = async () => {
     try {
@@ -209,7 +210,8 @@ export default function CategoryManagePage() {
   }
 
   const renderNode = (node) => {
-    const isOpen = expanded.has(node.id)
+    const searching = search.trim().length > 0
+    const isOpen = searching ? true : expanded.has(node.id)
     const isSelected = selected?.id === node.id
     const canHaveChild = node.depth < 3
     const hasChildren = node.children?.length > 0
@@ -252,7 +254,7 @@ export default function CategoryManagePage() {
               {hasChildren || canHaveChild ? (isOpen ? '▼' : '▶') : ''}
             </button>
 
-            <span>{node.name}</span>
+            <span>{highlight(node.name, search.trim().toLowerCase())}</span>
           </span>
 
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
@@ -264,7 +266,7 @@ export default function CategoryManagePage() {
               <div>
                 {node.children?.map(renderNode)}
 
-                {canHaveChild && (
+                {canHaveChild && !searching && (
                     <div style={{ paddingLeft: node.depth * 16 + 12, margin: '4px 0' }}>
                       <button
                           type="button"
@@ -300,6 +302,9 @@ export default function CategoryManagePage() {
               ? pathOf(index.byId.get(index.parentOf.get(selected.id))) || '(최상위 / 대분류)'
               : ''
 
+  const searchQuery = search.trim().toLowerCase()
+  const viewTree = searchQuery ? filterTree(tree, searchQuery) : tree
+
   return (
       <div>
         <PageHeader
@@ -325,9 +330,17 @@ export default function CategoryManagePage() {
               카테고리 목록
             </h2>
 
+            <input
+                className="form-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="카테고리명 검색"
+                style={{ marginBottom: '12px', height: '36px', fontSize: '13px' }}
+            />
+
             {/* 카테고리 많아져도 페이지가 길어지지 않게 패널 내부 스크롤 */}
-            <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
-              {tree.map(renderNode)}
+            <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {viewTree.map(renderNode)}
 
               {tree.length === 0 && (
                   <div
@@ -339,6 +352,12 @@ export default function CategoryManagePage() {
                       }}
                   >
                     {error ?? '카테고리 없음'}
+                  </div>
+              )}
+
+              {tree.length > 0 && searchQuery && viewTree.length === 0 && (
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>
+                    '{search.trim()}' 검색 결과가 없습니다
                   </div>
               )}
             </div>
@@ -595,6 +614,35 @@ function subtreeCount(node) {
   const children = (node.children ?? []).reduce((sum, child) => sum + subtreeCount(child), 0)
 
   return own + children
+}
+
+// 검색: 이름이 매칭되거나(매칭 노드는 하위 원본 유지) 자손에 매칭이 있으면(경로 유지) 살림
+function filterTree(nodes, q) {
+  const out = []
+  for (const node of nodes ?? []) {
+    const selfMatch = node.name?.toLowerCase().includes(q)
+    const kids = filterTree(node.children, q)
+    if (selfMatch) {
+      out.push({ ...node })
+    } else if (kids.length > 0) {
+      out.push({ ...node, children: kids })
+    }
+  }
+  return out
+}
+
+// 매칭 부분 하이라이트
+function highlight(name, q) {
+  if (!q) return name
+  const idx = name.toLowerCase().indexOf(q)
+  if (idx < 0) return name
+  return (
+    <>
+      {name.slice(0, idx)}
+      <mark style={{ background: '#FEF3C7', color: 'inherit', padding: 0 }}>{name.slice(idx, idx + q.length)}</mark>
+      {name.slice(idx + q.length)}
+    </>
+  )
 }
 
 function findInTree(nodes, id) {
