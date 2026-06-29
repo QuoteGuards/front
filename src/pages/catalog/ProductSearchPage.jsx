@@ -6,6 +6,7 @@ import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
+import ProductImage from '../../components/common/ProductImage'
 
 export default function ProductSearchPage() {
   const navigate = useNavigate()
@@ -187,10 +188,7 @@ export default function ProductSearchPage() {
                   style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
                   {/* 이미지 + 즐겨찾기 */}
                   <div className="relative aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover"
-                          onError={e => { e.currentTarget.style.display = 'none' }} />
-                      : <span className="text-[var(--color-text-muted)] text-sm">이미지</span>}
+                    <ProductImage src={p.imageUrl} />
                     <button onClick={() => toggleFavorite(p)}
                       className="absolute top-2 right-2 text-xl"
                       title={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}

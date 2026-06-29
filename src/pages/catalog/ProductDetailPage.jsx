@@ -6,6 +6,7 @@ import {
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
+import ProductImage from '../../components/common/ProductImage'
 
 export default function ProductDetailPage() {
   const { productId } = useParams()
@@ -62,7 +63,7 @@ export default function ProductDetailPage() {
     }
   }
 
-  const addToQuote = () => navigate('/quotes/new', { state: { addProduct: { ...product, quantity: qty } } })
+  const addToQuote = () => navigate('/quotes/new', { state: { addProduct: { ...product, quantity: Number(qty) || 1 } } })
 
   if (loading) return <div className="p-10 text-center text-[var(--color-text-muted)]">불러오는 중…</div>
   if (error && !product) return (
@@ -77,7 +78,6 @@ export default function ProductDetailPage() {
   const supply = vat ? Math.round(Number(product.unitPrice) / 1.1) : Number(product.unitPrice)
   const vatAmount = vat ? Number(product.unitPrice) - supply : 0
   const fav = favoriteOf(product)
-  const active = activeOf(product)
 
   return (
     <div>
@@ -101,10 +101,7 @@ export default function ProductDetailPage() {
         <div className="w-[420px] shrink-0">
           <div className="rounded-[var(--radius-md)] aspect-square flex items-center justify-center overflow-hidden"
             style={{ background: '#F3F4F6', border: '1px solid var(--color-border)' }}>
-            {product.imageUrl
-              ? <img src={product.imageUrl} alt="" className="w-full h-full object-cover"
-                  onError={e => { e.currentTarget.style.display = 'none' }} />
-              : <span className="text-[var(--color-text-muted)]">제품 이미지</span>}
+            <ProductImage src={product.imageUrl} label="제품 이미지" />
           </div>
 
           <Button variant={fav ? 'secondary' : 'outline'} className="w-full mt-4" onClick={toggleFavorite}>
@@ -116,10 +113,16 @@ export default function ProductDetailPage() {
           <div className="flex items-center gap-3 mt-3 text-sm text-[var(--color-text-sub)]">
             <span>견적 추가 시 수량</span>
             <div className="flex items-center rounded-[var(--radius-sm)]" style={{ border: '1px solid var(--color-border)' }}>
-              <button onClick={() => setQty(q => Math.max(1, q - 1))} className="px-3 py-1 text-[var(--color-text-sub)]">−</button>
-              <input className="w-12 text-center py-1" style={{ borderInline: '1px solid var(--color-border)' }} value={qty}
-                onChange={e => setQty(Math.max(1, Number(e.target.value) || 1))} />
-              <button onClick={() => setQty(q => q + 1)} className="px-3 py-1 text-[var(--color-text-sub)]">+</button>
+              <button onClick={() => setQty(q => Math.max(1, (Number(q) || 1) - 1))} className="px-3 py-1 text-[var(--color-text-sub)]">−</button>
+              <input type="number" min="1" className="w-12 text-center py-1" style={{ borderInline: '1px solid var(--color-border)' }} value={qty}
+                onChange={e => {
+                  const v = e.target.value
+                  if (v === '') { setQty(''); return } // 포커스 중 빈값 허용
+                  const n = Math.floor(Number(v))
+                  if (Number.isFinite(n)) setQty(Math.max(1, n))
+                }}
+                onBlur={() => { if (qty === '' || Number(qty) < 1) setQty(1) }} />
+              <button onClick={() => setQty(q => (Number(q) || 1) + 1)} className="px-3 py-1 text-[var(--color-text-sub)]">+</button>
             </div>
             <span>개</span>
           </div>
@@ -173,14 +176,6 @@ export default function ProductDetailPage() {
             </table>
           </Section>
 
-          {/* 상태 */}
-          <div className="flex items-center gap-2 text-sm mt-5">
-            <span className="text-[var(--color-text-sub)]">상태:</span>
-            <span className={`status-badge status-badge--${active ? 'green' : 'gray'}`}>
-              {active ? '활성 (구매 가능)' : '비활성'}
-            </span>
-          </div>
-
           {/* 연관 제품 */}
           {related.length > 0 && (
             <div className="mt-6">
@@ -191,9 +186,7 @@ export default function ProductDetailPage() {
                     className="rounded-[var(--radius-md)] overflow-hidden text-left hover:shadow"
                     style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
                     <div className="aspect-[4/3] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
-                      {r.imageUrl
-                        ? <img src={r.imageUrl} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-                        : <span className="text-[var(--color-text-muted)] text-xs">이미지</span>}
+                      <ProductImage src={r.imageUrl} />
                     </div>
                     <div className="p-2">
                       <div className="text-xs truncate">{r.name}</div>
@@ -212,7 +205,6 @@ export default function ProductDetailPage() {
 
 // ── 헬퍼 ──
 function favoriteOf(p) { return p?.isFavorite ?? p?.favorite ?? false }
-function activeOf(p) { return p?.isActive ?? p?.active ?? false }
 
 function Section({ title, children }) {
   return (

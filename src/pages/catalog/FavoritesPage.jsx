@@ -5,6 +5,7 @@ import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import Button from '../../components/common/Button'
+import ProductImage from '../../components/common/ProductImage'
 
 const SORTS = [
   { key: 'recent', label: '최근 추가순' },
@@ -177,9 +178,7 @@ export default function FavoritesPage() {
             <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
               style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
               <div className="relative aspect-[16/9] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
-                {p.imageUrl
-                  ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-                  : <span className="text-[var(--color-text-muted)] text-sm">이미지</span>}
+                <ProductImage src={p.imageUrl} />
                 <span className="absolute top-2 right-2 text-xl" style={{ color: 'var(--color-warning)' }}>★</span>
               </div>
               <div className="p-3 flex flex-col flex-1">
