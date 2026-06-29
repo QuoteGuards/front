@@ -149,7 +149,7 @@ export default function ProductManagePage() {
     return () => {
       ignore = true
     }
-  }, [applied, page, size])
+  }, [applied, page, size]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSearch = () => {
     setApplied({
