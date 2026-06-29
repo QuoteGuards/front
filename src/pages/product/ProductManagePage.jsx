@@ -198,8 +198,14 @@ export default function ProductManagePage() {
   const exportCsv = async () => {
     setError(null)
     try {
+      const EXPORT_CAP = 10000
       const total = pageData.totalElements ?? 0
-      const data = await getProductsApi(buildParams({ page: 0, size: Math.min(Math.max(total, 1), 10000) }))
+      // 한도 초과 시 잘린다는 점을 명시하고 동의받음
+      if (total > EXPORT_CAP &&
+          !confirm(`검색 결과가 ${total.toLocaleString('ko-KR')}개입니다. 처음 ${EXPORT_CAP.toLocaleString('ko-KR')}개만 내보냅니다. 계속할까요?`)) {
+        return
+      }
+      const data = await getProductsApi(buildParams({ page: 0, size: Math.min(Math.max(total, 1), EXPORT_CAP) }))
       const list = data.content ?? []
       if (list.length === 0) { alert('내보낼 제품이 없습니다.'); return }
 
