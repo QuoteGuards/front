@@ -176,6 +176,7 @@ export default function DiscountManagePage() {
         <table className="w-full text-sm">
           <thead className="text-gray-500 border-b">
             <tr>
+              <th className="px-4 py-3 text-left">정책명</th>
               <th className="px-4 py-3 text-left">적용 대상</th>
               <th className="px-4 py-3 text-right">할인율</th>
               <th className="px-4 py-3 text-right">최소 이익률</th>
@@ -187,13 +188,14 @@ export default function DiscountManagePage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-gray-400 py-10">등록된 정책이 없습니다</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-400 py-10">등록된 정책이 없습니다</td></tr>
             ) : rows.map(p => {
               const badge = TARGET_BADGE[p.targetType] ?? TARGET_BADGE.ALL
               return (
                 <tr key={p.id} className={`border-b hover:bg-gray-50 ${!isActiveOf(p) ? 'text-gray-400' : ''}`}>
+                  <td className="px-4 py-3 font-medium">{p.name}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${badge.cls}`}>{badge.label}</span>
                     <div className="text-xs text-gray-400 mt-1">{targetText(p)}</div>
@@ -234,17 +236,6 @@ export default function DiscountManagePage() {
             <PageBtn disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>다음</PageBtn>
           </div>
         )}
-      </div>
-
-      {/* ── 정책 변경 이력 (백엔드 미구현) ── */}
-      <div className="border rounded-lg mt-6">
-        <div className="flex items-center gap-2 p-4 border-b">
-          <h2 className="font-bold">정책 변경 이력</h2>
-          <span className="text-xs text-gray-400">— 최근 변경 내역 순으로 표시됩니다</span>
-        </div>
-        <div className="p-8 text-center text-sm text-gray-400">
-          정책 변경 이력 API는 아직 준비 중입니다. (discount_policy_histories 테이블/엔티티 미구현)
-        </div>
       </div>
 
       {/* ── 등록/수정 모달 ── */}
