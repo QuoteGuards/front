@@ -25,7 +25,8 @@ export default function ProductManagePage() {
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
   const [pageData, setPageData] = useState({ content: [], totalElements: 0, totalPages: 0 })
-  const [leafCats, setLeafCats] = useState([]) // 소분류(말단) 카테고리 목록
+  const [leafCats, setLeafCats] = useState([]) // 소분류(말단) — 등록/수정 모달용
+  const [allCats, setAllCats] = useState([])   // 대/중/소 전체 — 검색 필터용(자손 매칭)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -35,9 +36,12 @@ export default function ProductManagePage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
 
-  // 카테고리 트리 → 말단(소분류) 노드만 평탄화
+  // 카테고리 트리 로드 → 모달용(말단)/필터용(전체) 평탄화
   useEffect(() => {
-    getCategoriesApi().then(tree => setLeafCats(flattenLeaves(tree))).catch(() => {})
+    getCategoriesApi().then(tree => {
+      setLeafCats(flattenLeaves(tree))
+      setAllCats(flattenAll(tree))
+    }).catch(() => {})
   }, [])
 
   const load = async () => {
@@ -76,8 +80,8 @@ export default function ProductManagePage() {
     return list
   }, [pageData, vatFilter])
 
-  // 카테고리 전체 경로 라벨 (leaf 목록에 없으면 백엔드 categoryName 폴백)
-  const catLabel = (p) => leafCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
+  // 카테고리 전체 경로 라벨 (전체 목록에 없으면 백엔드 categoryName 폴백)
+  const catLabel = (p) => allCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
 
   // ── 모달 열기 ──
   const openCreate = () => {
@@ -177,7 +181,7 @@ export default function ProductManagePage() {
           <select className="border px-2 py-2 rounded w-full" value={filter.categoryId}
             onChange={e => setFilter({ ...filter, categoryId: e.target.value })}>
             <option value="">전체</option>
-            {leafCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
+            {allCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
           </select>
         </Field>
         <Field label="제품명 / 제품코드">
@@ -409,6 +413,20 @@ function flattenLeaves(tree) {
       const p = [...path, n.name]
       if (n.children?.length) walk(n.children, p)
       else out.push({ id: n.id, path: p.join(' > ') })
+    }
+  }
+  walk(tree, [])
+  return out
+}
+
+// 카테고리 트리 전체(대/중/소) 평탄화 + 전체 경로 라벨 (검색 필터용)
+function flattenAll(tree) {
+  const out = []
+  const walk = (nodes, path) => {
+    for (const n of nodes ?? []) {
+      const p = [...path, n.name]
+      out.push({ id: n.id, path: p.join(' > ') })
+      if (n.children?.length) walk(n.children, p)
     }
   }
   walk(tree, [])
