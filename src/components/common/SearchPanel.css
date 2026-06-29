@@ -1,0 +1,32 @@
+.search-panel {
+  background: var(--color-bg-white);
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-sm);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.search-row__label {
+  flex-shrink: 0;
+  width: 90px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-sub);
+}
+
+.search-row__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}

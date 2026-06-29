@@ -1,101 +1,251 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
-  getProductsApi, createProductApi, updateProductApi,
-  activateProductApi, deactivateProductApi, deleteProductApi,
+  getProductsApi,
+  createProductApi,
+  updateProductApi,
+  activateProductApi,
+  deactivateProductApi,
+  deleteProductApi,
+  bulkActivateProductsApi,
+  bulkDeactivateProductsApi,
+  bulkDeleteProductsApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
+import PageHeader from '../../components/common/PageHeader'
+import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import DataTable from '../../components/common/DataTable'
+import Button from '../../components/common/Button'
+import Pagination from '../../components/common/Pagination'
 
 const PAGE_SIZES = [10, 20, 50]
+
 const EMPTY_FORM = {
-  code: '', name: '', categoryId: '', description: '', imageUrl: '',
-  unitPrice: '', costPrice: '', unit: 'EA', spec: '', vatApplicable: true, isActive: true,
+  code: '',
+  name: '',
+  categoryId: '',
+  description: '',
+  imageUrl: '',
+  unitPrice: '',
+  costPrice: '',
+  unit: 'EA',
+  spec: '',
+  vatApplicable: true,
+  isActive: true,
 }
 
 export default function ProductManagePage() {
-  // 검색 필터 (입력값)
-  const [filter, setFilter] = useState({ categoryId: '', keyword: '', vat: '', active: '' })
-  // 실제 적용된 필터 (검색 버튼 눌렀을 때만 반영)
-  const [applied, setApplied] = useState({ categoryId: '', keyword: '', active: '' })
-  const [vatFilter, setVatFilter] = useState('') // VAT는 백엔드 미지원 → 클라 필터
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initCategoryId = searchParams.get('categoryId') ?? ''
+
+  const [filter, setFilter] = useState({
+    categoryId: initCategoryId,
+    keyword: '',
+    vat: '',
+    active: '',
+  })
+
+  const [applied, setApplied] = useState({
+    categoryId: initCategoryId,
+    keyword: '',
+    vat: '',
+    active: '',
+  })
 
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
-  const [pageData, setPageData] = useState({ content: [], totalElements: 0, totalPages: 0 })
-  const [leafCats, setLeafCats] = useState([]) // 소분류(말단) 카테고리 목록
+  const [pageData, setPageData] = useState({
+    content: [],
+    totalElements: 0,
+    totalPages: 0,
+  })
+
+  const [leafCats, setLeafCats] = useState([])
+  const [allCats, setAllCats] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
-  // 모달
   const [modalOpen, setModalOpen] = useState(false)
-  const [editId, setEditId] = useState(null)       // null이면 등록
+  const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
 
-  // 카테고리 트리 → 말단(소분류) 노드만 평탄화
   useEffect(() => {
-    getCategoriesApi().then(tree => setLeafCats(flattenLeaves(tree))).catch(() => {})
+    let ignore = false
+
+    getCategoriesApi()
+        .then((tree) => {
+          if (ignore) return
+
+          setLeafCats(flattenLeaves(tree))
+          setAllCats(flattenAll(tree))
+        })
+        .catch((e) => {
+          if (ignore) return
+
+          setError(e.response?.data?.message ?? '카테고리 목록을 불러오지 못했습니다.')
+        })
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
+  const buildParams = (base) => {
+    const params = { ...base }
+
+    if (applied.categoryId) params.categoryId = applied.categoryId
+    if (applied.keyword) params.keyword = applied.keyword
+    if (applied.active !== '') params.isActive = applied.active === 'true'
+    if (applied.vat !== '') params.vatApplicable = applied.vat === 'true'
+
+    return params
+  }
+
   const load = async () => {
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
+
     try {
-      const params = { page, size }
-      if (applied.categoryId) params.categoryId = applied.categoryId
-      if (applied.keyword) params.keyword = applied.keyword
-      if (applied.active !== '') params.isActive = applied.active === 'true'
-      const data = await getProductsApi(params)
+      const data = await getProductsApi(buildParams({ page, size }))
       setPageData(data)
+      setSelectedIds(new Set())
     } catch (e) {
       setError(e.response?.data?.message ?? '제품 목록 조회 실패')
     } finally {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [applied, page, size]) // eslint-disable-line
+
+  useEffect(() => {
+    let ignore = false
+
+    Promise.resolve()
+        .then(async () => {
+          if (ignore) return
+
+          setLoading(true)
+          setError(null)
+
+          try {
+            const data = await getProductsApi(buildParams({ page, size }))
+
+            if (ignore) return
+
+            setPageData(data)
+            setSelectedIds(new Set())
+          } catch (e) {
+            if (ignore) return
+
+            setError(e.response?.data?.message ?? '제품 목록 조회 실패')
+          } finally {
+            if (!ignore) {
+              setLoading(false)
+            }
+          }
+        })
+
+    return () => {
+      ignore = true
+    }
+  }, [applied, page, size]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSearch = () => {
-    setApplied({ categoryId: filter.categoryId, keyword: filter.keyword.trim(), active: filter.active })
-    setVatFilter(filter.vat)
-    setPage(0)
-  }
-  const onReset = () => {
-    setFilter({ categoryId: '', keyword: '', vat: '', active: '' })
-    setApplied({ categoryId: '', keyword: '', active: '' })
-    setVatFilter('')
-    setPage(0)
-  }
-
-  // VAT는 백엔드 필터가 없어 현재 페이지에서 클라이언트 필터
-  const rows = useMemo(() => {
-    let list = pageData.content ?? []
-    if (vatFilter !== '') list = list.filter(p => p.vatApplicable === (vatFilter === 'true'))
-    return list
-  }, [pageData, vatFilter])
-
-  // 카테고리 전체 경로 라벨 (leaf 목록에 없으면 백엔드 categoryName 폴백)
-  const catLabel = (p) => leafCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
-
-  // ── 모달 열기 ──
-  const openCreate = () => {
-    setEditId(null); setForm(EMPTY_FORM); setModalError(null); setModalOpen(true)
-  }
-  const openEdit = (p) => {
-    setEditId(p.id)
-    setForm({
-      code: p.code, name: p.name, categoryId: p.categoryId ?? '',
-      description: p.description ?? '', imageUrl: p.imageUrl ?? '',
-      unitPrice: p.unitPrice ?? '', costPrice: p.costPrice ?? '',
-      unit: p.unit ?? 'EA', spec: p.spec ?? '',
-      vatApplicable: p.vatApplicable, isActive: isActiveOf(p),
+    setApplied({
+      categoryId: filter.categoryId,
+      keyword: filter.keyword.trim(),
+      vat: filter.vat,
+      active: filter.active,
     })
-    setModalError(null); setModalOpen(true)
+    setPage(0)
+  }
+
+  const onReset = () => {
+    setFilter({
+      categoryId: '',
+      keyword: '',
+      vat: '',
+      active: '',
+    })
+
+    setApplied({
+      categoryId: '',
+      keyword: '',
+      vat: '',
+      active: '',
+    })
+
+    setPage(0)
+
+    if (searchParams.toString()) {
+      setSearchParams({})
+    }
+  }
+
+  const rows = pageData.content ?? []
+
+  const catLabel = (product) => {
+    return allCats.find((category) => category.id === product.categoryId)?.path ?? product.categoryName ?? ''
+  }
+
+  const openCreate = () => {
+    setEditId(null)
+    setForm(EMPTY_FORM)
+    setModalError(null)
+    setModalOpen(true)
+  }
+
+  const openEdit = (product) => {
+    setEditId(product.id)
+    setForm({
+      code: product.code,
+      name: product.name,
+      categoryId: product.categoryId ?? '',
+      description: product.description ?? '',
+      imageUrl: product.imageUrl ?? '',
+      unitPrice: product.unitPrice ?? '',
+      costPrice: product.costPrice ?? '',
+      unit: product.unit ?? 'EA',
+      spec: product.spec ?? '',
+      vatApplicable: product.vatApplicable,
+      isActive: isActiveOf(product),
+    })
+    setModalError(null)
+    setModalOpen(true)
   }
 
   const onSubmit = async () => {
     setModalError(null)
+
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
-      setModalError('제품코드, 제품명, 카테고리는 필수입니다.'); return
+      setModalError('제품코드, 제품명, 카테고리는 필수입니다.')
+      return
     }
+
+    if (form.unitPrice === '' || form.costPrice === '') {
+      setModalError('단가와 원가를 입력하세요.')
+      return
+    }
+
+    const unitPriceNum = Number(form.unitPrice)
+    const costPriceNum = Number(form.costPrice)
+
+    if (
+        !Number.isFinite(unitPriceNum) ||
+        !Number.isFinite(costPriceNum) ||
+        unitPriceNum < 0 ||
+        costPriceNum < 0
+    ) {
+      setModalError('단가·원가는 0 이상의 유효한 숫자여야 합니다.')
+      return
+    }
+
+    if (costPriceNum > unitPriceNum) {
+      setModalError('원가가 단가보다 클 수 없습니다.')
+      return
+    }
+
     const payload = {
       categoryId: Number(form.categoryId),
       name: form.name.trim(),
@@ -103,19 +253,29 @@ export default function ProductManagePage() {
       description: form.description?.trim() || null,
       spec: form.spec?.trim() || null,
       imageUrl: form.imageUrl?.trim() || null,
-      unitPrice: form.unitPrice === '' ? 0 : Number(form.unitPrice),
-      costPrice: form.costPrice === '' ? 0 : Number(form.costPrice),
+      unitPrice: unitPriceNum,
+      costPrice: costPriceNum,
       unit: form.unit?.trim() || 'EA',
       vatApplicable: form.vatApplicable,
     }
+
     try {
       let saved
-      if (editId == null) saved = await createProductApi(payload)
-      else saved = await updateProductApi(editId, payload)
-      // 등록/수정과 상태(활성화)는 별도 API → 수정 시 상태가 바뀌었으면 반영
-      if (editId != null && isActiveOf(saved) !== form.isActive) {
-        form.isActive ? await activateProductApi(editId) : await deactivateProductApi(editId)
+
+      if (editId == null) {
+        saved = await createProductApi(payload)
+      } else {
+        saved = await updateProductApi(editId, payload)
       }
+
+      if (editId != null && isActiveOf(saved) !== form.isActive) {
+        if (form.isActive) {
+          await activateProductApi(editId)
+        } else {
+          await deactivateProductApi(editId)
+        }
+      }
+
       setModalOpen(false)
       await load()
     } catch (e) {
@@ -123,339 +283,759 @@ export default function ProductManagePage() {
     }
   }
 
-  const onToggleActive = async (p) => {
+  const onToggleActive = async (product) => {
     try {
-      isActiveOf(p) ? await deactivateProductApi(p.id) : await activateProductApi(p.id)
+      if (isActiveOf(product)) {
+        await deactivateProductApi(product.id)
+      } else {
+        await activateProductApi(product.id)
+      }
+
       await load()
     } catch (e) {
       setError(e.response?.data?.message ?? '상태 변경 실패')
     }
   }
 
-  const onDelete = async (p) => {
-    if (!confirm(`'${p.name}' 삭제할까요? (견적에 연결된 제품은 삭제 불가)`)) return
+  const onDelete = async (product) => {
+    if (!confirm(`'${product.name}' 삭제할까요? (견적에 연결된 제품은 삭제 불가)`)) return
+
     try {
-      await deleteProductApi(p.id)
+      await deleteProductApi(product.id)
       await load()
     } catch (e) {
-      setError(e.response?.data?.message ?? '삭제 실패 (견적 연결 제품 확인)')
+      setError(e.response?.data?.message ?? '삭제 실패')
     }
   }
 
-  const exportCsv = () => {
-    const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
-    const lines = rows.map(p => [
-      p.code, p.name, p.spec ?? '', catLabel(p),
-      p.unitPrice, p.costPrice, p.vatApplicable ? '적용' : '미적용', isActiveOf(p) ? '사용' : '미사용',
-    ].map(csvCell).join(','))
-    const csv = '﻿' + [header.join(','), ...lines].join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
-    a.click(); URL.revokeObjectURL(url)
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
   }
 
-  const totalPages = pageData.totalPages ?? 0
+  const allChecked = rows.length > 0 && rows.every((product) => selectedIds.has(product.id))
 
-  return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">제품 관리</h1>
-        <div className="flex gap-2">
-          <button onClick={exportCsv} className="border px-3 py-1.5 rounded text-sm">엑셀 다운로드</button>
-          <button onClick={openCreate} className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">+ 제품 등록</button>
-        </div>
-      </div>
+  const toggleAll = () => {
+    if (allChecked) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(rows.map((product) => product.id)))
+    }
+  }
 
-      {/* ── 검색 필터 바 ── */}
-      <div className="border rounded-lg p-4 mb-4 grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
-        <Field label="카테고리">
-          <select className="border px-2 py-2 rounded w-full" value={filter.categoryId}
-            onChange={e => setFilter({ ...filter, categoryId: e.target.value })}>
-            <option value="">전체</option>
-            {leafCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
-          </select>
-        </Field>
-        <Field label="제품명 / 제품코드">
-          <input className="border px-2 py-2 rounded w-full" value={filter.keyword}
-            placeholder="제품명 또는 코드"
-            onChange={e => setFilter({ ...filter, keyword: e.target.value })}
-            onKeyDown={e => e.key === 'Enter' && onSearch()} />
-        </Field>
-        <Field label="VAT">
-          <select className="border px-2 py-2 rounded w-full" value={filter.vat}
-            onChange={e => setFilter({ ...filter, vat: e.target.value })}>
-            <option value="">전체</option>
-            <option value="true">적용</option>
-            <option value="false">미적용</option>
-          </select>
-        </Field>
-        <Field label="사용 상태">
-          <select className="border px-2 py-2 rounded w-full" value={filter.active}
-            onChange={e => setFilter({ ...filter, active: e.target.value })}>
-            <option value="">전체</option>
-            <option value="true">사용</option>
-            <option value="false">미사용</option>
-          </select>
-        </Field>
-        <div className="flex gap-2">
-          <button onClick={onSearch} className="bg-blue-600 text-white px-4 py-2 rounded text-sm flex-1">검색</button>
-          <button onClick={onReset} className="border px-4 py-2 rounded text-sm">초기화</button>
-        </div>
-      </div>
+  const runBulk = async (fn, label) => {
+    const ids = [...selectedIds]
 
-      <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-        <span>총 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개{vatFilter !== '' && ' (VAT 필터는 현재 페이지 기준)'}</span>
-        <label className="flex items-center gap-2">
-          페이지당
-          <select className="border px-2 py-1 rounded" value={size}
-            onChange={e => { setSize(Number(e.target.value)); setPage(0) }}>
-            {PAGE_SIZES.map(s => <option key={s} value={s}>{s}개</option>)}
-          </select>
-        </label>
-      </div>
+    if (ids.length === 0) return
 
-      {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
+    if (label === '삭제' && !confirm(`선택한 ${ids.length}개 제품을 삭제할까요? (견적 연결 제품은 실패)`)) {
+      return
+    }
 
-      {/* ── 테이블 ── */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600">
-            <tr>
-              <th className="px-3 py-2 text-left">제품코드</th>
-              <th className="px-3 py-2 text-left">제품</th>
-              <th className="px-3 py-2 text-left">카테고리</th>
-              <th className="px-3 py-2 text-right">단가</th>
-              <th className="px-3 py-2 text-right">원가</th>
-              <th className="px-3 py-2 text-center">VAT</th>
-              <th className="px-3 py-2 text-center">상태</th>
-              <th className="px-3 py-2 text-center">관리</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">제품이 없습니다</td></tr>
-            ) : rows.map(p => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
-                <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.code}</td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Thumb src={p.imageUrl} />
-                    <div>
-                      <div className="font-medium">{p.name}</div>
-                      {p.spec && <div className="text-xs text-gray-400">{p.spec}</div>}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-gray-600">{catLabel(p)}</td>
-                <td className="px-3 py-2 text-right">{won(p.unitPrice)}</td>
-                <td className="px-3 py-2 text-right text-gray-400">{won(p.costPrice)}</td>
-                <td className="px-3 py-2 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded ${p.vatApplicable ? 'bg-gray-100 text-gray-600' : 'bg-gray-50 text-gray-400'}`}>
-                    {p.vatApplicable ? '적용' : '미적용'}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-center">
-                  <span className={`text-xs px-2 py-0.5 rounded ${isActiveOf(p) ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {isActiveOf(p) ? '사용' : '미사용'}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-1 justify-center">
-                    <button onClick={() => openEdit(p)} className="text-blue-600 text-xs px-2 py-1">수정</button>
-                    <button onClick={() => onToggleActive(p)} className="text-amber-600 text-xs px-2 py-1">
-                      {isActiveOf(p) ? '비활성화' : '활성화'}
-                    </button>
-                    <button onClick={() => onDelete(p)} className="text-red-500 text-xs px-2 py-1">삭제</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    setError(null)
 
-      {/* ── 페이징 ── */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-1 mt-4">
-          <PageBtn disabled={page === 0} onClick={() => setPage(page - 1)}>이전</PageBtn>
-          {Array.from({ length: totalPages }, (_, i) => i)
-            .filter(i => Math.abs(i - page) <= 2 || i === 0 || i === totalPages - 1)
-            .map((i, idx, arr) => (
-              <span key={i} className="flex">
-                {idx > 0 && arr[idx - 1] !== i - 1 && <span className="px-1 text-gray-300">…</span>}
-                <PageBtn active={i === page} onClick={() => setPage(i)}>{i + 1}</PageBtn>
-              </span>
-            ))}
-          <PageBtn disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>다음</PageBtn>
-        </div>
-      )}
+    try {
+      await fn(ids)
+      await load()
+    } catch (e) {
+      setError(e.response?.data?.message ?? `일괄 ${label} 실패`)
+    }
+  }
 
-      {/* ── 등록/수정 모달 ── */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-          onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6"
-            onClick={e => e.stopPropagation()}>
-            <h2 className="font-bold text-lg mb-4">제품 {editId == null ? '등록' : '수정'}</h2>
-            {modalError && <div className="mb-3 text-red-500 text-sm">{modalError}</div>}
+  const onBulkActivate = () => runBulk(bulkActivateProductsApi, '활성화')
+  const onBulkDeactivate = () => runBulk(bulkDeactivateProductsApi, '비활성화')
+  const onBulkDelete = () => runBulk(bulkDeleteProductsApi, '삭제')
 
-            <div className="grid grid-cols-2 gap-4">
-              <Row label="제품코드 *">
-                <input className="border px-3 py-2 rounded w-full" value={form.code}
-                  onChange={e => setForm({ ...form, code: e.target.value })} placeholder="예: WM-1024" />
-              </Row>
-              <Row label="제품명 *">
-                <input className="border px-3 py-2 rounded w-full" value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} placeholder="예: 드럼 세탁기 12kg" />
-              </Row>
-              <Row label="카테고리 *">
-                <select className="border px-3 py-2 rounded w-full" value={form.categoryId}
-                  onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                  <option value="">선택</option>
-                  {leafCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
-                </select>
-              </Row>
-              <Row label="규격">
-                <input className="border px-3 py-2 rounded w-full" value={form.spec}
-                  onChange={e => setForm({ ...form, spec: e.target.value })} placeholder="예: 600x850x600mm" />
-              </Row>
-              <Row label="단가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.unitPrice}
-                  onChange={e => setForm({ ...form, unitPrice: e.target.value })} placeholder="0" />
-              </Row>
-              <Row label="원가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.costPrice}
-                  onChange={e => setForm({ ...form, costPrice: e.target.value })} placeholder="0" />
-              </Row>
-              <Row label="단위">
-                <input className="border px-3 py-2 rounded w-full" value={form.unit}
-                  onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="EA" />
-              </Row>
-              <Row label="VAT">
-                <div className="flex gap-4 items-center h-full">
-                  <label className="flex items-center gap-1 text-sm">
-                    <input type="radio" checked={form.vatApplicable === true}
-                      onChange={() => setForm({ ...form, vatApplicable: true })} /> 적용
-                  </label>
-                  <label className="flex items-center gap-1 text-sm">
-                    <input type="radio" checked={form.vatApplicable === false}
-                      onChange={() => setForm({ ...form, vatApplicable: false })} /> 미적용
-                  </label>
-                </div>
-              </Row>
-            </div>
+  const exportCsv = async () => {
+    setError(null)
 
-            <div className="mt-4">
-              <Row label="설명">
-                <textarea className="border px-3 py-2 rounded w-full h-20" value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })} placeholder="제품 설명 (선택)" />
-              </Row>
-            </div>
+    try {
+      const exportCap = 10000
+      const total = pageData.totalElements ?? 0
 
-            <div className="mt-4">
-              <Row label="이미지 URL">
-                <div className="flex gap-3 items-start">
-                  <input className="border px-3 py-2 rounded flex-1" value={form.imageUrl}
-                    onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                    placeholder="https://… (업로드 기능 연동 전 임시: URL 직접 입력)" />
-                  <Thumb src={form.imageUrl} size={56} />
-                </div>
-              </Row>
-            </div>
+      if (
+          total > exportCap &&
+          !confirm(
+              `검색 결과가 ${total.toLocaleString('ko-KR')}개입니다. 처음 ${exportCap.toLocaleString(
+                  'ko-KR',
+              )}개만 내보냅니다. 계속할까요?`,
+          )
+      ) {
+        return
+      }
 
-            {editId != null && (
-              <div className="mt-4">
-                <Row label="사용 상태">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setForm({ ...form, isActive: !form.isActive })}
-                      className={`relative w-11 h-6 rounded-full transition ${form.isActive ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition ${form.isActive ? 'translate-x-5' : ''}`} />
-                    </button>
-                    <span className="text-sm text-gray-600">{form.isActive ? '사용 중' : '미사용'}</span>
-                  </div>
-                </Row>
-              </div>
-            )}
+      const data = await getProductsApi(
+          buildParams({
+            page: 0,
+            size: Math.min(Math.max(total, 1), exportCap),
+          }),
+      )
 
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setModalOpen(false)} className="border px-4 py-2 rounded">취소</button>
-              <button onClick={onSubmit} className="bg-blue-600 text-white px-4 py-2 rounded">저장</button>
+      const list = data.content ?? []
+
+      if (list.length === 0) {
+        alert('내보낼 제품이 없습니다.')
+        return
+      }
+
+      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
+
+      const lines = list.map((product) =>
+          [
+            product.code,
+            product.name,
+            product.spec ?? '',
+            catLabel(product),
+            product.unitPrice,
+            product.costPrice,
+            product.vatApplicable ? '적용' : '미적용',
+            isActiveOf(product) ? '사용' : '미사용',
+          ]
+              .map(csvCell)
+              .join(','),
+      )
+
+      const csv = '\uFEFF' + [header.join(','), ...lines].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const a = document.createElement('a')
+
+      a.href = url
+      a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.response?.data?.message ?? '엑셀 다운로드 실패')
+    }
+  }
+
+  const columns = [
+    {
+      key: '_select',
+      title: <input type="checkbox" checked={allChecked} onChange={toggleAll} />,
+      align: 'center',
+      render: (_, row) => (
+          <input
+              type="checkbox"
+              checked={selectedIds.has(row.id)}
+              onChange={() => toggleOne(row.id)}
+              onClick={(e) => e.stopPropagation()}
+          />
+      ),
+    },
+    {
+      key: 'code',
+      title: '제품코드',
+      render: (value) => (
+          <span style={{ fontFamily: 'monospace', fontSize: '12px', color: 'var(--color-text-sub)' }}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'name',
+      title: '제품명',
+      render: (value, row) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Thumb src={row.imageUrl} />
+
+            <div>
+              <div style={{ fontWeight: 500 }}>{value}</div>
+              {row.spec && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{row.spec}</div>}
             </div>
           </div>
+      ),
+    },
+    {
+      key: '_cat',
+      title: '카테고리',
+      render: (_, row) => <span style={{ color: 'var(--color-text-sub)' }}>{catLabel(row)}</span>,
+    },
+    {
+      key: 'unitPrice',
+      title: '단가',
+      align: 'right',
+      render: (value) => <span style={{ fontWeight: 500 }}>{won(value)}</span>,
+    },
+    {
+      key: 'costPrice',
+      title: '원가',
+      align: 'right',
+      render: (value) => <span style={{ color: 'var(--color-text-sub)' }}>{won(value)}</span>,
+    },
+    {
+      key: 'vatApplicable',
+      title: 'VAT',
+      align: 'center',
+      render: (value) => (
+          <span
+              style={{
+                fontSize: '12px',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                background: value ? '#F3F4F6' : '#F9FAFB',
+                color: value ? '#374151' : '#9CA3AF',
+              }}
+          >
+          {value ? '적용' : '미적용'}
+        </span>
+      ),
+    },
+    {
+      key: '_active',
+      title: '상태',
+      align: 'center',
+      render: (_, row) => {
+        const active = isActiveOf(row)
+
+        return (
+            <span
+                style={{
+                  fontSize: '12px',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  background: active ? '#F0FDF4' : '#F3F4F6',
+                  color: active ? '#16A34A' : '#9CA3AF',
+                }}
+            >
+            {active ? '사용' : '미사용'}
+          </span>
+        )
+      },
+    },
+    {
+      key: '_actions',
+      title: '관리',
+      align: 'center',
+      render: (_, row) => (
+          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEdit(row)
+                }}
+            >
+              수정
+            </Button>
+
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleActive(row)
+                }}
+            >
+              {isActiveOf(row) ? '비활성화' : '활성화'}
+            </Button>
+
+            <Button
+                variant="danger"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(row)
+                }}
+            >
+              삭제
+            </Button>
+          </div>
+      ),
+    },
+  ]
+
+  return (
+      <div>
+        <PageHeader
+            breadcrumbs={['제품', '제품 관리']}
+            title="제품 관리"
+            actions={
+              <>
+                <Button variant="ghost" onClick={exportCsv}>
+                  엑셀 다운로드
+                </Button>
+                <Button variant="primary" onClick={openCreate}>
+                  + 제품 등록
+                </Button>
+              </>
+            }
+        />
+
+        <SearchPanel>
+          <SearchRow label="카테고리">
+            <select
+                className="form-select"
+                value={filter.categoryId}
+                onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
+                style={{ width: '240px' }}
+            >
+              <option value="">전체</option>
+              {allCats.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.path}
+                  </option>
+              ))}
+            </select>
+          </SearchRow>
+
+          <SearchRow label="검색">
+            <input
+                type="text"
+                className="form-input"
+                value={filter.keyword}
+                placeholder="제품명 또는 코드"
+                onChange={(e) => setFilter({ ...filter, keyword: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                style={{ width: '220px' }}
+            />
+
+            <select
+                className="form-select"
+                value={filter.vat}
+                onChange={(e) => setFilter({ ...filter, vat: e.target.value })}
+                style={{ width: '110px' }}
+            >
+              <option value="">VAT 전체</option>
+              <option value="true">적용</option>
+              <option value="false">미적용</option>
+            </select>
+
+            <select
+                className="form-select"
+                value={filter.active}
+                onChange={(e) => setFilter({ ...filter, active: e.target.value })}
+                style={{ width: '110px' }}
+            >
+              <option value="">상태 전체</option>
+              <option value="true">사용</option>
+              <option value="false">미사용</option>
+            </select>
+
+            <Button variant="secondary" onClick={onSearch}>
+              검색
+            </Button>
+            <Button variant="ghost" onClick={onReset}>
+              초기화
+            </Button>
+          </SearchRow>
+        </SearchPanel>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <span style={{ fontSize: '13px', color: 'var(--color-text-sub)' }}>
+          총 <strong style={{ color: 'var(--color-text-main)' }}>{pageData.totalElements ?? 0}</strong>개
+        </span>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+            페이지당
+            <select
+                className="form-select"
+                value={size}
+                onChange={(e) => {
+                  setSize(Number(e.target.value))
+                  setPage(0)
+                }}
+                style={{ width: '80px', height: '32px' }}
+            >
+              {PAGE_SIZES.map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize}개
+                  </option>
+              ))}
+            </select>
+          </label>
         </div>
-      )}
-    </div>
+
+        {selectedIds.size > 0 && (
+            <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  background: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                }}
+            >
+              <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{selectedIds.size}개 선택됨</span>
+
+              <Button variant="outline" size="sm" onClick={onBulkActivate}>
+                일괄 활성화
+              </Button>
+              <Button variant="outline" size="sm" onClick={onBulkDeactivate}>
+                일괄 비활성화
+              </Button>
+              <Button variant="danger" size="sm" onClick={onBulkDelete}>
+                일괄 삭제
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                선택 해제
+              </Button>
+            </div>
+        )}
+
+        {error && (
+            <div
+                role="alert"
+                style={{
+                  marginBottom: '12px',
+                  fontSize: '13px',
+                  color: 'var(--color-danger)',
+                  background: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '10px 16px',
+                }}
+            >
+              {error}
+            </div>
+        )}
+
+        <DataTable columns={columns} data={rows} rowKey="id" loading={loading} emptyText="제품이 없습니다." />
+
+        <Pagination page={page} totalPages={pageData.totalPages ?? 0} onChange={setPage} />
+
+        {modalOpen && (
+            <div
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.45)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 200,
+                  padding: '16px',
+                }}
+                onClick={() => setModalOpen(false)}
+            >
+              <div
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: 'var(--radius-md)',
+                    width: '100%',
+                    maxWidth: '640px',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    padding: '28px',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+              >
+                <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>
+                  제품 {editId == null ? '등록' : '수정'}
+                </h2>
+
+                {modalError && (
+                    <div
+                        style={{
+                          marginBottom: '12px',
+                          fontSize: '13px',
+                          color: 'var(--color-danger)',
+                          background: '#FEF2F2',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '10px 14px',
+                        }}
+                    >
+                      {modalError}
+                    </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <ModalRow label="제품코드 *">
+                    <input
+                        className="form-input"
+                        value={form.code}
+                        onChange={(e) => setForm({ ...form, code: e.target.value })}
+                        placeholder="예: WM-1024"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="제품명 *">
+                    <input
+                        className="form-input"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        placeholder="예: 드럼 세탁기 12kg"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="카테고리 *">
+                    <select
+                        className="form-select"
+                        value={form.categoryId}
+                        onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                    >
+                      <option value="">선택</option>
+                      {leafCats.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.path}
+                          </option>
+                      ))}
+                    </select>
+                  </ModalRow>
+
+                  <ModalRow label="규격">
+                    <input
+                        className="form-input"
+                        value={form.spec}
+                        onChange={(e) => setForm({ ...form, spec: e.target.value })}
+                        placeholder="예: 600x850x600mm"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="단가 *">
+                    <input
+                        type="number"
+                        min="0"
+                        className="form-input"
+                        value={form.unitPrice}
+                        onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
+                        placeholder="0"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="원가 *">
+                    <input
+                        type="number"
+                        min="0"
+                        className="form-input"
+                        value={form.costPrice}
+                        onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+                        placeholder="0"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="단위">
+                    <input
+                        className="form-input"
+                        value={form.unit}
+                        onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                        placeholder="EA"
+                    />
+                  </ModalRow>
+
+                  <ModalRow label="VAT">
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '40px' }}>
+                      <label className="form-checkbox">
+                        <input
+                            type="radio"
+                            checked={form.vatApplicable === true}
+                            onChange={() => setForm({ ...form, vatApplicable: true })}
+                        />
+                        적용
+                      </label>
+
+                      <label className="form-checkbox">
+                        <input
+                            type="radio"
+                            checked={form.vatApplicable === false}
+                            onChange={() => setForm({ ...form, vatApplicable: false })}
+                        />
+                        미적용
+                      </label>
+                    </div>
+                  </ModalRow>
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <ModalRow label="설명">
+                <textarea
+                    className="form-textarea"
+                    style={{ height: '80px' }}
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="제품 설명 (선택)"
+                />
+                  </ModalRow>
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <ModalRow label="이미지 URL">
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                      <input
+                          className="form-input"
+                          value={form.imageUrl}
+                          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                          placeholder="https://..."
+                          style={{ flex: 1 }}
+                      />
+                      <Thumb src={form.imageUrl} size={56} />
+                    </div>
+                  </ModalRow>
+                </div>
+
+                {editId != null && (
+                    <div style={{ marginTop: '16px' }}>
+                      <ModalRow label="사용 상태">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <button
+                              type="button"
+                              onClick={() => setForm({ ...form, isActive: !form.isActive })}
+                              style={{
+                                position: 'relative',
+                                width: '44px',
+                                height: '24px',
+                                borderRadius: '12px',
+                                background: form.isActive ? 'var(--color-primary)' : '#D1D5DB',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                              }}
+                          >
+                      <span
+                          style={{
+                            position: 'absolute',
+                            top: '2px',
+                            left: form.isActive ? '22px' : '2px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#FFFFFF',
+                            transition: 'left 0.2s',
+                          }}
+                      />
+                          </button>
+
+                          <span style={{ fontSize: '13px', color: 'var(--color-text-sub)' }}>
+                      {form.isActive ? '사용 중' : '미사용'}
+                    </span>
+                        </div>
+                      </ModalRow>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '24px' }}>
+                  <Button variant="ghost" onClick={() => setModalOpen(false)}>
+                    취소
+                  </Button>
+                  <Button variant="primary" onClick={onSubmit}>
+                    저장
+                  </Button>
+                </div>
+              </div>
+            </div>
+        )}
+      </div>
   )
 }
 
-// ── 헬퍼 ──
-// 백엔드 boolean isActive → Jackson이 JSON 키 "active"로 직렬화하므로 둘 다 수용
-function isActiveOf(p) {
-  return p?.isActive ?? p?.active ?? false
+function isActiveOf(product) {
+  return product?.isActive ?? product?.active ?? false
 }
 
-// 카테고리 트리에서 말단(자식 없는) 노드만 평탄화 + 전체 경로 라벨
 function flattenLeaves(tree) {
   const out = []
+
   const walk = (nodes, path) => {
-    for (const n of nodes ?? []) {
-      const p = [...path, n.name]
-      if (n.children?.length) walk(n.children, p)
-      else out.push({ id: n.id, path: p.join(' > ') })
+    for (const node of nodes ?? []) {
+      const nextPath = [...path, node.name]
+
+      if (node.children?.length) {
+        walk(node.children, nextPath)
+      } else {
+        out.push({ id: node.id, path: nextPath.join(' > ') })
+      }
     }
   }
+
   walk(tree, [])
+
   return out
 }
 
-function won(v) {
-  if (v == null || v === '') return '-'
-  return Number(v).toLocaleString('ko-KR') + '원'
+function flattenAll(tree) {
+  const out = []
+
+  const walk = (nodes, path) => {
+    for (const node of nodes ?? []) {
+      const nextPath = [...path, node.name]
+
+      out.push({ id: node.id, path: nextPath.join(' > ') })
+
+      if (node.children?.length) {
+        walk(node.children, nextPath)
+      }
+    }
+  }
+
+  walk(tree, [])
+
+  return out
 }
 
-function csvCell(v) {
-  const s = String(v ?? '')
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+function won(value) {
+  if (value == null || value === '') return '-'
+
+  return `${Number(value).toLocaleString('ko-KR')}원`
+}
+
+function csvCell(value) {
+  const text = String(value ?? '')
+
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
 function Thumb({ src, size = 36 }) {
   if (!src) {
-    return <div style={{ width: size, height: size }}
-      className="bg-gray-100 rounded text-gray-300 flex items-center justify-center text-xs shrink-0">無</div>
+    return (
+        <div
+            style={{
+              width: size,
+              height: size,
+              background: '#F3F4F6',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#D1D5DB',
+              fontSize: '11px',
+              flexShrink: 0,
+            }}
+        >
+          無
+        </div>
+    )
   }
-  return <img src={src} alt="" style={{ width: size, height: size }}
-    className="rounded object-cover border shrink-0"
-    onError={e => { e.currentTarget.style.display = 'none' }} />
-}
 
-function Field({ label, children }) {
   return (
-    <div>
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
-      {children}
-    </div>
+      <img
+          src={src}
+          alt=""
+          style={{
+            width: size,
+            height: size,
+            borderRadius: '4px',
+            objectFit: 'cover',
+            border: '1px solid var(--color-border)',
+            flexShrink: 0,
+          }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
+      />
   )
 }
 
-function Row({ label, children }) {
+function ModalRow({ label, children }) {
   return (
-    <div>
-      <div className="text-sm text-gray-600 mb-1">{label}</div>
-      {children}
-    </div>
-  )
-}
-
-function PageBtn({ children, active, disabled, onClick }) {
-  return (
-    <button disabled={disabled} onClick={onClick}
-      className={`min-w-8 px-2 py-1 rounded text-sm border
-        ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600'}
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}`}>
-      {children}
-    </button>
+      <div>
+        <div style={{ fontSize: '13px', color: 'var(--color-text-sub)', marginBottom: '4px' }}>
+          {label}
+        </div>
+        {children}
+      </div>
   )
 }

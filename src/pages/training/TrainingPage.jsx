@@ -6,6 +6,7 @@ import TrainingStatusBadge from '../../components/training/TrainingStatusBadge'
 import TrainingGuideModal from '../../components/training/TrainingGuideModal'
 import TrainingSummaryCards from '../../components/training/TrainingSummaryCards'
 import { TRAINING_COMPLETE_THRESHOLD } from '../../constants/training'
+import PageHeader from '../../components/common/PageHeader'
 
 const TrainingPage = () => {
     const navigate = useNavigate()
@@ -65,6 +66,7 @@ const TrainingPage = () => {
 
     return (
         <div className="flex-1 bg-gray-50 min-h-screen">
+        <PageHeader breadcrumbs={['계정', '교육 이수']} />
             {/* 헤더 섹션 */}
             <div className="px-8 pt-8 pb-6 border-b border-gray-200 bg-white">
                 <div className="flex items-start justify-between">

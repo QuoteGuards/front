@@ -5,6 +5,8 @@ import { getApprovalHistories } from '../../api/approvalApi'
 import { getEmailHistory } from '../../api/emailApi'
 import EmailModal from '../../components/quote/EmailModal'
 import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE } from '../../constants/quoteStatus'
+import PageHeader from '../../components/common/PageHeader'
+import { formatKRW } from '../../utils/quoteUtils'
 
 // APPROVAL_PENDING 상태는 "승인이 필요하다고 판정됨"만 의미하고
 // 실제 승인 요청(ApprovalRequest)을 보냈는지는 별도로 이력을 봐야 알 수 있음
@@ -34,7 +36,6 @@ const ACTION_LABEL = {
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 const REUSABLE_STATUSES = ['APPROVAL_NOT_REQUIRED', 'APPROVED', 'SENT']
 
-const formatKRW = (n) => `${Math.round(n ?? 0).toLocaleString('ko-KR')}원`
 
 const QuoteDetailPage = () => {
     const { quoteId } = useParams()
@@ -140,6 +141,7 @@ const QuoteDetailPage = () => {
 
     return (
         <div className="flex-1 bg-gray-50 min-h-screen pb-10">
+        <PageHeader breadcrumbs={['견적 관리', '견적 상세']} />
             <div className="bg-white border-b border-gray-200 px-8 py-5">
                 <button onClick={() => navigate('/quotes')} className="text-xs text-gray-400 hover:text-gray-600 mb-2">
                     ← 내 견적 목록
