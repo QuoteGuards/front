@@ -42,7 +42,7 @@ export default function ProductManagePage() {
     getCategoriesApi().then(tree => {
       setLeafCats(flattenLeaves(tree))
       setAllCats(flattenAll(tree))
-    }).catch(() => {})
+    }).catch(e => setError(e.response?.data?.message ?? '카테고리 목록을 불러오지 못했습니다.'))
   }, [])
 
   // applied 필터 → API 쿼리 파라미터 (VAT 포함, 전부 서버 처리)
