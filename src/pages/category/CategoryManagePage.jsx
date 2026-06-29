@@ -239,19 +239,21 @@ export default function CategoryManagePage() {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation()
-                  toggle(node.id)
+                  if (!searching) toggle(node.id) // 검색 중엔 토글 금지(expanded 오염 방지)
                 }}
                 style={{
                   width: '16px',
                   color: 'var(--color-text-muted)',
                   background: 'none',
                   border: 'none',
-                  cursor: hasChildren || canHaveChild ? 'pointer' : 'default',
+                  cursor: (!searching && (hasChildren || canHaveChild)) ? 'pointer' : 'default',
                   fontSize: '10px',
                   padding: 0,
                 }}
             >
-              {hasChildren || canHaveChild ? (isOpen ? '▼' : '▶') : ''}
+              {searching
+                ? (hasChildren ? '▼' : '')
+                : (hasChildren || canHaveChild ? (isOpen ? '▼' : '▶') : '')}
             </button>
 
             <span>{highlight(node.name, search.trim().toLowerCase())}</span>
