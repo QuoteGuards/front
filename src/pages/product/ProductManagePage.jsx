@@ -15,7 +15,7 @@ const EMPTY_FORM = {
 
 export default function ProductManagePage() {
   // 카테고리 관리 화면에서 "제품 목록 보기"로 넘어올 때 ?categoryId= 로 초기 필터 지정
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const initCategoryId = searchParams.get('categoryId') ?? ''
   // 검색 필터 (입력값)
   const [filter, setFilter] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
@@ -74,6 +74,7 @@ export default function ProductManagePage() {
     setApplied({ categoryId: '', keyword: '', active: '' })
     setVatFilter('')
     setPage(0)
+    if (searchParams.toString()) setSearchParams({}) // "제품 목록 보기"로 들어온 ?categoryId= 등 URL 쿼리 정리
   }
 
   // VAT는 백엔드 필터가 없어 현재 페이지에서 클라이언트 필터
@@ -183,17 +184,33 @@ export default function ProductManagePage() {
   const onBulkDeactivate = () => runBulk(bulkDeactivateProductsApi, '비활성화')
   const onBulkDelete = () => runBulk(bulkDeleteProductsApi, '삭제')
 
-  const exportCsv = () => {
-    const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
-    const lines = rows.map(p => [
-      p.code, p.name, p.spec ?? '', catLabel(p),
-      p.unitPrice, p.costPrice, p.vatApplicable ? '적용' : '미적용', isActiveOf(p) ? '사용' : '미사용',
-    ].map(csvCell).join(','))
-    const csv = '﻿' + [header.join(','), ...lines].join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
-    a.click(); URL.revokeObjectURL(url)
+  // 현재 페이지가 아니라 "검색 조건에 맞는 전체 결과"를 내보냄
+  const exportCsv = async () => {
+    setError(null)
+    try {
+      const total = pageData.totalElements ?? 0
+      const params = { page: 0, size: Math.min(Math.max(total, 1), 10000) }
+      if (applied.categoryId) params.categoryId = applied.categoryId
+      if (applied.keyword) params.keyword = applied.keyword
+      if (applied.active !== '') params.isActive = applied.active === 'true'
+      const data = await getProductsApi(params)
+      let list = data.content ?? []
+      if (vatFilter !== '') list = list.filter(p => p.vatApplicable === (vatFilter === 'true')) // VAT는 클라 필터
+      if (list.length === 0) { alert('내보낼 제품이 없습니다.'); return }
+
+      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
+      const lines = list.map(p => [
+        p.code, p.name, p.spec ?? '', catLabel(p),
+        p.unitPrice, p.costPrice, p.vatApplicable ? '적용' : '미적용', isActiveOf(p) ? '사용' : '미사용',
+      ].map(csvCell).join(','))
+      const csv = '﻿' + [header.join(','), ...lines].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const a = document.createElement('a')
+      a.href = url; a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click(); URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.response?.data?.message ?? '엑셀 다운로드 실패')
+    }
   }
 
   const totalPages = pageData.totalPages ?? 0
