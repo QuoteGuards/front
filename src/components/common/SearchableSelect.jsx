@@ -11,6 +11,7 @@ export default function SearchableSelect({
   const [activeIndex, setActiveIndex] = useState(0)
   const ref = useRef(null)
   const listRef = useRef(null)
+  const triggerRef = useRef(null)
   const baseId = useId()
   const listId = `${baseId}-listbox`
 
@@ -41,7 +42,7 @@ export default function SearchableSelect({
     if (el) el.scrollIntoView({ block: 'nearest' })
   }, [activeIndex, open])
 
-  const pick = (v) => { if (disabled) return; onChange(v); setOpen(false); setQuery('') }
+  const pick = (v) => { if (disabled) return; onChange(v); setOpen(false); setQuery(''); triggerRef.current?.focus() }
 
   const onInputKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -57,6 +58,7 @@ export default function SearchableSelect({
     } else if (e.key === 'Escape') {
       e.preventDefault()
       setOpen(false)
+      triggerRef.current?.focus()
     }
   }
 
@@ -64,7 +66,7 @@ export default function SearchableSelect({
 
   return (
     <div ref={ref} style={{ position: 'relative', width }}>
-      <button type="button" className="form-select" disabled={disabled}
+      <button ref={triggerRef} type="button" className="form-select" disabled={disabled}
         aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
         onClick={() => setOpen(o => !o)}
         onKeyDown={(e) => { if (e.key === 'ArrowDown' && !open) { e.preventDefault(); setOpen(true) } }}
