@@ -29,3 +29,13 @@ export async function confirmPasswordResetApi(token, newPassword) {
   const response = await apiClient.post('/api/auth/password-reset/confirm', { token, newPassword });
   return response.data;
 }
+
+// POST /api/auth/set-initial-password - 초기 비밀번호 설정 (이메일 링크 클릭 후, 공개 API)
+export async function setInitialPasswordApi({ token, newPassword, newPasswordConfirm }) {
+  const response = await apiClient.post('/api/auth/set-initial-password', {
+    token,
+    newPassword,
+    newPasswordConfirm,
+  });
+  return response.data;
+}

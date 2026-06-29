@@ -69,3 +69,12 @@ export async function deleteUserApi(userId) {
   const response = await apiClient.delete('/api/admin/users/' + userId);
   return response.data;
 }
+
+/**
+ * POST /api/admin/users/:userId/initial-password/resend
+ * 초기 비밀번호 설정 링크 재발송
+ */
+export async function resendInitialPasswordApi(userId) {
+  const response = await apiClient.post('/api/admin/users/' + userId + '/initial-password/resend');
+  return response.data;
+}
