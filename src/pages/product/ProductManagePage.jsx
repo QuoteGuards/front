@@ -10,6 +10,7 @@ import {
   bulkActivateProductsApi,
   bulkDeactivateProductsApi,
   bulkDeleteProductsApi,
+  uploadProductImageApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
@@ -72,6 +73,7 @@ export default function ProductManagePage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
+  const [uploading, setUploading] = useState(false) // 이미지 업로드 중
 
   useEffect(() => {
     let ignore = false
@@ -216,6 +218,22 @@ export default function ProductManagePage() {
     })
     setModalError(null)
     setModalOpen(true)
+  }
+
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setModalError(null)
+    setUploading(true)
+    try {
+      const url = await uploadProductImageApi(file)
+      setForm((f) => ({ ...f, imageUrl: url }))
+    } catch (err) {
+      setModalError(err.response?.data?.message ?? '이미지 업로드 실패')
+    } finally {
+      setUploading(false)
+      e.target.value = '' // 같은 파일 재선택 허용
+    }
   }
 
   const onSubmit = async () => {
@@ -892,15 +910,29 @@ export default function ProductManagePage() {
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
-                  <ModalRow label="이미지 URL">
+                  <ModalRow label="이미지">
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <input
-                          className="form-input"
-                          value={form.imageUrl}
-                          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                          placeholder="https://..."
-                          style={{ flex: 1 }}
-                      />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input
+                            className="form-input"
+                            value={form.imageUrl}
+                            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                            placeholder="파일 업로드 또는 https:// URL 직접 입력"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label className="btn btn--outline btn--sm" style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}>
+                            {uploading ? '업로드 중…' : '파일 선택'}
+                            <input type="file" accept="image/*" hidden disabled={uploading} onChange={onPickImage} />
+                          </label>
+                          {form.imageUrl && !uploading && (
+                            <button type="button" onClick={() => setForm({ ...form, imageUrl: '' })}
+                                style={{ fontSize: '12px', color: 'var(--color-text-sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              이미지 제거
+                            </button>
+                          )}
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>JPG·PNG 등, 최대 5MB</span>
+                        </div>
+                      </div>
                       <Thumb src={form.imageUrl} size={56} />
                     </div>
                   </ModalRow>
