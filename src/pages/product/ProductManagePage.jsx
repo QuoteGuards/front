@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi, createProductApi, updateProductApi,
@@ -20,8 +20,7 @@ export default function ProductManagePage() {
   // 검색 필터 (입력값)
   const [filter, setFilter] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
   // 실제 적용된 필터 (검색 버튼 눌렀을 때만 반영)
-  const [applied, setApplied] = useState({ categoryId: initCategoryId, keyword: '', active: '' })
-  const [vatFilter, setVatFilter] = useState('') // VAT는 백엔드 미지원 → 클라 필터
+  const [applied, setApplied] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
 
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
@@ -46,14 +45,20 @@ export default function ProductManagePage() {
     }).catch(() => {})
   }, [])
 
+  // applied 필터 → API 쿼리 파라미터 (VAT 포함, 전부 서버 처리)
+  const buildParams = (base) => {
+    const params = { ...base }
+    if (applied.categoryId) params.categoryId = applied.categoryId
+    if (applied.keyword) params.keyword = applied.keyword
+    if (applied.active !== '') params.isActive = applied.active === 'true'
+    if (applied.vat !== '') params.vatApplicable = applied.vat === 'true'
+    return params
+  }
+
   const load = async () => {
     setLoading(true); setError(null)
     try {
-      const params = { page, size }
-      if (applied.categoryId) params.categoryId = applied.categoryId
-      if (applied.keyword) params.keyword = applied.keyword
-      if (applied.active !== '') params.isActive = applied.active === 'true'
-      const data = await getProductsApi(params)
+      const data = await getProductsApi(buildParams({ page, size }))
       setPageData(data)
       setSelectedIds(new Set()) // 목록 갱신 시 선택 초기화
     } catch (e) {
@@ -65,24 +70,17 @@ export default function ProductManagePage() {
   useEffect(() => { load() }, [applied, page, size]) // eslint-disable-line
 
   const onSearch = () => {
-    setApplied({ categoryId: filter.categoryId, keyword: filter.keyword.trim(), active: filter.active })
-    setVatFilter(filter.vat)
+    setApplied({ categoryId: filter.categoryId, keyword: filter.keyword.trim(), vat: filter.vat, active: filter.active })
     setPage(0)
   }
   const onReset = () => {
     setFilter({ categoryId: '', keyword: '', vat: '', active: '' })
-    setApplied({ categoryId: '', keyword: '', active: '' })
-    setVatFilter('')
+    setApplied({ categoryId: '', keyword: '', vat: '', active: '' })
     setPage(0)
     if (searchParams.toString()) setSearchParams({}) // "제품 목록 보기"로 들어온 ?categoryId= 등 URL 쿼리 정리
   }
 
-  // VAT는 백엔드 필터가 없어 현재 페이지에서 클라이언트 필터
-  const rows = useMemo(() => {
-    let list = pageData.content ?? []
-    if (vatFilter !== '') list = list.filter(p => p.vatApplicable === (vatFilter === 'true'))
-    return list
-  }, [pageData, vatFilter])
+  const rows = pageData.content ?? []
 
   // 카테고리 전체 경로 라벨 (전체 목록에 없으면 백엔드 categoryName 폴백)
   const catLabel = (p) => allCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
@@ -201,13 +199,8 @@ export default function ProductManagePage() {
     setError(null)
     try {
       const total = pageData.totalElements ?? 0
-      const params = { page: 0, size: Math.min(Math.max(total, 1), 10000) }
-      if (applied.categoryId) params.categoryId = applied.categoryId
-      if (applied.keyword) params.keyword = applied.keyword
-      if (applied.active !== '') params.isActive = applied.active === 'true'
-      const data = await getProductsApi(params)
-      let list = data.content ?? []
-      if (vatFilter !== '') list = list.filter(p => p.vatApplicable === (vatFilter === 'true')) // VAT는 클라 필터
+      const data = await getProductsApi(buildParams({ page: 0, size: Math.min(Math.max(total, 1), 10000) }))
+      const list = data.content ?? []
       if (list.length === 0) { alert('내보낼 제품이 없습니다.'); return }
 
       const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
@@ -275,7 +268,7 @@ export default function ProductManagePage() {
       </div>
 
       <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-        <span>총 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개{vatFilter !== '' && ' (VAT 필터는 현재 페이지 기준)'}</span>
+        <span>총 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개</span>
         <label className="flex items-center gap-2">
           페이지당
           <select className="border px-2 py-1 rounded" value={size}
