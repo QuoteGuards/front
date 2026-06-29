@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi, createProductApi, updateProductApi,
   activateProductApi, deactivateProductApi, deleteProductApi,
+  bulkActivateProductsApi, bulkDeactivateProductsApi, bulkDeleteProductsApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 
@@ -12,18 +14,22 @@ const EMPTY_FORM = {
 }
 
 export default function ProductManagePage() {
+  // 카테고리 관리 화면에서 "제품 목록 보기"로 넘어올 때 ?categoryId= 로 초기 필터 지정
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initCategoryId = searchParams.get('categoryId') ?? ''
   // 검색 필터 (입력값)
-  const [filter, setFilter] = useState({ categoryId: '', keyword: '', vat: '', active: '' })
+  const [filter, setFilter] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
   // 실제 적용된 필터 (검색 버튼 눌렀을 때만 반영)
-  const [applied, setApplied] = useState({ categoryId: '', keyword: '', active: '' })
-  const [vatFilter, setVatFilter] = useState('') // VAT는 백엔드 미지원 → 클라 필터
+  const [applied, setApplied] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
 
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
   const [pageData, setPageData] = useState({ content: [], totalElements: 0, totalPages: 0 })
-  const [leafCats, setLeafCats] = useState([]) // 소분류(말단) 카테고리 목록
+  const [leafCats, setLeafCats] = useState([]) // 소분류(말단) — 등록/수정 모달용
+  const [allCats, setAllCats] = useState([])   // 대/중/소 전체 — 검색 필터용(자손 매칭)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set()) // 체크박스 선택 (일괄 처리용)
 
   // 모달
   const [modalOpen, setModalOpen] = useState(false)
@@ -31,20 +37,30 @@ export default function ProductManagePage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
 
-  // 카테고리 트리 → 말단(소분류) 노드만 평탄화
+  // 카테고리 트리 로드 → 모달용(말단)/필터용(전체) 평탄화
   useEffect(() => {
-    getCategoriesApi().then(tree => setLeafCats(flattenLeaves(tree))).catch(() => {})
+    getCategoriesApi().then(tree => {
+      setLeafCats(flattenLeaves(tree))
+      setAllCats(flattenAll(tree))
+    }).catch(e => setError(e.response?.data?.message ?? '카테고리 목록을 불러오지 못했습니다.'))
   }, [])
+
+  // applied 필터 → API 쿼리 파라미터 (VAT 포함, 전부 서버 처리)
+  const buildParams = (base) => {
+    const params = { ...base }
+    if (applied.categoryId) params.categoryId = applied.categoryId
+    if (applied.keyword) params.keyword = applied.keyword
+    if (applied.active !== '') params.isActive = applied.active === 'true'
+    if (applied.vat !== '') params.vatApplicable = applied.vat === 'true'
+    return params
+  }
 
   const load = async () => {
     setLoading(true); setError(null)
     try {
-      const params = { page, size }
-      if (applied.categoryId) params.categoryId = applied.categoryId
-      if (applied.keyword) params.keyword = applied.keyword
-      if (applied.active !== '') params.isActive = applied.active === 'true'
-      const data = await getProductsApi(params)
+      const data = await getProductsApi(buildParams({ page, size }))
       setPageData(data)
+      setSelectedIds(new Set()) // 목록 갱신 시 선택 초기화
     } catch (e) {
       setError(e.response?.data?.message ?? '제품 목록 조회 실패')
     } finally {
@@ -54,26 +70,20 @@ export default function ProductManagePage() {
   useEffect(() => { load() }, [applied, page, size]) // eslint-disable-line
 
   const onSearch = () => {
-    setApplied({ categoryId: filter.categoryId, keyword: filter.keyword.trim(), active: filter.active })
-    setVatFilter(filter.vat)
+    setApplied({ categoryId: filter.categoryId, keyword: filter.keyword.trim(), vat: filter.vat, active: filter.active })
     setPage(0)
   }
   const onReset = () => {
     setFilter({ categoryId: '', keyword: '', vat: '', active: '' })
-    setApplied({ categoryId: '', keyword: '', active: '' })
-    setVatFilter('')
+    setApplied({ categoryId: '', keyword: '', vat: '', active: '' })
     setPage(0)
+    if (searchParams.toString()) setSearchParams({}) // "제품 목록 보기"로 들어온 ?categoryId= 등 URL 쿼리 정리
   }
 
-  // VAT는 백엔드 필터가 없어 현재 페이지에서 클라이언트 필터
-  const rows = useMemo(() => {
-    let list = pageData.content ?? []
-    if (vatFilter !== '') list = list.filter(p => p.vatApplicable === (vatFilter === 'true'))
-    return list
-  }, [pageData, vatFilter])
+  const rows = pageData.content ?? []
 
-  // 카테고리 전체 경로 라벨 (leaf 목록에 없으면 백엔드 categoryName 폴백)
-  const catLabel = (p) => leafCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
+  // 카테고리 전체 경로 라벨 (전체 목록에 없으면 백엔드 categoryName 폴백)
+  const catLabel = (p) => allCats.find(c => c.id === p.categoryId)?.path ?? p.categoryName ?? ''
 
   // ── 모달 열기 ──
   const openCreate = () => {
@@ -96,6 +106,18 @@ export default function ProductManagePage() {
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
       setModalError('제품코드, 제품명, 카테고리는 필수입니다.'); return
     }
+    // 단가/원가 검증: 필수 + 0 이상 + 원가 ≤ 단가
+    if (form.unitPrice === '' || form.costPrice === '') {
+      setModalError('단가와 원가를 입력하세요.'); return
+    }
+    const unitPriceNum = Number(form.unitPrice)
+    const costPriceNum = Number(form.costPrice)
+    if (!Number.isFinite(unitPriceNum) || !Number.isFinite(costPriceNum) || unitPriceNum < 0 || costPriceNum < 0) {
+      setModalError('단가·원가는 0 이상의 유효한 숫자여야 합니다.'); return
+    }
+    if (costPriceNum > unitPriceNum) {
+      setModalError('원가가 단가보다 클 수 없습니다.'); return
+    }
     const payload = {
       categoryId: Number(form.categoryId),
       name: form.name.trim(),
@@ -103,8 +125,8 @@ export default function ProductManagePage() {
       description: form.description?.trim() || null,
       spec: form.spec?.trim() || null,
       imageUrl: form.imageUrl?.trim() || null,
-      unitPrice: form.unitPrice === '' ? 0 : Number(form.unitPrice),
-      costPrice: form.costPrice === '' ? 0 : Number(form.costPrice),
+      unitPrice: unitPriceNum,
+      costPrice: costPriceNum,
       unit: form.unit?.trim() || 'EA',
       vatApplicable: form.vatApplicable,
     }
@@ -142,17 +164,64 @@ export default function ProductManagePage() {
     }
   }
 
-  const exportCsv = () => {
-    const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
-    const lines = rows.map(p => [
-      p.code, p.name, p.spec ?? '', catLabel(p),
-      p.unitPrice, p.costPrice, p.vatApplicable ? '적용' : '미적용', isActiveOf(p) ? '사용' : '미사용',
-    ].map(csvCell).join(','))
-    const csv = '﻿' + [header.join(','), ...lines].join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
-    const a = document.createElement('a')
-    a.href = url; a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
-    a.click(); URL.revokeObjectURL(url)
+  // ── 체크박스 선택 ──
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const allChecked = rows.length > 0 && rows.every(p => selectedIds.has(p.id))
+  const toggleAll = () => {
+    setSelectedIds(allChecked ? new Set() : new Set(rows.map(p => p.id)))
+  }
+
+  // ── 일괄 처리 ──
+  const runBulk = async (fn, label) => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    if (label === '삭제' && !confirm(`선택한 ${ids.length}개 제품을 삭제할까요? (견적 연결 제품은 실패)`)) return
+    setError(null)
+    try {
+      await fn(ids)
+      await load()
+    } catch (e) {
+      setError(e.response?.data?.message ?? `일괄 ${label} 실패`)
+    }
+  }
+  const onBulkActivate = () => runBulk(bulkActivateProductsApi, '활성화')
+  const onBulkDeactivate = () => runBulk(bulkDeactivateProductsApi, '비활성화')
+  const onBulkDelete = () => runBulk(bulkDeleteProductsApi, '삭제')
+
+  // 현재 페이지가 아니라 "검색 조건에 맞는 전체 결과"를 내보냄
+  const exportCsv = async () => {
+    setError(null)
+    try {
+      const EXPORT_CAP = 10000
+      const total = pageData.totalElements ?? 0
+      // 한도 초과 시 잘린다는 점을 명시하고 동의받음
+      if (total > EXPORT_CAP &&
+          !confirm(`검색 결과가 ${total.toLocaleString('ko-KR')}개입니다. 처음 ${EXPORT_CAP.toLocaleString('ko-KR')}개만 내보냅니다. 계속할까요?`)) {
+        return
+      }
+      const data = await getProductsApi(buildParams({ page: 0, size: Math.min(Math.max(total, 1), EXPORT_CAP) }))
+      const list = data.content ?? []
+      if (list.length === 0) { alert('내보낼 제품이 없습니다.'); return }
+
+      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
+      const lines = list.map(p => [
+        p.code, p.name, p.spec ?? '', catLabel(p),
+        p.unitPrice, p.costPrice, p.vatApplicable ? '적용' : '미적용', isActiveOf(p) ? '사용' : '미사용',
+      ].map(csvCell).join(','))
+      const csv = '﻿' + [header.join(','), ...lines].join('\n')
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+      const a = document.createElement('a')
+      a.href = url; a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`
+      a.click(); URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.response?.data?.message ?? '엑셀 다운로드 실패')
+    }
   }
 
   const totalPages = pageData.totalPages ?? 0
@@ -173,7 +242,7 @@ export default function ProductManagePage() {
           <select className="border px-2 py-2 rounded w-full" value={filter.categoryId}
             onChange={e => setFilter({ ...filter, categoryId: e.target.value })}>
             <option value="">전체</option>
-            {leafCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
+            {allCats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
           </select>
         </Field>
         <Field label="제품명 / 제품코드">
@@ -205,7 +274,7 @@ export default function ProductManagePage() {
       </div>
 
       <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-        <span>총 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개{vatFilter !== '' && ' (VAT 필터는 현재 페이지 기준)'}</span>
+        <span>총 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개</span>
         <label className="flex items-center gap-2">
           페이지당
           <select className="border px-2 py-1 rounded" value={size}
@@ -215,6 +284,17 @@ export default function ProductManagePage() {
         </label>
       </div>
 
+      {/* ── 일괄 작업 바 ── */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-2 bg-blue-50 border border-blue-200 rounded px-3 py-2 text-sm">
+          <span className="text-blue-700 font-medium">{selectedIds.size}개 선택됨</span>
+          <button onClick={onBulkActivate} className="ml-2 border border-green-300 text-green-600 px-2 py-1 rounded text-xs">일괄 활성화</button>
+          <button onClick={onBulkDeactivate} className="border border-amber-300 text-amber-600 px-2 py-1 rounded text-xs">일괄 비활성화</button>
+          <button onClick={onBulkDelete} className="border border-red-300 text-red-500 px-2 py-1 rounded text-xs">일괄 삭제</button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-gray-400 px-2 py-1 text-xs ml-auto">선택 해제</button>
+        </div>
+      )}
+
       {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
 
       {/* ── 테이블 ── */}
@@ -222,6 +302,9 @@ export default function ProductManagePage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
+              <th className="px-3 py-2 text-center w-8">
+                <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+              </th>
               <th className="px-3 py-2 text-left">제품코드</th>
               <th className="px-3 py-2 text-left">제품</th>
               <th className="px-3 py-2 text-left">카테고리</th>
@@ -234,11 +317,14 @@ export default function ProductManagePage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
+              <tr><td colSpan={9} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">제품이 없습니다</td></tr>
+              <tr><td colSpan={9} className="text-center text-gray-400 py-10">제품이 없습니다</td></tr>
             ) : rows.map(p => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
+              <tr key={p.id} className={`border-t hover:bg-gray-50 ${selectedIds.has(p.id) ? 'bg-blue-50/50' : ''}`}>
+                <td className="px-3 py-2 text-center">
+                  <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} />
+                </td>
                 <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.code}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
@@ -323,11 +409,11 @@ export default function ProductManagePage() {
                   onChange={e => setForm({ ...form, spec: e.target.value })} placeholder="예: 600x850x600mm" />
               </Row>
               <Row label="단가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.unitPrice}
+                <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.unitPrice}
                   onChange={e => setForm({ ...form, unitPrice: e.target.value })} placeholder="0" />
               </Row>
               <Row label="원가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.costPrice}
+                <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.costPrice}
                   onChange={e => setForm({ ...form, costPrice: e.target.value })} placeholder="0" />
               </Row>
               <Row label="단위">
@@ -405,6 +491,20 @@ function flattenLeaves(tree) {
       const p = [...path, n.name]
       if (n.children?.length) walk(n.children, p)
       else out.push({ id: n.id, path: p.join(' > ') })
+    }
+  }
+  walk(tree, [])
+  return out
+}
+
+// 카테고리 트리 전체(대/중/소) 평탄화 + 전체 경로 라벨 (검색 필터용)
+function flattenAll(tree) {
+  const out = []
+  const walk = (nodes, path) => {
+    for (const n of nodes ?? []) {
+      const p = [...path, n.name]
+      out.push({ id: n.id, path: p.join(' > ') })
+      if (n.children?.length) walk(n.children, p)
     }
   }
   walk(tree, [])

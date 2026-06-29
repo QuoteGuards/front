@@ -36,6 +36,8 @@ export default function FavoritesPage() {
       setLoading(false)
     }
   }
+  // 마운트 시 즐겨찾기 1회 로드 (fetch-in-effect는 의도된 패턴)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [])
 
   // 카테고리 id → 전체경로 / 최상위명 매핑

@@ -19,6 +19,7 @@ export default function ProductDetailPage() {
   useEffect(() => { getCategoriesApi().then(setTree).catch(() => {}) }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true); setError(null)
     getProductDetailApi(productId)
       .then(async (p) => {

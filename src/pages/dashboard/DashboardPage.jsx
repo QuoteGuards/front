@@ -52,8 +52,10 @@ export default function DashboardPage() {
   // (역순 범위는 백엔드가 400을 주므로 호출 전에 차단. from/to는 yyyy-MM-dd 문자열이라 사전식 비교=날짜순)
   useEffect(() => {
     if (period === 'CUSTOM') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (from && to && from <= to) load({ period, from, to })
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       load({ period })
     }
   }, [period, from, to]) // eslint-disable-line
