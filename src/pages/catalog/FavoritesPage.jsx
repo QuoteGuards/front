@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getFavoriteProductsApi, removeFavoriteApi } from '../../api/catalogApi'
+import { getFavoriteProductsApi, removeFavoriteApi, removeAllFavoritesApi } from '../../api/catalogApi'
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
@@ -30,9 +30,8 @@ export default function FavoritesPage() {
   const load = async () => {
     setLoading(true); setError(null)
     try {
-      // sort 명시 필수: 미지정 시 백엔드 기본 sort=name이 ProductFavorite 루트에 적용돼 500 발생.
-      // createdAt,desc = 즐겨찾기 설정일 최신순(= 최근 추가순)
-      const data = await getFavoriteProductsApi({ size: 200, sort: 'createdAt,desc' })
+      // 백엔드 기본 sort가 createdAt,desc(최근 추가순)로 정리됨. size는 클라 필터링용 캡(상향)
+      const data = await getFavoriteProductsApi({ size: 500, sort: 'createdAt,desc' })
       setItems(data.content ?? [])
     } catch (e) {
       setError(e.response?.data?.message ?? '즐겨찾기 목록 조회 실패')
@@ -101,13 +100,12 @@ export default function FavoritesPage() {
   const removeAll = async () => {
     if (items.length === 0) return
     if (!confirm(`즐겨찾기 ${items.length}개를 전부 해제할까요?`)) return
-    const targets = [...items]
-    setItems([])
+    setItems([]) // 낙관적
     try {
-      await Promise.all(targets.map(p => removeFavoriteApi(p.id)))
+      await removeAllFavoritesApi() // 벌크: 서버 트랜잭션 1번
     } catch (e) {
-      setError(e.response?.data?.message ?? '전체 해제 중 일부 실패')
-      load()
+      setError(e.response?.data?.message ?? '전체 해제 실패')
+      load() // 실패 시 동기화
     }
   }
 
