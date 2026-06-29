@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getFavoriteProductsApi, removeFavoriteApi } from '../../api/catalogApi'
-import { getCategoriesApi } from '../../api/categoryApi'
+import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 
 const SORTS = [
@@ -22,7 +22,7 @@ export default function FavoritesPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { getCategoriesApi().then(setTree).catch(() => {}) }, [])
+  useEffect(() => { getActiveCategoryTreeApi().then(setTree).catch(() => {}) }, [])
 
   const load = async () => {
     setLoading(true); setError(null)

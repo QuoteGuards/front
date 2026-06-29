@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   getProductDetailApi, searchProductsApi, addFavoriteApi, removeFavoriteApi,
 } from '../../api/catalogApi'
-import { getCategoriesApi } from '../../api/categoryApi'
+import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 
 export default function ProductDetailPage() {
@@ -17,7 +17,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { getCategoriesApi().then(setTree).catch(() => {}) }, [])
+  useEffect(() => { getActiveCategoryTreeApi().then(setTree).catch(() => {}) }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

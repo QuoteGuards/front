@@ -18,17 +18,12 @@ export async function getCategoryChildrenApi(parentId) {
   return res.data.data
 }
 
-// 활성 카테고리 전체 트리를 드릴다운으로 재구성 (영업사원용 — 관리자 트리 API 대체)
+// 활성 카테고리 전체 트리 (영업사원용 — 단일 호출, 백엔드 /api/categories/tree)
+// 기존 드릴다운 재귀(노드당 1콜 = N+1)를 한 번의 호출로 대체
+// 반환: CategoryTreeResponse[] (children 중첩, productCount 포함)
 export async function getActiveCategoryTreeApi() {
-  const attach = async (node) => {
-    const children = await getCategoryChildrenApi(node.id)
-    node.children = children
-    await Promise.all(children.map(attach))
-    return node
-  }
-  const roots = await getCategoryChildrenApi(null)
-  await Promise.all(roots.map(attach))
-  return roots
+  const res = await apiClient.get('/api/categories/tree')
+  return res.data.data
 }
 
 // POST 등록  payload: { parentId, name, slug, sortOrder }
