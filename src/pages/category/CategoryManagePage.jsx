@@ -325,20 +325,23 @@ export default function CategoryManagePage() {
               카테고리 목록
             </h2>
 
-            {tree.map(renderNode)}
+            {/* 카테고리 많아져도 페이지가 길어지지 않게 패널 내부 스크롤 */}
+            <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              {tree.map(renderNode)}
 
-            {tree.length === 0 && (
-                <div
-                    style={{
-                      color: error ? 'var(--color-danger)' : 'var(--color-text-muted)',
-                      fontSize: '13px',
-                      textAlign: 'center',
-                      padding: '40px 0',
-                    }}
-                >
-                  {error ?? '카테고리 없음'}
-                </div>
-            )}
+              {tree.length === 0 && (
+                  <div
+                      style={{
+                        color: error ? 'var(--color-danger)' : 'var(--color-text-muted)',
+                        fontSize: '13px',
+                        textAlign: 'center',
+                        padding: '40px 0',
+                      }}
+                  >
+                    {error ?? '카테고리 없음'}
+                  </div>
+              )}
+            </div>
           </Card>
 
           <Card style={{ flex: 1 }}>
