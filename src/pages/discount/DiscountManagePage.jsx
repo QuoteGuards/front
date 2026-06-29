@@ -301,11 +301,19 @@ export default function DiscountManagePage() {
 
       {/* ── 등록/수정 모달 ── */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setModalOpen(false)}>
+        /* 피드백 반영: saving 중일 때는 배경을 클릭해도 모달이 닫히지 않도록 방지 */
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => !saving && setModalOpen(false)}>
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="bg-slate-700 text-white px-5 py-3 flex items-center justify-between rounded-t-lg">
               <h2 className="font-bold">정책 {editId == null ? '등록' : '수정'}</h2>
-              <button onClick={() => setModalOpen(false)} className="bg-blue-600 w-7 h-7 rounded">✕</button>
+              {/* 피드백 반영: saving 중일 때는 상단 X 버튼 비활성화 및 스타일 처리 */}
+              <button 
+                onClick={() => !saving && setModalOpen(false)} 
+                disabled={saving} 
+                className="bg-blue-600 w-7 h-7 rounded disabled:opacity-50"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="p-6">
@@ -395,12 +403,10 @@ export default function DiscountManagePage() {
 }
 
 // ── 헬퍼 ──
-// DiscountPolicyResponse.isActive(Boolean) → JSON "isActive". 혹시 모를 직렬화차이 대비 둘 다 수용
 function isActiveOf(p) {
   return p?.isActive ?? p?.active ?? false
 }
 
-// 카테고리 트리 전체 평탄화 (대/중/소 모두 선택 가능, 경로 라벨)
 function flattenAll(tree) {
   const out = []
   const walk = (nodes, path) => {
