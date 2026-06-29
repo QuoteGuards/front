@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchProductsApi, addFavoriteApi, removeFavoriteApi } from '../../api/catalogApi'
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
@@ -28,6 +28,20 @@ export default function ProductSearchPage() {
       .catch(e => setCatError(e.response?.data?.message ?? '카테고리 조회 실패'))
   }, [])
 
+  // 카테고리 id → 전체 경로 문자열 (전자제품 > 가전 > 노트북)
+  const catPathMap = useMemo(() => {
+    const map = new Map()
+    const walk = (nodes, trail) => {
+      for (const n of nodes ?? []) {
+        const t = [...trail, n.name]
+        map.set(n.id, t.join(' > '))
+        if (n.children?.length) walk(n.children, t)
+      }
+    }
+    walk(tree, [])
+    return map
+  }, [tree])
+
   const load = async () => {
     setLoading(true); setError(null)
     try {
@@ -54,7 +68,7 @@ export default function ProductSearchPage() {
     setPage(0)
   }
   const selectCategory = (node) => {
-    setApplied(a => ({ ...a, categoryId: node.id, categoryName: node.name }))
+    setApplied(a => ({ ...a, categoryId: node.id, categoryName: catPathMap.get(node.id) ?? node.name }))
     setPage(0)
   }
   const clearCategory = () => {
