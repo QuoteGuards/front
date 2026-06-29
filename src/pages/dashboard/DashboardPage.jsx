@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   getSummaryApi, getSalesAnalysisApi, getMonthlyTrendApi,
-  getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi,
+  getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi, getDepartmentStatsApi, getDepartmentsApi,
 } from '../../api/dashboardApi'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
@@ -27,6 +27,8 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [department, setDepartment] = useState('') // 부서 스코프 ('' = 전체)
+  const [departments, setDepartments] = useState([])
 
   const [summary, setSummary] = useState(null)
   const [analysis, setAnalysis] = useState(null)
@@ -36,6 +38,7 @@ export default function DashboardPage() {
   const [staff, setStaff] = useState([])
   const [staffSearch, setStaffSearch] = useState('')
   const [staffPage, setStaffPage] = useState(0)
+  const [dept, setDept] = useState([])
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -43,11 +46,14 @@ export default function DashboardPage() {
   const load = async (opts) => {
     setLoading(true); setError(null)
     try {
-      const [s, a, t, q, p, st] = await Promise.all([
+      // 부서별 통계 패널은 부서 필터와 무관하게 전 부서 표시 → department 제외한 opts 사용
+      const deptOpts = { period: opts.period, from: opts.from, to: opts.to }
+      const [s, a, t, q, p, st, dp] = await Promise.all([
         getSummaryApi(opts), getSalesAnalysisApi(opts), getMonthlyTrendApi(opts),
         getQuoteStatusApi(opts), getPopularProductsApi(opts, 10), getSalesStaffApi(opts),
+        getDepartmentStatsApi(deptOpts),
       ])
-      setSummary(s); setAnalysis(a); setTrend(t); setStatusCounts(q); setPopular(p); setStaff(st)
+      setSummary(s); setAnalysis(a); setTrend(t); setStatusCounts(q); setPopular(p); setStaff(st); setDept(dp)
       setStaffPage(0) // 기간 변경으로 데이터 갱신되면 페이지 초기화
     } catch (e) {
       setError(e.response?.data?.message ?? '대시보드 조회 실패')
@@ -61,11 +67,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (period === 'CUSTOM') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (from && to && from <= to) load({ period, from, to })
+      if (from && to && from <= to) load({ period, from, to, department })
     } else {
-      load({ period })
+      load({ period, department })
     }
-  }, [period, from, to])
+  }, [period, from, to, department])
+
+  // 부서 필터 드롭다운 목록 1회 로드
+  useEffect(() => { getDepartmentsApi().then(setDepartments).catch(() => {}) }, [])
 
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
@@ -99,6 +108,12 @@ export default function DashboardPage() {
                 <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={to} onChange={(e) => setTo(e.target.value)} />
               </span>
             )}
+            <span style={{ width: '1px', height: '20px', background: 'var(--color-border)', margin: '0 4px' }} />
+            <select className="form-select" style={{ width: '150px', height: '36px' }}
+              aria-label="부서 필터" value={department} onChange={(e) => setDepartment(e.target.value)}>
+              <option value="">부서 전체</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
           </div>
         }
       />
@@ -117,6 +132,14 @@ export default function DashboardPage() {
       )}
       {loading && <div className="mb-3 text-sm text-[var(--color-text-muted)]">불러오는 중…</div>}
 
+      {department && (
+        <div className="mb-3 inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full"
+          style={{ background: '#EFF6FF', color: 'var(--color-primary)' }}>
+          <span><b>{department}</b> 부서 통계만 표시 중</span>
+          <button onClick={() => setDepartment('')} aria-label="부서 필터 해제" style={{ color: 'var(--color-primary)' }}>✕</button>
+        </div>
+      )}
+
       {/* ── 요약 카드 ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Card label="총 견적 수" value={`${num(summary?.totalQuotes)}건`} />
@@ -126,7 +149,12 @@ export default function DashboardPage() {
         <Card label="총 견적 금액" value={won(summary?.totalAmount)} />
         <Card label="총 공급가액" value={won(summary?.totalSupplyAmount)} />
         <Card label="총 예상 이익금" value={won(summary?.totalProfitAmount)} accent="green" />
-        <Card label="평균 할인율 / 이익률" value={`${pct(summary?.averageDiscountRate)} / ${pct(summary?.averageProfitRate)}`} />
+        <Card label="평균 할인율 / 이익률" value={`${pct(summary?.averageDiscountRate)} / ${pct(summary?.averageProfitRate)}`}
+          info={<>
+            <b>평균 할인율</b> = 각 견적의 (할인액 ÷ 공급가 합계 × 100)을 구해 견적끼리 단순 평균낸 값입니다. (공급가 0인 견적 제외, 견적 1건당 동일 비중)
+            <br /><br />
+            <b>평균 이익률</b> = 각 견적에 저장된 이익률(예상 이익금 기준)의 단순 평균입니다.
+          </>} />
       </div>
 
       {/* ── 영업 현황 분석 ── */}
@@ -230,6 +258,35 @@ export default function DashboardPage() {
             </>
           )}
         </Panel>
+
+        {/* ── 부서별 통계 ── */}
+        <Panel title="부서별 통계">
+          {dept.length === 0 ? <Empty /> : (
+            <table className="w-full text-sm">
+              <thead className="text-xs text-[var(--color-text-muted)]">
+                <tr><th className="text-left py-1">부서</th><th className="text-right">작성</th><th className="text-right">승인율</th><th className="text-right">반려율</th><th className="text-right">견적 총액</th></tr>
+              </thead>
+              <tbody>
+                {dept.map(d => {
+                  const clickable = d.department !== '미지정'
+                  const isSel = department === d.department
+                  return (
+                    <tr key={d.department}
+                      onClick={clickable ? () => setDepartment(d.department) : undefined}
+                      title={clickable ? `${d.department} 부서로 필터` : undefined}
+                      style={{ borderTop: '1px solid var(--color-border)', cursor: clickable ? 'pointer' : 'default', background: isSel ? '#EFF6FF' : 'transparent' }}>
+                      <td className="py-1.5 font-medium" style={{ color: isSel ? 'var(--color-primary)' : undefined }}>{d.department}</td>
+                      <td className="text-right">{num(d.totalQuotes)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-success)' }}>{pct(d.approvalRate)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-danger)' }}>{pct(d.rejectionRate)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(d.totalAmount)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </Panel>
       </div>
     </div>
   )
@@ -245,13 +302,30 @@ const ACCENT_COLOR = {
   red: 'var(--color-danger)',
   blue: 'var(--color-primary)',
 }
-function Card({ label, value, accent }) {
+function Card({ label, value, accent, info }) {
   return (
     <div className="rounded-[var(--radius-md)] px-5 py-4"
       style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <p className="text-xs text-[var(--color-text-sub)] mb-1">{label}</p>
+      <p className="text-xs text-[var(--color-text-sub)] mb-1 flex items-center gap-1">
+        {label}
+        {info && <InfoTip text={info} />}
+      </p>
       <p className="text-[22px] font-bold leading-tight" style={{ color: ACCENT_COLOR[accent] ?? 'var(--color-text-main)' }}>{value}</p>
     </div>
+  )
+}
+
+// ⓘ 호버 툴팁 — 지표 계산 방식 설명
+function InfoTip({ text }) {
+  return (
+    <span className="relative inline-flex group align-middle">
+      <span tabIndex={0} role="img" aria-label="계산 방식 설명"
+        className="cursor-help select-none text-[var(--color-text-muted)]" style={{ fontSize: '13px' }}>ⓘ</span>
+      <span className="hidden group-hover:block group-focus-within:block absolute z-50 right-0 top-5 w-64 p-3 text-xs leading-relaxed rounded-[var(--radius-sm)]"
+        style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', color: 'var(--color-text-main)', fontWeight: 400 }}>
+        {text}
+      </span>
+    </span>
   )
 }
 
