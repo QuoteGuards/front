@@ -24,6 +24,9 @@ const EMPTY_FORM = {
 
 export default function DiscountManagePage() {
   const [tab, setTab] = useState('')           // '' | CATEGORY | PRODUCT
+  // 검색 필터: 정책명 키워드 + 상태(활성/비활성)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [search, setSearch] = useState({ keyword: '', active: '', categoryId: '' }) // 적용된 검색
   const [page, setPage] = useState(0)
   const [size] = useState(10)
   const [pageData, setPageData] = useState({ content: [], totalElements: 0, totalPages: 0 })
@@ -56,6 +59,9 @@ export default function DiscountManagePage() {
     try {
       const params = { page, size }
       if (tab) params.targetType = tab
+      if (search.keyword) params.keyword = search.keyword
+      if (search.active !== '') params.isActive = search.active === 'true'
+      if (search.categoryId) params.categoryId = search.categoryId
       const data = await getDiscountsApi(params)
       setPageData(data)
     } catch (e) {
@@ -64,7 +70,17 @@ export default function DiscountManagePage() {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [tab, page]) // eslint-disable-line
+  useEffect(() => { load() }, [tab, page, search]) // eslint-disable-line
+
+  const onSearch = () => {
+    setSearch(s => ({ ...s, keyword: keywordInput.trim() }))
+    setPage(0)
+  }
+  const onResetSearch = () => {
+    setKeywordInput('')
+    setSearch({ keyword: '', active: '', categoryId: '' })
+    setPage(0)
+  }
   useEffect(() => { loadActiveCount() }, []) // eslint-disable-line
 
   const rows = pageData.content ?? []
@@ -168,6 +184,30 @@ export default function DiscountManagePage() {
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* 검색 바: 정책명 + 상태 */}
+        <div className="flex flex-wrap items-center gap-2 p-4 border-b">
+          <input className="border px-3 py-2 rounded text-sm flex-1 min-w-[180px]"
+            placeholder="정책명 검색"
+            value={keywordInput}
+            onChange={e => setKeywordInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onSearch()} />
+          <select className="border px-2 py-2 rounded text-sm max-w-[200px]"
+            value={search.categoryId}
+            onChange={e => { setSearch(s => ({ ...s, categoryId: e.target.value })); setPage(0) }}>
+            <option value="">카테고리 전체</option>
+            {cats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
+          </select>
+          <select className="border px-2 py-2 rounded text-sm"
+            value={search.active}
+            onChange={e => { setSearch(s => ({ ...s, active: e.target.value })); setPage(0) }}>
+            <option value="">상태 전체</option>
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+          <button onClick={onSearch} className="bg-blue-600 text-white px-4 py-2 rounded text-sm">검색</button>
+          <button onClick={onResetSearch} className="border px-4 py-2 rounded text-sm">초기화</button>
         </div>
 
         {error && <div className="px-4 pt-3 text-red-500 text-sm">{error}</div>}
