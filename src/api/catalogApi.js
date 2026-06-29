@@ -32,3 +32,8 @@ export async function addFavoriteApi(productId) {
 export async function removeFavoriteApi(productId) {
   await apiClient.delete(`/api/products/${productId}/favorites`)
 }
+
+// DELETE 즐겨찾기 전체 해제 (벌크 — 서버에서 트랜잭션 1번으로 일괄 삭제)
+export async function removeAllFavoritesApi() {
+  await apiClient.delete('/api/products/favorites')
+}

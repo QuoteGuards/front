@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchProductsApi, addFavoriteApi, removeFavoriteApi } from '../../api/catalogApi'
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
+import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import Button from '../../components/common/Button'
+import Pagination from '../../components/common/Pagination'
+import ProductImage from '../../components/common/ProductImage'
 
 export default function ProductSearchPage() {
   const navigate = useNavigate()
@@ -23,6 +27,20 @@ export default function ProductSearchPage() {
       .then(data => { setTree(data); setCatError(null) })
       .catch(e => setCatError(e.response?.data?.message ?? '카테고리 조회 실패'))
   }, [])
+
+  // 카테고리 id → 전체 경로 문자열 (전자제품 > 가전 > 노트북)
+  const catPathMap = useMemo(() => {
+    const map = new Map()
+    const walk = (nodes, trail) => {
+      for (const n of nodes ?? []) {
+        const t = [...trail, n.name]
+        map.set(n.id, t.join(' > '))
+        if (n.children?.length) walk(n.children, t)
+      }
+    }
+    walk(tree, [])
+    return map
+  }, [tree])
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -50,7 +68,7 @@ export default function ProductSearchPage() {
     setPage(0)
   }
   const selectCategory = (node) => {
-    setApplied(a => ({ ...a, categoryId: node.id, categoryName: node.name }))
+    setApplied(a => ({ ...a, categoryId: node.id, categoryName: catPathMap.get(node.id) ?? node.name }))
     setPage(0)
   }
   const clearCategory = () => {
@@ -83,120 +101,151 @@ export default function ProductSearchPage() {
   const rows = pageData.content ?? []
   const totalPages = pageData.totalPages ?? 0
 
-  const renderCatNode = (node, depth = 0) => {
+  const renderCatNode = (node) => {
     const isOpen = expanded.has(node.id)
     const hasChild = node.children?.length > 0
     const isSel = applied.categoryId === node.id
     return (
       <div key={node.id}>
-        <div className="flex items-center text-sm py-1" style={{ paddingLeft: depth * 12 }}>
-          {hasChild ? (
-            <button onClick={() => toggleExpand(node.id)} className="w-4 text-gray-400 shrink-0">{isOpen ? '▼' : '▶'}</button>
-          ) : <span className="w-4 shrink-0" />}
-          <button onClick={() => selectCategory(node)}
-            className={`flex-1 text-left truncate ${isSel ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>
-            {node.name}
-            {node.productCount != null && <span className="text-gray-400"> ({node.productCount})</span>}
-          </button>
+        <div onClick={() => selectCategory(node)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', paddingLeft: (node.depth - 1) * 16 + 12,
+            cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+            background: isSel ? '#EFF6FF' : 'transparent',
+            color: isSel ? 'var(--color-primary)' : 'var(--color-text-main)',
+            fontWeight: isSel ? 600 : 400, fontSize: '13px',
+          }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+            <button type="button"
+              onClick={e => { e.stopPropagation(); if (hasChild) toggleExpand(node.id) }}
+              aria-label={hasChild ? `${node.name} ${isOpen ? '접기' : '펼치기'}` : undefined}
+              aria-expanded={hasChild ? isOpen : undefined}
+              aria-hidden={hasChild ? undefined : true}
+              tabIndex={hasChild ? undefined : -1}
+              style={{ width: '16px', color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: hasChild ? 'pointer' : 'default', fontSize: '10px', padding: 0, flexShrink: 0 }}>
+              {hasChild ? (isOpen ? '▼' : '▶') : ''}
+            </button>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.name}</span>
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0, marginLeft: '8px' }}>
+            {subtreeCount(node)}개
+          </span>
         </div>
-        {isOpen && hasChild && <div>{node.children.map(c => renderCatNode(c, depth + 1))}</div>}
+        {isOpen && hasChild && <div>{node.children.map(renderCatNode)}</div>}
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div>
       <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" />
-      {/* ── 상단 검색 바 ── */}
-      <div className="flex gap-2 mb-3">
-        <input
-          className="border px-4 py-2 rounded flex-1"
-          placeholder="제품명 / 키워드 / 제품코드로 검색"
-          value={keywordInput}
-          onChange={e => setKeywordInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && onSearch()}
-        />
-        <button onClick={onSearch} className="bg-blue-600 text-white px-6 py-2 rounded">검색</button>
-        <button onClick={onReset} className="border px-6 py-2 rounded">초기화</button>
-      </div>
 
-      {/* 적용된 필터 칩 */}
-      <div className="flex items-center gap-2 mb-4 text-sm min-h-[28px]">
-        <span className="text-gray-400">적용된 필터:</span>
-        {applied.categoryName && (
-          <Chip onRemove={clearCategory}>{applied.categoryName}</Chip>
-        )}
-        {applied.keyword && (
-          <Chip onRemove={() => { setKeywordInput(''); setApplied(a => ({ ...a, keyword: '' })); setPage(0) }}>
-            "{applied.keyword}"
-          </Chip>
-        )}
-        {!applied.categoryName && !applied.keyword && <span className="text-gray-300">없음 (전체 제품)</span>}
-      </div>
+      {/* ── 검색 패널 ── */}
+      <SearchPanel>
+        <SearchRow label="검색">
+          <input
+            type="text"
+            className="form-input"
+            style={{ width: '320px' }}
+            placeholder="제품명 / 키워드 / 제품코드로 검색"
+            value={keywordInput}
+            onChange={e => setKeywordInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onSearch()}
+          />
+          <Button variant="secondary" onClick={onSearch}>검색</Button>
+          <Button variant="ghost" onClick={onReset}>초기화</Button>
+        </SearchRow>
+
+        {/* 적용된 필터 칩 */}
+        <SearchRow label="적용 필터">
+          {applied.categoryName && (
+            <Chip onRemove={clearCategory}>{applied.categoryName}</Chip>
+          )}
+          {applied.keyword && (
+            <Chip onRemove={() => { setKeywordInput(''); setApplied(a => ({ ...a, keyword: '' })); setPage(0) }}>
+              "{applied.keyword}"
+            </Chip>
+          )}
+          {!applied.categoryName && !applied.keyword && (
+            <span className="text-sm text-[var(--color-text-muted)]">없음 (전체 제품)</span>
+          )}
+        </SearchRow>
+      </SearchPanel>
 
       <div className="flex gap-6">
         {/* ── 좌측 카테고리 필터 ── */}
-        <aside className="w-56 shrink-0 border rounded-lg p-4 self-start">
-          <h2 className="font-bold text-sm mb-3">카테고리 필터</h2>
-          <button onClick={clearCategory}
-            className={`text-sm mb-2 ${!applied.categoryId ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
-            전체 제품
-          </button>
-          <div className="mt-1">{tree.map(n => renderCatNode(n))}</div>
-          {catError
-            ? <div className="text-red-500 text-xs py-4">{catError}</div>
-            : tree.length === 0 && <div className="text-gray-400 text-xs py-4">카테고리 없음</div>}
+        <aside className="w-64 shrink-0 self-start rounded-[var(--radius-md)] p-4"
+          style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
+          <h2 className="font-bold text-sm mb-3" style={{ color: 'var(--color-text-main)' }}>카테고리 목록</h2>
+          <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+            {/* 전체 제품 (필터 해제) */}
+            <div onClick={clearCategory}
+              style={{
+                display: 'flex', alignItems: 'center', padding: '8px 12px', paddingLeft: '28px',
+                cursor: 'pointer', borderRadius: 'var(--radius-sm)', fontSize: '13px',
+                background: !applied.categoryId ? '#EFF6FF' : 'transparent',
+                color: !applied.categoryId ? 'var(--color-primary)' : 'var(--color-text-main)',
+                fontWeight: !applied.categoryId ? 600 : 400,
+              }}>
+              전체 제품
+            </div>
+            {tree.map(renderCatNode)}
+            {catError
+              ? <div className="text-[var(--color-danger)] text-xs py-10 text-center">{catError}</div>
+              : tree.length === 0 && <div className="text-[var(--color-text-muted)] text-xs py-10 text-center">카테고리 없음</div>}
+          </div>
         </aside>
 
         {/* ── 우측 결과 ── */}
         <div className="flex-1">
-          <div className="mb-3 text-sm text-gray-600">
-            검색 결과 <b className="text-gray-900">{pageData.totalElements ?? 0}</b>개
+          <div className="mb-3 text-sm text-[var(--color-text-sub)]">
+            검색 결과 <b className="text-[var(--color-text-main)]">{pageData.totalElements ?? 0}</b>개
           </div>
 
-          {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
+          {error && (
+            <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
+              style={{ color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+              {error}
+            </div>
+          )}
 
           {loading ? (
-            <div className="text-center text-gray-400 py-20">불러오는 중…</div>
+            <div className="text-center text-[var(--color-text-muted)] py-20">불러오는 중…</div>
           ) : rows.length === 0 ? (
-            <div className="text-center py-24 border rounded-lg">
-              <div className="text-gray-500 mb-1">🔍 검색 결과가 없습니다</div>
-              <div className="text-gray-400 text-sm">다른 검색어나 카테고리로 다시 시도해 보세요.</div>
+            <div className="text-center py-24 rounded-[var(--radius-md)]" style={{ border: '1px solid var(--color-border)' }}>
+              <div className="text-[var(--color-text-sub)] mb-1">검색 결과가 없습니다</div>
+              <div className="text-[var(--color-text-muted)] text-sm">다른 검색어나 카테고리로 다시 시도해 보세요.</div>
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {rows.map(p => (
-                <div key={p.id} className="border rounded-lg overflow-hidden flex flex-col">
+                <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
+                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
                   {/* 이미지 + 즐겨찾기 */}
-                  <div className="relative bg-gray-100 aspect-square flex items-center justify-center">
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover"
-                          onError={e => { e.currentTarget.style.display = 'none' }} />
-                      : <span className="text-gray-300 text-sm">이미지</span>}
+                  <div className="relative aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                    <ProductImage src={p.imageUrl} />
                     <button onClick={() => toggleFavorite(p)}
                       className="absolute top-2 right-2 text-xl"
-                      title={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}>
-                      <span className={favoriteOf(p) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+                      title={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}
+                      aria-label={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}>
+                      <span style={{ color: favoriteOf(p) ? 'var(--color-warning)' : '#D1D5DB' }}>★</span>
                     </button>
                   </div>
 
                   {/* 본문 */}
                   <div className="p-3 flex flex-col flex-1">
-                    <div className="text-xs text-gray-400 font-mono">{p.code}</div>
+                    <div className="text-xs text-[var(--color-text-muted)] font-mono">{p.code}</div>
                     <div className="font-medium text-sm mt-0.5 line-clamp-2">{p.name}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{p.categoryName}</div>
+                    <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{p.categoryName}</div>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-blue-600 font-bold">{won(p.unitPrice)}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.vatApplicable ? 'bg-gray-100 text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
-                        VAT {p.vatApplicable ? '적용' : '미적용'}
-                      </span>
+                      <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{won(p.unitPrice)}</span>
+                      <VatBadge applicable={p.vatApplicable} />
                     </div>
 
                     <div className="mt-3 flex flex-col gap-1.5">
-                      <button onClick={() => goDetail(p)}
-                        className="border text-sm py-1.5 rounded text-gray-600 hover:bg-gray-50">상세 보기 →</button>
-                      <button onClick={() => addToQuote(p)}
-                        className="bg-blue-600 text-white text-sm py-1.5 rounded">견적에 추가</button>
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => goDetail(p)}>상세 보기</Button>
+                      <Button variant="primary" size="sm" className="w-full" onClick={() => addToQuote(p)}>견적에 추가</Button>
                     </div>
                   </div>
                 </div>
@@ -204,16 +253,7 @@ export default function ProductSearchPage() {
             </div>
           )}
 
-          {/* 페이징 */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-1 mt-6">
-              <PageBtn disabled={page === 0} onClick={() => setPage(page - 1)}>‹</PageBtn>
-              {Array.from({ length: totalPages }, (_, i) => i).map(i => (
-                <PageBtn key={i} active={i === page} onClick={() => setPage(i)}>{i + 1}</PageBtn>
-              ))}
-              <PageBtn disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>›</PageBtn>
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </div>
     </div>
@@ -225,26 +265,32 @@ export default function ProductSearchPage() {
 function favoriteOf(p) {
   return p?.isFavorite ?? p?.favorite ?? false
 }
+
+// 자기 제품수 + 모든 자손 카테고리 제품수 합산 (관리자 카테고리 목록과 동일)
+function subtreeCount(node) {
+  if (!node) return 0
+  const own = node.productCount ?? 0
+  const children = (node.children ?? []).reduce((sum, c) => sum + subtreeCount(c), 0)
+  return own + children
+}
 function won(v) {
   return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원'
 }
 
-function Chip({ children, onRemove }) {
+function VatBadge({ applicable }) {
   return (
-    <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs">
-      {children}
-      <button onClick={onRemove} className="text-blue-400 hover:text-blue-700">✕</button>
+    <span className="status-badge status-badge--gray" style={{ fontSize: '11px', padding: '2px 8px' }}>
+      VAT {applicable ? '적용' : '미적용'}
     </span>
   )
 }
 
-function PageBtn({ children, active, disabled, onClick }) {
+function Chip({ children, onRemove }) {
   return (
-    <button disabled={disabled} onClick={onClick}
-      className={`min-w-8 px-2 py-1 rounded text-sm border
-        ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600'}
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-50'}`}>
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+      style={{ background: '#EEF4FF', color: 'var(--color-primary)' }}>
       {children}
-    </button>
+      <button onClick={onRemove} aria-label="필터 제거" style={{ color: 'var(--color-primary)' }}>✕</button>
+    </span>
   )
 }
