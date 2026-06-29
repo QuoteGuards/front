@@ -366,3 +366,4 @@ function Bar({ ratio, color = 'var(--color-primary)', h = 10 }) {
 function Empty() {
   return <p className="text-[var(--color-text-muted)] text-[13px] text-center py-8">데이터가 없습니다</p>
 }
+

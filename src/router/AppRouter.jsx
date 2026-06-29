@@ -170,6 +170,7 @@ export default function AppRouter() {
         {/* 매칭되지 않는 경로 → 루트로 리다이렉트 (보호 라우트 밖에 위치해야 무한 리다이렉트 방지) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
     </>
   )
 }

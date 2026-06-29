@@ -83,6 +83,7 @@ const Sidebar = ({ collapsed }) => {
   const isManager = user?.role === 'SALES_MANAGER'
   const isStaff = user?.role === 'SALES_STAFF'
 
+
   const NAV_GROUPS = [
     // ── 견적 (영업사원·영업관리자만) ─────────────
     ...(isStaff || isManager ? [{
@@ -107,6 +108,7 @@ const Sidebar = ({ collapsed }) => {
       ],
     }] : []),
     // ── 제품 ─────────────────────────────────
+
     {
       group: '제품',
       items: [

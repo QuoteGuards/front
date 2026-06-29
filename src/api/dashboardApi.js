@@ -1,5 +1,6 @@
 import apiClient from './apiClient'
 
+
 // 통계 대시보드 API (SUPER_ADMIN, SALES_MANAGER)
 // 경로 /api/admin/dashboard/**, 응답 래퍼 ApiResponse { ..., data }
 // 공통 기간 파라미터: { period, from, to }
@@ -66,3 +67,4 @@ export async function getDepartmentStatsApi(opts) {
   const res = await apiClient.get('/api/admin/dashboard/department-stats', { params: periodParams(opts) })
   return res.data.data
 }
+
