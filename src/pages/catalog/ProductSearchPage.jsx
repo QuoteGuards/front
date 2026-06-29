@@ -119,6 +119,10 @@ export default function ProductSearchPage() {
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
             <button type="button"
               onClick={e => { e.stopPropagation(); if (hasChild) toggleExpand(node.id) }}
+              aria-label={hasChild ? `${node.name} ${isOpen ? '접기' : '펼치기'}` : undefined}
+              aria-expanded={hasChild ? isOpen : undefined}
+              aria-hidden={hasChild ? undefined : true}
+              tabIndex={hasChild ? undefined : -1}
               style={{ width: '16px', color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: hasChild ? 'pointer' : 'default', fontSize: '10px', padding: 0, flexShrink: 0 }}>
               {hasChild ? (isOpen ? '▼' : '▶') : ''}
             </button>
