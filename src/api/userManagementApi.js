@@ -3,7 +3,6 @@ import apiClient from './apiClient';
 /**
  * POST /api/admin/users
  * 관리자가 신규 사원 계정을 생성합니다.
- * @param {{ name, department, position, phone, role }} payload
  */
 export async function createUserApi(payload) {
   const response = await apiClient.post('/api/admin/users', payload);
@@ -24,10 +23,18 @@ export async function getUserListApi({ role, status, keyword, page = 0, size = 2
 }
 
 /**
+ * GET /api/admin/users/:userId
+ */
+export async function getUserDetailApi(userId) {
+  const response = await apiClient.get('/api/admin/users/' + userId);
+  return response.data;
+}
+
+/**
  * PATCH /api/admin/users/:userId/suspend
  */
 export async function suspendUserApi(userId) {
-  const response = await apiClient.patch(`/api/admin/users/${userId}/suspend`);
+  const response = await apiClient.patch('/api/admin/users/' + userId + '/suspend');
   return response.data;
 }
 
@@ -35,7 +42,7 @@ export async function suspendUserApi(userId) {
  * PATCH /api/admin/users/:userId/reactivate
  */
 export async function reactivateUserApi(userId) {
-  const response = await apiClient.patch(`/api/admin/users/${userId}/reactivate`);
+  const response = await apiClient.patch('/api/admin/users/' + userId + '/reactivate');
   return response.data;
 }
 
@@ -43,6 +50,22 @@ export async function reactivateUserApi(userId) {
  * PATCH /api/admin/users/:userId/role
  */
 export async function changeUserRoleApi(userId, role) {
-  const response = await apiClient.patch(`/api/admin/users/${userId}/role`, { role });
+  const response = await apiClient.patch('/api/admin/users/' + userId + '/role', { role });
+  return response.data;
+}
+
+/**
+ * PATCH /api/admin/users/:userId/info
+ */
+export async function updateUserInfoApi(userId, payload) {
+  const response = await apiClient.patch('/api/admin/users/' + userId + '/info', payload);
+  return response.data;
+}
+
+/**
+ * DELETE /api/admin/users/:userId
+ */
+export async function deleteUserApi(userId) {
+  const response = await apiClient.delete('/api/admin/users/' + userId);
   return response.data;
 }

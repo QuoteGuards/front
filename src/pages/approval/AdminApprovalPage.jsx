@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getPendingList, getApprovalReasons } from '../../api/approvalApi'
+import { getPendingList, getApprovalReasons, getApprovalMonthlyStats } from '../../api/approvalApi'
 
 const REASON_LABEL = {
   DISCOUNT_EXCEEDED: '할인율 초과',
@@ -46,6 +46,7 @@ export default function AdminApprovalPage() {
   const navigate = useNavigate()
   const [pendingList, setPendingList] = useState([])
   const [reasonsMap, setReasonsMap] = useState({})
+  const [monthlyStats, setMonthlyStats] = useState({ monthlyApproved: 0, monthlyRejected: 0 })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [reasonFilter, setReasonFilter] = useState('전체')
@@ -55,9 +56,13 @@ export default function AdminApprovalPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const res = await getPendingList()
+      const [res, statsRes] = await Promise.all([
+        getPendingList(),
+        getApprovalMonthlyStats(),
+      ])
       const list = res.data ?? []
       setPendingList(list)
+      setMonthlyStats(statsRes.data ?? { monthlyApproved: 0, monthlyRejected: 0 })
 
       const results = await Promise.all(
         list.map((item) =>
@@ -97,8 +102,8 @@ export default function AdminApprovalPage() {
         <div className="grid grid-cols-4 gap-4 mt-5">
           <StatCard icon="⏳" label="승인 대기" value={pendingList.length} color="text-amber-600" bg="bg-amber-50" />
           <StatCard icon="📋" label="오늘 신규" value={pendingList.filter(i => new Date(i.requestedAt).toDateString() === new Date().toDateString()).length} color="text-blue-600" bg="bg-blue-50" />
-          <StatCard icon="✅" label="이달 승인" value="—" color="text-emerald-600" bg="bg-emerald-50" />
-          <StatCard icon="✗" label="이달 반려" value="—" color="text-red-500" bg="bg-red-50" />
+          <StatCard icon="✅" label="이달 승인" value={monthlyStats.monthlyApproved} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard icon="✗" label="이달 반려" value={monthlyStats.monthlyRejected} color="text-red-500" bg="bg-red-50" />
         </div>
       </div>
 

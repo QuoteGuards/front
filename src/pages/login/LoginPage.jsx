@@ -1,5 +1,5 @@
 import { useState, useCallback, useId } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loginApi } from '../../api/authApi';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -58,7 +58,11 @@ export default function LoginPage() {
         const resData = await loginApi(email, password);
 
         if (resData?.data?.accessToken) {
-          login(resData.data.accessToken, resData.data.mustChangePassword ?? false);
+          login(
+            resData.data.accessToken,
+            resData.data.refreshToken ?? null,
+            resData.data.mustChangePassword ?? false
+          );
 
           const prev = location.state?.from;
           const from = prev
@@ -200,6 +204,12 @@ export default function LoginPage() {
             {isSubmitting ? <><Spinner />로그인 중...</> : '로그인'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-500">
+          <Link to="/forgot-password" className="text-blue-600 hover:underline">
+            비밀번호를 잊으셨나요?
+          </Link>
+        </p>
       </main>
     </div>
   );
@@ -213,6 +223,7 @@ function EyeIcon() {
     </svg>
   );
 }
+
 function EyeOffIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -220,6 +231,7 @@ function EyeOffIcon() {
     </svg>
   );
 }
+
 function ErrorIcon() {
   return (
     <svg className="shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -227,6 +239,7 @@ function ErrorIcon() {
     </svg>
   );
 }
+
 function Spinner() {
   return (
     <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">

@@ -5,7 +5,6 @@ import { createUserApi } from '../../api/userManagementApi'
 const ROLE_OPTIONS = [
   { value: 'SALES_STAFF', label: '영업 사원' },
   { value: 'SALES_MANAGER', label: '영업 관리자' },
-  { value: 'SUPER_ADMIN', label: '최고 관리자' },
 ]
 
 const INITIAL_FORM = {
@@ -16,13 +15,9 @@ const INITIAL_FORM = {
   role: 'SALES_STAFF',
 }
 
-/**
- * 관리자 전용 – 신규 사원 계정 생성 모달
- * 사원번호와 이메일은 시스템이 자동 생성한다. 관리자는 입력하지 않는다.
- */
 export default function UserCreateModal({ onClose, onCreated }) {
   const baseId = useId()
-  const id = (name) => `${baseId}-${name}`
+  const id = (name) => baseId + '-' + name
 
   const [form, setForm] = useState(INITIAL_FORM)
   const [errors, setErrors] = useState({})
@@ -30,15 +25,15 @@ export default function UserCreateModal({ onClose, onCreated }) {
   const [created, setCreated] = useState(null)
 
   const formatPhone = (raw) => {
-    const digits = raw.replace(/\D/g, '').slice(0, 11)
+    let digits = raw.replace(/\D/g, '')
+    const is010 = digits.startsWith('010')
+    digits = digits.slice(0, is010 ? 11 : 10)
     if (digits.length <= 3) return digits
-    if (digits.startsWith('010')) {
-      if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-    } else {
-      if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+    if (digits.length <= 6) return digits.slice(0, 3) + '-' + digits.slice(3)
+    if (is010 && digits.length === 11) {
+      return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7)
     }
+    return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6)
   }
 
   const handleChange = (e) => {
@@ -67,14 +62,12 @@ export default function UserCreateModal({ onClose, onCreated }) {
       setErrors(validationErrors)
       return
     }
-
     setSubmitting(true)
     try {
       const payload = { name: form.name.trim(), role: form.role }
       if (form.department.trim()) payload.department = form.department.trim()
       if (form.position.trim()) payload.position = form.position.trim()
       if (form.phone.trim()) payload.phone = form.phone.trim()
-
       const res = await createUserApi(payload)
       setCreated(res.data)
       onCreated?.()
@@ -86,7 +79,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
     }
   }
 
-  // ── 생성 성공 화면 ──────────────────────────────────────────────────────
   if (created) {
     return (
       <div
@@ -100,7 +92,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
           <h2 id="modal-title-created" className="text-base font-semibold text-gray-800 mb-4">
             계정 생성 완료
           </h2>
-
           <div className="space-y-2 text-sm mb-5">
             <Row label="이름" value={created.name} />
             <Row label="사원번호" value={created.memberNumber} />
@@ -110,7 +101,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
             <Row label="권한" value={ROLE_OPTIONS.find(r => r.value === created.role)?.label ?? created.role} />
             <Row label="상태" value="활성" />
           </div>
-
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
             <p className="text-xs font-medium text-amber-700 mb-1">임시 비밀번호</p>
             <p className="text-sm font-mono font-semibold text-amber-900 break-all select-all">
@@ -120,7 +110,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
               이 비밀번호는 지금만 확인할 수 있습니다. 사원에게 안전하게 전달하세요.
             </p>
           </div>
-
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>확인</Button>
           </div>
@@ -129,7 +118,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
     )
   }
 
-  // ── 입력 폼 화면 ───────────────────────────────────────────────────────
   return (
     <div
       role="dialog"
@@ -145,21 +133,18 @@ export default function UserCreateModal({ onClose, onCreated }) {
         <p className="text-xs text-gray-400 mb-4">
           사원번호와 이메일은 시스템이 자동으로 생성합니다.
         </p>
-
         <form onSubmit={handleSubmit} noValidate className="space-y-3">
           {errors._global && (
             <div role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {errors._global}
             </div>
           )}
-
           <Field
             id={id('name')} label="이름" required
             name="name" value={form.name}
             onChange={handleChange} error={errors.name}
             placeholder="홍길동"
           />
-
           <div className="grid grid-cols-2 gap-3">
             <Field
               id={id('department')} label="부서"
@@ -174,7 +159,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
               placeholder="대리"
             />
           </div>
-
           <Field
             id={id('phone')} label="연락처" required
             name="phone" value={form.phone}
@@ -182,7 +166,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
             placeholder="010-0000-0000"
             type="tel"
           />
-
           <div>
             <label htmlFor={id('role')} className="block text-xs font-medium text-gray-600 mb-1">
               권한 <span className="text-red-500">*</span>
@@ -200,7 +183,6 @@ export default function UserCreateModal({ onClose, onCreated }) {
             </select>
             {errors.role && <p className="mt-1 text-xs text-red-500">{errors.role}</p>}
           </div>
-
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={onClose} disabled={submitting}>
               취소
@@ -229,7 +211,7 @@ function Field({ id, label, required, name, value, onChange, error, placeholder,
         onChange={onChange}
         placeholder={placeholder}
         aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={error ? id + '-error' : undefined}
         className={[
           'w-full border rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400',
           'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
@@ -237,7 +219,7 @@ function Field({ id, label, required, name, value, onChange, error, placeholder,
         ].join(' ')}
       />
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-red-500">{error}</p>
+        <p id={id + '-error'} role="alert" className="mt-1 text-xs text-red-500">{error}</p>
       )}
     </div>
   )
