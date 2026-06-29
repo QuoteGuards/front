@@ -1011,11 +1011,13 @@ function won(value) {
   return `${Number(value).toLocaleString('ko-KR')}원`
 }
 
-// 마진율(%) = (단가 - 원가) / 단가 * 100. 단가 0/유효치 않으면 null
+// 마진율(%) = (단가 - 원가) / 단가 * 100
+// 단가는 0 이하/비유효, 원가는 비유효(NaN 등)/음수면 null (원가 0은 유효: 마진 100%)
 function marginRate(product) {
   const u = Number(product?.unitPrice)
   const c = Number(product?.costPrice)
   if (!Number.isFinite(u) || u <= 0) return null
+  if (!Number.isFinite(c) || c < 0) return null
   return ((u - c) / u) * 100
 }
 
