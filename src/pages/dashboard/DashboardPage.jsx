@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [to, setTo] = useState('')
   const [department, setDepartment] = useState('') // 부서 스코프 ('' = 전체)
   const [departments, setDepartments] = useState([])
+  const [deptError, setDeptError] = useState(null) // 부서 목록 로드 실패 표시
 
   const [summary, setSummary] = useState(null)
   const [analysis, setAnalysis] = useState(null)
@@ -73,8 +74,12 @@ export default function DashboardPage() {
     }
   }, [period, from, to, department])
 
-  // 부서 필터 드롭다운 목록 1회 로드
-  useEffect(() => { getDepartmentsApi().then(setDepartments).catch(() => {}) }, [])
+  // 부서 필터 드롭다운 목록 1회 로드 (실패 시 사용자에게 표시)
+  useEffect(() => {
+    getDepartmentsApi()
+      .then(d => { setDepartments(d); setDeptError(null) })
+      .catch(() => setDeptError('부서 목록을 불러오지 못했습니다.'))
+  }, [])
 
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
@@ -114,6 +119,7 @@ export default function DashboardPage() {
               <option value="">부서 전체</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
+            {deptError && <span style={{ fontSize: '12px', color: 'var(--color-danger)' }}>{deptError}</span>}
           </div>
         }
       />
