@@ -108,6 +108,18 @@ export default function ProductManagePage() {
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
       setModalError('제품코드, 제품명, 카테고리는 필수입니다.'); return
     }
+    // 단가/원가 검증: 필수 + 0 이상 + 원가 ≤ 단가
+    if (form.unitPrice === '' || form.costPrice === '') {
+      setModalError('단가와 원가를 입력하세요.'); return
+    }
+    const unitPriceNum = Number(form.unitPrice)
+    const costPriceNum = Number(form.costPrice)
+    if (Number.isNaN(unitPriceNum) || Number.isNaN(costPriceNum) || unitPriceNum < 0 || costPriceNum < 0) {
+      setModalError('단가·원가는 0 이상의 숫자여야 합니다.'); return
+    }
+    if (costPriceNum > unitPriceNum) {
+      setModalError('원가가 단가보다 클 수 없습니다.'); return
+    }
     const payload = {
       categoryId: Number(form.categoryId),
       name: form.name.trim(),
@@ -115,8 +127,8 @@ export default function ProductManagePage() {
       description: form.description?.trim() || null,
       spec: form.spec?.trim() || null,
       imageUrl: form.imageUrl?.trim() || null,
-      unitPrice: form.unitPrice === '' ? 0 : Number(form.unitPrice),
-      costPrice: form.costPrice === '' ? 0 : Number(form.costPrice),
+      unitPrice: unitPriceNum,
+      costPrice: costPriceNum,
       unit: form.unit?.trim() || 'EA',
       vatApplicable: form.vatApplicable,
     }
@@ -398,11 +410,11 @@ export default function ProductManagePage() {
                   onChange={e => setForm({ ...form, spec: e.target.value })} placeholder="예: 600x850x600mm" />
               </Row>
               <Row label="단가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.unitPrice}
+                <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.unitPrice}
                   onChange={e => setForm({ ...form, unitPrice: e.target.value })} placeholder="0" />
               </Row>
               <Row label="원가 *">
-                <input type="number" className="border px-3 py-2 rounded w-full" value={form.costPrice}
+                <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.costPrice}
                   onChange={e => setForm({ ...form, costPrice: e.target.value })} placeholder="0" />
               </Row>
               <Row label="단위">
