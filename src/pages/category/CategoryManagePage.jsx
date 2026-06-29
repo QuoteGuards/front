@@ -448,7 +448,7 @@ export default function CategoryManagePage() {
                           style={inputStyle}
                           value={form.name}
                           onChange={(e) => setForm({ ...form, name: e.target.value })}
-                          placeholder="예: 세탁기"
+                          placeholder="카테고리명"
                       />
                     </Row>
 
@@ -457,7 +457,7 @@ export default function CategoryManagePage() {
                           style={inputStyle}
                           value={form.slug}
                           onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                          placeholder="영소문자·숫자·하이픈 예: elec-home-wm"
+                          placeholder="영소문자·숫자·하이픈"
                       />
                     </Row>
 

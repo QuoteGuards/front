@@ -56,7 +56,6 @@ export default function DashboardPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (from && to && from <= to) load({ period, from, to })
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       load({ period })
     }
   }, [period, from, to])
