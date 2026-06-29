@@ -50,7 +50,22 @@ export default function DiscountManagePage() {
 
   useEffect(() => {
     getCategoriesApi().then(t => setCats(flattenAll(t))).catch(() => {})
-    getProductsApi({ size: 500 }).then(p => setProducts(p.content ?? [])).catch(() => {})
+
+    // 제품 전체 로드 (페이지 순회) — 500개 초과 제품도 정책 대상으로 선택 가능하도록
+    ;(async () => {
+      try {
+        const PAGE = 500
+        let page = 0
+        let all = []
+        let data
+        do {
+          data = await getProductsApi({ size: PAGE, page })
+          all = all.concat(data.content ?? [])
+          page += 1
+        } while (data && data.last === false && page < 20) // 안전 상한(최대 10,000개)
+        setProducts(all)
+      } catch { /* 무시 */ }
+    })()
   }, [])
 
   const loadActiveCount = async () => {
