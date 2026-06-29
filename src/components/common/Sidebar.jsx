@@ -88,7 +88,7 @@ const Sidebar = ({ collapsed }) => {
     ...(isStaff || isManager ? [{
       group: '견적',
       items: [
-        ...(isStaff ? [{ label: '견적 작성', path: '/quotes/new', icon: <PlusIcon />, locked: !loading && !canWriteQuote }] : []),
+        ...((isStaff || isManager) ? [{ label: '견적 작성', path: '/quotes/new', icon: <PlusIcon />, locked: !loading && !canWriteQuote }] : []),
         { label: '견적 목록', path: '/quotes', icon: <ListIcon />, end: true },
         { label: '발송 이력', path: '/history', icon: <SendIcon /> },
       ],
