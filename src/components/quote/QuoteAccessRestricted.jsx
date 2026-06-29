@@ -16,10 +16,10 @@ const REASONS = {
     },
     ACCESS_DENIED: {
         icon: '⛔',
-        title: '권한이 없습니다',
-        description: ['해당 화면에 접근할 수 있는 권한이 없습니다.'],
-        primaryLabel: '메인 화면으로 이동',
-        primaryTo: '/quotes',
+        title: '접근 권한이 없습니다',
+        description: ['이 페이지는 해당 역할의 사용자만 접근할 수 있습니다.'],
+        primaryLabel: '메인 화면으로',
+        primaryTo: null, // redirectTo prop으로 대체
     },
     LOGIN_REQUIRED: {
         icon: '👤',
@@ -37,13 +37,14 @@ const REASONS = {
     },
 }
 
-const QuoteAccessRestricted = ({ reason = 'TRAINING_NOT_COMPLETED' }) => {
+const QuoteAccessRestricted = ({ reason = 'TRAINING_NOT_COMPLETED', redirectTo }) => {
     const navigate = useNavigate()
     const info = REASONS[reason] ?? REASONS.TRAINING_NOT_COMPLETED
+    const primaryTo = redirectTo ?? info.primaryTo ?? '/'
 
     return (
-        <div className="flex-1 min-h-screen bg-gray-50 flex items-center justify-center p-6">
-            <div className="bg-white border border-rose-200 rounded-2xl shadow-sm w-full max-w-md p-8 text-center">
+        <div className="flex items-center justify-center py-12">
+            <div className="bg-white border border-rose-200 rounded-2xl shadow-sm w-full max-w-3xl p-16 text-center">
                 <div className="w-16 h-16 mx-auto rounded-full bg-rose-50 flex items-center justify-center text-3xl mb-4">
                     {info.icon}
                 </div>
@@ -69,7 +70,7 @@ const QuoteAccessRestricted = ({ reason = 'TRAINING_NOT_COMPLETED' }) => {
 
                 <div className="mt-6 flex flex-col gap-2">
                     <button
-                        onClick={() => navigate(info.primaryTo)}
+                        onClick={() => navigate(primaryTo)}
                         className="w-full py-2.5 rounded-lg bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 transition-colors"
                     >
                         {info.primaryLabel}
@@ -82,7 +83,7 @@ const QuoteAccessRestricted = ({ reason = 'TRAINING_NOT_COMPLETED' }) => {
                             이전 페이지
                         </button>
                         <button
-                            onClick={() => navigate('/quotes')}
+                            onClick={() => navigate(primaryTo)}
                             className="flex-1 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
                         >
                             메인 화면

@@ -2,13 +2,12 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuotes } from '../../hooks/useQuotes'
 import { formatKRW } from '../../utils/quoteUtils'
-import { QUOTE_STATUS_LABEL, QUOTE_STATUS_STYLE, QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
-
-const StatusBadge = ({ status }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${QUOTE_STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-500'}`}>
-    {QUOTE_STATUS_LABEL[status] ?? status}
-  </span>
-)
+import { QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
+import PageHeader from '../../components/common/PageHeader'
+import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import DataTable from '../../components/common/DataTable'
+import StatusBadge from '../../components/common/StatusBadge'
+import Button from '../../components/common/Button'
 
 const QuoteListPage = () => {
   const navigate = useNavigate()
@@ -32,96 +31,83 @@ const QuoteListPage = () => {
 
   const statuses = Object.keys(QUOTE_STATUS_FILTERS)
 
+  const columns = [
+    {
+      key: 'id',
+      title: '견적번호',
+      render: (val) => (
+        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+          {val}
+        </span>
+      ),
+    },
+    { key: 'buyerName', title: '거래처' },
+    { key: 'contactName', title: '담당자', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px]">{val}</span> },
+    { key: 'createdAt', title: '발행일', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val}</span> },
+    { key: 'validUntil', title: '유효기한', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val}</span> },
+    { key: 'totalAmount', title: '합계금액', align: 'right', render: (val) => <span className="font-semibold">{formatKRW(val)}</span> },
+    { key: 'status', title: '상태', align: 'center', render: (val) => <StatusBadge status={val} type="quote" /> },
+  ]
+
+  if (error) {
+    return (
+      <div>
+        <PageHeader breadcrumbs={['견적 관리', '견적 목록']} title="내 견적 목록" />
+        <p className="text-[var(--color-danger)] text-sm">목록을 불러올 수 없습니다.</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-gray-800">내 견적 목록</h1>
-        <p className="text-sm text-gray-400 mt-1">전체 {quotes.length}건의 견적서가 있습니다.</p>
-      </div>
+    <div>
+      <PageHeader
+        breadcrumbs={['견적 관리', '견적 목록']}
+        title="내 견적 목록"
+        actions={
+          <Button variant="primary" onClick={() => navigate('/quotes/new')}>
+            + 신규 견적
+          </Button>
+        }
+      />
 
-      <div className="px-8 py-4 flex gap-3 items-center">
-        <input
-          type="text"
-          placeholder="견적번호 / 거래처명 검색"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-        />
-        <div className="flex gap-1">
+      <SearchPanel>
+        <SearchRow label="상태 필터">
           {statuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${statusFilter === s
-                ? 'bg-violet-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-500 hover:bg-gray-50'
-                }`}
-            >
+            <label key={s} className="form-checkbox">
+              <input
+                type="radio"
+                name="statusFilter"
+                value={s}
+                checked={statusFilter === s}
+                onChange={() => setStatusFilter(s)}
+              />
               {s}
-            </button>
+            </label>
           ))}
-        </div>
-        <span className="text-sm text-gray-400 ml-auto">{filtered.length}건 표시 중</span>
-      </div>
+        </SearchRow>
+        <SearchRow label="검색">
+          <input
+            type="text"
+            className="form-input"
+            placeholder="견적번호 / 거래처명 / 담당자 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: '300px' }}
+          />
+          <span className="text-[13px] text-[var(--color-text-muted)] ml-2">
+            {filtered.length}건 표시 중
+          </span>
+        </SearchRow>
+      </SearchPanel>
 
-      <div className="px-8 pb-10">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          {loading ? (
-            <div className="py-20 text-center text-sm text-gray-400">견적 목록을 불러오는 중...</div>
-          ) : error ? (
-            <div className="py-20 text-center text-sm text-red-400">목록을 불러올 수 없습니다.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">견적번호</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">거래처</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">담당자</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">발행일</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">유효기한</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 whitespace-nowrap">합계금액</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500">상태</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center text-sm text-gray-400">
-                      견적서가 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((q) => (
-                    <tr
-                      key={q.id}
-                      onClick={() => navigate(`/quotes/${q.dbId}/detail`)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate(`/quotes/${q.dbId}/detail`) }}
-                      tabIndex={0}
-                      className="hover:bg-violet-50 cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500"
-                    >
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                          {q.id}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-800 font-medium">{q.buyerName}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{q.contactName}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{q.createdAt}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{q.validUntil}</td>
-                      <td className="px-4 py-3 text-right text-gray-800 font-medium whitespace-nowrap">
-                        {formatKRW(q.totalAmount)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <StatusBadge status={q.status} />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        data={filtered.map((q) => ({ ...q, _dbId: q.dbId }))}
+        rowKey="id"
+        loading={loading}
+        emptyText="견적서가 없습니다."
+        onRowClick={(row) => navigate(`/quotes/${row._dbId}/detail`)}
+      />
     </div>
   )
 }

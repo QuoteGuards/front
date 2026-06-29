@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getInternalAnalysis } from '../../api/quoteApi'
 import { requestApproval, reRequestApproval, getApprovalHistories } from '../../api/approvalApi'
+import PageHeader from '../../components/common/PageHeader'
+import { formatKRW } from '../../utils/quoteUtils'
 
 const REASON_LABEL = {
     DISCOUNT_EXCEEDED: '할인율 정책 초과',
@@ -35,7 +37,6 @@ const deriveApprovalStatus = (histories) => {
     return { status: 'NONE', lastMemo: null, approvalRequestId: null }
 }
 
-const formatKRW = (n) => `${Math.round(n ?? 0).toLocaleString('ko-KR')}원`
 
 const QuoteInternalAnalysisPage = () => {
     const { quoteId } = useParams()
@@ -123,6 +124,7 @@ const QuoteInternalAnalysisPage = () => {
 
     return (
         <div className="flex-1 bg-gray-50 min-h-screen pb-10">
+        <PageHeader breadcrumbs={['견적 관리', '내부 분석']} />
             <div className="bg-white border-b border-gray-200 px-8 py-5">
                 <button
                     onClick={() => navigate(`/quotes/new?id=${quoteId}`)}

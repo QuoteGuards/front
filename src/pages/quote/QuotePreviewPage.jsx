@@ -6,6 +6,7 @@ import QuoteDocument from '../../components/quote/QuoteDocument'
 import QuoteActionBar from '../../components/quote/QuoteActionBar'
 import EmailModal from '../../components/quote/EmailModal'
 import Toast from '../../components/common/Toast'
+import PageHeader from '../../components/common/PageHeader'
 
 const QuotePreviewPage = () => {
   const { id } = useParams()
@@ -55,6 +56,7 @@ const QuotePreviewPage = () => {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
+      <PageHeader breadcrumbs={['견적 관리', '견적 미리보기']} />
       <div className="no-print flex items-center justify-between px-8 pt-8 pb-4">
         <h1 className="text-xl font-bold text-gray-800">견적서 상세 및 미리보기</h1>
         <span className="text-sm text-gray-400">견적번호: {quote.id}</span>
