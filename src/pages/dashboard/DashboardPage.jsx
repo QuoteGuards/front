@@ -4,6 +4,10 @@ import {
   getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi,
 } from '../../api/dashboardApi'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
+import Pagination from '../../components/common/Pagination'
+
+const STAFF_PAGE_SIZE = 8
 
 const PERIODS = [
   { key: '', label: '전체' },
@@ -30,6 +34,8 @@ export default function DashboardPage() {
   const [statusCounts, setStatusCounts] = useState([])
   const [popular, setPopular] = useState([])
   const [staff, setStaff] = useState([])
+  const [staffSearch, setStaffSearch] = useState('')
+  const [staffPage, setStaffPage] = useState(0)
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -42,6 +48,7 @@ export default function DashboardPage() {
         getQuoteStatusApi(opts), getPopularProductsApi(opts, 10), getSalesStaffApi(opts),
       ])
       setSummary(s); setAnalysis(a); setTrend(t); setStatusCounts(q); setPopular(p); setStaff(st)
+      setStaffPage(0) // 기간 변경으로 데이터 갱신되면 페이지 초기화
     } catch (e) {
       setError(e.response?.data?.message ?? '대시보드 조회 실패')
     } finally {
@@ -63,6 +70,15 @@ export default function DashboardPage() {
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
 
+  // 영업사원별: 이름 검색 + 페이징 (클라이언트 처리)
+  const staffFiltered = useMemo(() => {
+    const q = staffSearch.trim().toLowerCase()
+    return q ? staff.filter(s => s.userName?.toLowerCase().includes(q)) : staff
+  }, [staff, staffSearch])
+  const staffTotalPages = Math.ceil(staffFiltered.length / STAFF_PAGE_SIZE)
+  const staffSafePage = Math.min(staffPage, Math.max(0, staffTotalPages - 1))
+  const staffPaged = staffFiltered.slice(staffSafePage * STAFF_PAGE_SIZE, staffSafePage * STAFF_PAGE_SIZE + STAFF_PAGE_SIZE)
+
   return (
     <div>
       <PageHeader
@@ -71,15 +87,10 @@ export default function DashboardPage() {
         actions={
           <div className="flex items-center gap-1 flex-wrap">
             {PERIODS.map(p => (
-              <button key={p.key} type="button" onClick={() => setPeriod(p.key)}
-                className={[
-                  'px-3 py-1.5 rounded text-[13px] border transition-colors',
-                  period === p.key
-                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                    : 'bg-white text-[var(--color-text-sub)] border-[var(--color-border)] hover:bg-gray-50',
-                ].join(' ')}>
+              <Button key={p.key} size="sm" variant={period === p.key ? 'primary' : 'outline'}
+                onClick={() => setPeriod(p.key)}>
                 {p.label}
-              </button>
+              </Button>
             ))}
             {period === 'CUSTOM' && (
               <span className="flex items-center gap-1.5 ml-1">
@@ -92,14 +103,19 @@ export default function DashboardPage() {
         }
       />
 
-      {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
+      {error && (
+        <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
+          style={{ color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {error}
+        </div>
+      )}
       {period === 'CUSTOM' && (!from || !to) && (
-        <div className="mb-3 text-amber-600 text-sm">사용자 지정 기간은 시작일과 종료일을 모두 선택하세요.</div>
+        <div className="mb-3 text-sm" style={{ color: 'var(--color-warning)' }}>사용자 지정 기간은 시작일과 종료일을 모두 선택하세요.</div>
       )}
       {period === 'CUSTOM' && from && to && from > to && (
-        <div className="mb-3 text-amber-600 text-sm">종료일이 시작일보다 빠릅니다. 기간을 다시 선택하세요.</div>
+        <div className="mb-3 text-sm" style={{ color: 'var(--color-warning)' }}>종료일이 시작일보다 빠릅니다. 기간을 다시 선택하세요.</div>
       )}
-      {loading && <div className="mb-3 text-gray-400 text-sm">불러오는 중…</div>}
+      {loading && <div className="mb-3 text-sm text-[var(--color-text-muted)]">불러오는 중…</div>}
 
       {/* ── 요약 카드 ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -115,14 +131,15 @@ export default function DashboardPage() {
 
       {/* ── 영업 현황 분석 ── */}
       {analysis && (
-        <div className="border rounded-lg p-4 mb-4 bg-blue-50/40">
+        <div className="rounded-[var(--radius-md)] p-4 mb-4"
+          style={{ background: '#EFF6FF', border: '1px solid var(--color-border)' }}>
           <div className="flex items-center gap-4 mb-2 text-sm">
             <span className="font-bold">영업 현황 분석</span>
-            <span className="text-gray-600">승인율 <b className="text-green-600">{pct(analysis.approvalRate)}</b></span>
-            <span className="text-gray-600">반려율 <b className="text-red-500">{pct(analysis.rejectionRate)}</b></span>
+            <span className="text-[var(--color-text-sub)]">승인율 <b style={{ color: 'var(--color-success)' }}>{pct(analysis.approvalRate)}</b></span>
+            <span className="text-[var(--color-text-sub)]">반려율 <b style={{ color: 'var(--color-danger)' }}>{pct(analysis.rejectionRate)}</b></span>
           </div>
-          {analysis.summary && <p className="text-sm text-gray-700">{analysis.summary}</p>}
-          {analysis.recommendation && <p className="text-sm text-blue-700 mt-1">💡 {analysis.recommendation}</p>}
+          {analysis.summary && <p className="text-sm text-[var(--color-text-main)]">{analysis.summary}</p>}
+          {analysis.recommendation && <p className="text-sm mt-1" style={{ color: 'var(--color-primary)' }}>💡 {analysis.recommendation}</p>}
         </div>
       )}
 
@@ -134,12 +151,10 @@ export default function DashboardPage() {
               {trend.map(t => (
                 <div key={t.month} className="text-xs">
                   <div className="flex justify-between mb-0.5">
-                    <span className="text-gray-500">{t.month}</span>
-                    <span className="text-gray-700"><b>{num(t.quoteCount)}건</b> · {won(t.totalAmount)}</span>
+                    <span className="text-[var(--color-text-sub)]">{t.month}</span>
+                    <span className="text-[var(--color-text-main)]"><b>{num(t.quoteCount)}건</b> · {won(t.totalAmount)}</span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 rounded">
-                    <div className="h-2.5 bg-blue-500 rounded" style={{ width: `${(Number(t.totalAmount) / maxTrend) * 100}%` }} />
-                  </div>
+                  <Bar ratio={(Number(t.totalAmount) || 0) / maxTrend} />
                 </div>
               ))}
             </div>
@@ -152,11 +167,9 @@ export default function DashboardPage() {
             <div className="space-y-1.5">
               {statusCounts.map(s => (
                 <div key={s.status} className="flex items-center gap-2 text-xs">
-                  <span className="w-20 shrink-0 text-gray-500">{STATUS_LABEL[s.status] ?? s.status}</span>
-                  <div className="flex-1 h-4 bg-gray-100 rounded">
-                    <div className="h-4 bg-indigo-400 rounded" style={{ width: `${(s.count / maxStatus) * 100}%` }} />
-                  </div>
-                  <span className="w-10 text-right text-gray-700">{num(s.count)}</span>
+                  <span className="w-20 shrink-0 text-[var(--color-text-sub)]">{STATUS_LABEL[s.status] ?? s.status}</span>
+                  <Bar ratio={s.count / maxStatus} color="#8EA3CC" h={16} />
+                  <span className="w-10 text-right text-[var(--color-text-main)]">{num(s.count)}</span>
                 </div>
               ))}
             </div>
@@ -167,17 +180,17 @@ export default function DashboardPage() {
         <Panel title="인기 제품 순위 (TOP 10)">
           {popular.length === 0 ? <Empty /> : (
             <table className="w-full text-sm">
-              <thead className="text-gray-400 text-xs">
+              <thead className="text-xs text-[var(--color-text-muted)]">
                 <tr><th className="text-left py-1 w-8">#</th><th className="text-left">제품</th><th className="text-right">견적포함</th><th className="text-right">수량</th><th className="text-right">매출기여</th></tr>
               </thead>
               <tbody>
                 {popular.map((p, i) => (
-                  <tr key={p.productId} className="border-t">
-                    <td className="py-1.5 text-gray-400">{i + 1}</td>
+                  <tr key={p.productId} style={{ borderTop: '1px solid var(--color-border)' }}>
+                    <td className="py-1.5 text-[var(--color-text-muted)]">{i + 1}</td>
                     <td className="font-medium">{p.productName}</td>
                     <td className="text-right">{num(p.orderCount)}</td>
-                    <td className="text-right text-gray-500">{num(p.totalQuantity)}</td>
-                    <td className="text-right text-blue-600">{won(p.totalSalesAmount)}</td>
+                    <td className="text-right text-[var(--color-text-sub)]">{num(p.totalQuantity)}</td>
+                    <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(p.totalSalesAmount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -186,25 +199,35 @@ export default function DashboardPage() {
         </Panel>
 
         {/* ── 영업사원별 통계 ── */}
-        <Panel title="영업사원별 통계">
-          {staff.length === 0 ? <Empty /> : (
-            <table className="w-full text-sm">
-              <thead className="text-gray-400 text-xs">
-                <tr><th className="text-left py-1">영업사원</th><th className="text-right">작성</th><th className="text-right">승인</th><th className="text-right">반려</th><th className="text-right">승인율</th><th className="text-right">반려율</th></tr>
-              </thead>
-              <tbody>
-                {staff.map(s => (
-                  <tr key={s.userId} className="border-t">
-                    <td className="py-1.5 font-medium">{s.userName}</td>
-                    <td className="text-right">{num(s.totalQuotes)}</td>
-                    <td className="text-right text-green-600">{num(s.approvedQuotes)}</td>
-                    <td className="text-right text-red-500">{num(s.rejectedQuotes)}</td>
-                    <td className="text-right">{pct(s.approvalRate)}</td>
-                    <td className="text-right">{pct(s.rejectionRate)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Panel title="영업사원별 통계"
+          action={staff.length > 0 && (
+            <input className="form-input" style={{ width: '170px', height: '32px', fontSize: '13px' }}
+              aria-label="영업사원 이름 검색" placeholder="사원 이름 검색" value={staffSearch}
+              onChange={e => { setStaffSearch(e.target.value); setStaffPage(0) }} />
+          )}>
+          {staff.length === 0 ? <Empty /> : staffFiltered.length === 0 ? (
+            <p className="text-[var(--color-text-muted)] text-[13px] text-center py-8">검색 결과가 없습니다</p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead className="text-xs text-[var(--color-text-muted)]">
+                  <tr><th className="text-left py-1">영업사원</th><th className="text-right">작성</th><th className="text-right">승인</th><th className="text-right">반려</th><th className="text-right">승인율</th><th className="text-right">반려율</th></tr>
+                </thead>
+                <tbody>
+                  {staffPaged.map(s => (
+                    <tr key={s.userId} style={{ borderTop: '1px solid var(--color-border)' }}>
+                      <td className="py-1.5 font-medium">{s.userName}</td>
+                      <td className="text-right">{num(s.totalQuotes)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-success)' }}>{num(s.approvedQuotes)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-danger)' }}>{num(s.rejectedQuotes)}</td>
+                      <td className="text-right">{pct(s.approvalRate)}</td>
+                      <td className="text-right">{pct(s.rejectionRate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination page={staffSafePage} totalPages={staffTotalPages} onChange={setStaffPage} showEdge={false} />
+            </>
           )}
         </Panel>
       </div>
@@ -217,25 +240,40 @@ function num(v) { return v == null ? '0' : Number(v).toLocaleString('ko-KR') }
 function won(v) { return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원' }
 function pct(v) { return v == null || v === '' ? '0%' : `${Number(v)}%` }
 
-const ACCENT_CLASS = {
-  green: 'text-[var(--color-success)]',
-  red: 'text-[var(--color-danger)]',
-  blue: 'text-[var(--color-primary)]',
+const ACCENT_COLOR = {
+  green: 'var(--color-success)',
+  red: 'var(--color-danger)',
+  blue: 'var(--color-primary)',
 }
 function Card({ label, value, accent }) {
   return (
-    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-5 py-4">
+    <div className="rounded-[var(--radius-md)] px-5 py-4"
+      style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
       <p className="text-xs text-[var(--color-text-sub)] mb-1">{label}</p>
-      <p className={`text-[22px] font-bold leading-tight ${ACCENT_CLASS[accent] ?? 'text-[var(--color-text-main)]'}`}>{value}</p>
+      <p className="text-[22px] font-bold leading-tight" style={{ color: ACCENT_COLOR[accent] ?? 'var(--color-text-main)' }}>{value}</p>
     </div>
   )
 }
 
-function Panel({ title, children }) {
+function Panel({ title, action, children }) {
   return (
-    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-6 py-5">
-      <h2 className="text-sm font-bold text-[var(--color-text-main)] mb-4">{title}</h2>
+    <div className="rounded-[var(--radius-md)] px-6 py-5"
+      style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <h2 className="text-sm font-bold text-[var(--color-text-main)]">{title}</h2>
+        {action}
+      </div>
       {children}
+    </div>
+  )
+}
+
+// 막대 — 트랙 + 채움. color/높이 옵션
+function Bar({ ratio, color = 'var(--color-primary)', h = 10 }) {
+  const pctW = `${Math.max(0, Math.min(1, ratio || 0)) * 100}%`
+  return (
+    <div className="flex-1 rounded" style={{ height: h, background: '#F3F4F6' }}>
+      <div className="rounded" style={{ height: h, width: pctW, background: color }} />
     </div>
   )
 }
