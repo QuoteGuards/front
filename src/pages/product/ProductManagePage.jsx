@@ -112,8 +112,8 @@ export default function ProductManagePage() {
     }
     const unitPriceNum = Number(form.unitPrice)
     const costPriceNum = Number(form.costPrice)
-    if (Number.isNaN(unitPriceNum) || Number.isNaN(costPriceNum) || unitPriceNum < 0 || costPriceNum < 0) {
-      setModalError('단가·원가는 0 이상의 숫자여야 합니다.'); return
+    if (!Number.isFinite(unitPriceNum) || !Number.isFinite(costPriceNum) || unitPriceNum < 0 || costPriceNum < 0) {
+      setModalError('단가·원가는 0 이상의 유효한 숫자여야 합니다.'); return
     }
     if (costPriceNum > unitPriceNum) {
       setModalError('원가가 단가보다 클 수 없습니다.'); return
