@@ -7,7 +7,6 @@ import DataTable from '../../components/common/DataTable'
 import StatusBadge from '../../components/common/StatusBadge'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
-import '../../components/common/FormControls.css'
 
 const REASON_LABEL = {
   DISCOUNT_EXCEEDED: '할인율 초과',
@@ -27,12 +26,14 @@ const REASON_KEY = { '이익률 미달': 'LOW_PROFIT', '할인율 초과': 'DISC
 function StatCard({ label, value, sub, color }) {
   return (
     <Card style={{ padding: '20px 24px' }}>
-      <p style={{ fontSize: '12px', color: 'var(--color-text-sub)', marginBottom: '6px' }}>{label}</p>
-      <p style={{ fontSize: '28px', fontWeight: 700, color: color ?? 'var(--color-text-main)', lineHeight: 1 }}>
+      <p className="text-xs text-[var(--color-text-sub)] mb-1.5">{label}</p>
+      <p className="text-[28px] font-bold leading-none" style={{ color: color ?? 'var(--color-text-main)' }}>
         {value}
-        {typeof value === 'number' && <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--color-text-sub)', marginLeft: '4px' }}>건</span>}
+        {typeof value === 'number' && (
+          <span className="text-[13px] font-normal text-[var(--color-text-sub)] ml-1">건</span>
+        )}
       </p>
-      {sub && <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>{sub}</p>}
+      {sub && <p className="text-xs text-[var(--color-text-muted)] mt-1">{sub}</p>}
     </Card>
   )
 }
@@ -97,7 +98,7 @@ export default function AdminApprovalPage() {
       key: 'quoteId',
       title: '견적번호',
       render: (val) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#F3F4F6', padding: '2px 8px', borderRadius: '4px', color: '#374151' }}>
+        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
           #{val}
         </span>
       ),
@@ -108,13 +109,13 @@ export default function AdminApprovalPage() {
       title: '승인 사유',
       render: (val) => {
         const reasons = reasonsMap[val] ?? []
-        if (reasons.length === 0) return <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+        if (reasons.length === 0) return <span className="text-[var(--color-text-muted)]">—</span>
         return (
-          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          <div className="flex gap-1 flex-wrap">
             {reasons.map((r) => {
               const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
               return (
-                <span key={r.id} style={{ ...s, padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 600 }}>
+                <span key={r.id} style={s} className="px-2 py-0.5 rounded-full text-[11px] font-semibold">
                   {REASON_LABEL[r.reasonType] ?? r.reasonType}
                 </span>
               )
@@ -127,7 +128,7 @@ export default function AdminApprovalPage() {
       key: 'requestedAt',
       title: '요청일',
       render: (val) => (
-        <span style={{ color: 'var(--color-text-sub)', fontSize: '13px' }}>
+        <span className="text-[var(--color-text-sub)] text-[13px]">
           {val ? new Date(val).toLocaleDateString('ko-KR') : '—'}
         </span>
       ),
@@ -135,7 +136,7 @@ export default function AdminApprovalPage() {
     {
       key: 'requestCount',
       title: '요청 횟수',
-      render: (val) => <span style={{ color: 'var(--color-text-sub)', fontSize: '13px' }}>{val}회차</span>,
+      render: (val) => <span className="text-[var(--color-text-sub)] text-[13px]">{val}회차</span>,
     },
     {
       key: 'status',
@@ -162,7 +163,7 @@ export default function AdminApprovalPage() {
         title="승인 관리"
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="승인 대기" value={pendingList.length} color="#D97706" />
         <StatCard label="오늘 신규" value={todayCount} color="var(--color-primary)" />
         <StatCard label="이달 승인" value={monthlyStats.monthlyApproved} color="var(--color-success)" />
@@ -193,7 +194,7 @@ export default function AdminApprovalPage() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ width: '280px' }}
           />
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+          <span className="text-[13px] text-[var(--color-text-muted)] ml-2">
             {filtered.length}건 표시 중
           </span>
         </SearchRow>

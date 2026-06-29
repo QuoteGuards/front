@@ -59,20 +59,14 @@ export default function AdminApprovalDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // eslint-disable-next-line react-hooks/immutability
-  useEffect(() => { loadDetail() }, [approvalRequestId])
-
-  const loadDetail = async () => {
-    setLoading(true)
-    try {
-      const res = await getApprovalDetail(approvalRequestId)
-      setDetail(res.data)
-    } catch (e) {
-      setError(e.response?.data?.message ?? '상세 정보를 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    let cancelled = false
+    getApprovalDetail(approvalRequestId)
+      .then((res) => { if (!cancelled) setDetail(res.data) })
+      .catch((e) => { if (!cancelled) setError(e.response?.data?.message ?? '상세 정보를 불러오지 못했습니다.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [approvalRequestId])
 
   const handleSubmit = async () => {
     if (!decision) { setError('승인 또는 반려를 선택해주세요.'); return }

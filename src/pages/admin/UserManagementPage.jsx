@@ -7,7 +7,7 @@ import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import DataTable from '../../components/common/DataTable'
 import StatusBadge from '../../components/common/StatusBadge'
 import Button from '../../components/common/Button'
-import '../../components/common/FormControls.css'
+import Pagination from '../../components/common/Pagination'
 
 const STATUS_OPTIONS = [
   { value: '', label: '전체' },
@@ -43,33 +43,6 @@ const fmtDate = (iso) => {
   const d = new Date(iso)
   const pad = (n) => String(n).padStart(2, '0')
   return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
-}
-
-function Pagination({ page, totalPages, onChange }) {
-  if (totalPages <= 1) return null
-
-  const blockSize = 5
-  const blockStart = Math.floor(page / blockSize) * blockSize
-  const blockEnd = Math.min(blockStart + blockSize, totalPages)
-  const pages = []
-  for (let i = blockStart; i < blockEnd; i++) pages.push(i)
-
-  const base = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', border: '1px solid var(--color-border)', background: 'transparent', transition: 'background 0.1s' }
-  const activeStyle = { ...base, background: 'var(--color-primary)', color: '#fff', borderColor: 'var(--color-primary)', fontWeight: 600 }
-  const inactiveStyle = { ...base, color: 'var(--color-text-sub)' }
-  const disabledStyle = { ...base, color: 'var(--color-text-muted)', cursor: 'not-allowed', opacity: 0.5 }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '20px' }}>
-      <button type="button" onClick={() => onChange(0)} disabled={page === 0} style={page === 0 ? disabledStyle : inactiveStyle} aria-label="첫 페이지">{'<<'}</button>
-      <button type="button" onClick={() => onChange(page - 1)} disabled={page === 0} style={page === 0 ? disabledStyle : inactiveStyle} aria-label="이전 페이지">{'<'}</button>
-      {pages.map((p) => (
-        <button key={p} type="button" onClick={() => onChange(p)} style={p === page ? activeStyle : inactiveStyle} aria-current={p === page ? 'page' : undefined}>{p + 1}</button>
-      ))}
-      <button type="button" onClick={() => onChange(page + 1)} disabled={page >= totalPages - 1} style={page >= totalPages - 1 ? disabledStyle : inactiveStyle} aria-label="다음 페이지">{'>'}</button>
-      <button type="button" onClick={() => onChange(totalPages - 1)} disabled={page >= totalPages - 1} style={page >= totalPages - 1 ? disabledStyle : inactiveStyle} aria-label="마지막 페이지">{'>>'}</button>
-    </div>
-  )
 }
 
 export default function UserManagementPage() {
@@ -160,12 +133,12 @@ export default function UserManagementPage() {
       width: '80px',
       render: (val) => <StatusBadge status={val} type="user" />,
     },
-    { key: 'name', title: '이름', render: (val) => <strong style={{ color: 'var(--color-text-main)' }}>{val}</strong> },
-    { key: 'memberNumber', title: '사원번호', render: (val) => <span style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--color-text-sub)' }}>{val ?? '-'}</span> },
-    { key: 'email', title: '이메일', render: (val) => <span style={{ color: 'var(--color-text-sub)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{val}</span> },
-    { key: 'deptPos', title: '부서/직급', render: (_, row) => <span style={{ color: 'var(--color-text-sub)' }}>{[row.department, row.position].filter(Boolean).join(' / ') || '-'}</span> },
-    { key: 'role', title: '권한', align: 'center', render: (val) => <span style={{ color: 'var(--color-text-sub)' }}>{ROLE_LABEL[val] ?? val}</span> },
-    { key: 'createdAt', title: '생성일시', render: (val) => <span style={{ color: 'var(--color-text-muted)', fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(val)}</span> },
+    { key: 'name', title: '이름', render: (val) => <strong className="text-[var(--color-text-main)]">{val}</strong> },
+    { key: 'memberNumber', title: '사원번호', render: (val) => <span className="font-mono text-[13px] text-[var(--color-text-sub)]">{val ?? '-'}</span> },
+    { key: 'email', title: '이메일', render: (val) => <span className="text-[var(--color-text-sub)] max-w-[200px] overflow-hidden text-ellipsis block">{val}</span> },
+    { key: 'deptPos', title: '부서/직급', render: (_, row) => <span className="text-[var(--color-text-sub)]">{[row.department, row.position].filter(Boolean).join(' / ') || '-'}</span> },
+    { key: 'role', title: '권한', align: 'center', render: (val) => <span className="text-[var(--color-text-sub)]">{ROLE_LABEL[val] ?? val}</span> },
+    { key: 'createdAt', title: '생성일시', render: (val) => <span className="text-[var(--color-text-muted)] text-xs tabular-nums">{fmtDate(val)}</span> },
     {
       key: '_action',
       title: '상세보기',
@@ -222,13 +195,13 @@ export default function UserManagementPage() {
       </SearchPanel>
 
       {error && (
-        <div role="alert" style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '10px 16px' }}>
+        <div role="alert" className="mb-3 text-[13px] text-[var(--color-danger)] bg-red-50 border border-red-200 rounded px-4 py-2.5">
           {error}
         </div>
       )}
 
       {!loading && (
-        <p style={{ fontSize: '13px', color: 'var(--color-text-sub)', marginBottom: '8px' }}>
+        <p className="text-[13px] text-[var(--color-text-sub)] mb-2">
           전체 <strong>{totalElements}</strong>건
         </p>
       )}

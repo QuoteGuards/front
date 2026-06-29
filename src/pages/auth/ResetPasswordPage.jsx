@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
         setIsSubmitting(false);
       }
     },
-    [isSubmitting, tokenMissing, token, newPassword, confirmPassword, navigate]
+    [isSubmitting, tokenMissing, token, newPassword, confirmPassword]
   );
 
   if (tokenMissing) {

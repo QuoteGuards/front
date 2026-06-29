@@ -8,7 +8,6 @@ import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import DataTable from '../../components/common/DataTable'
 import StatusBadge from '../../components/common/StatusBadge'
 import Button from '../../components/common/Button'
-import '../../components/common/FormControls.css'
 
 const QuoteListPage = () => {
   const navigate = useNavigate()
@@ -37,16 +36,16 @@ const QuoteListPage = () => {
       key: 'id',
       title: '견적번호',
       render: (val) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#F3F4F6', padding: '2px 8px', borderRadius: '4px', color: '#374151' }}>
+        <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
           {val}
         </span>
       ),
     },
     { key: 'buyerName', title: '거래처' },
-    { key: 'contactName', title: '담당자', render: (val) => <span style={{ color: 'var(--color-text-sub)', fontSize: '13px' }}>{val}</span> },
-    { key: 'createdAt', title: '발행일', render: (val) => <span style={{ color: 'var(--color-text-sub)', fontSize: '13px', whiteSpace: 'nowrap' }}>{val}</span> },
-    { key: 'validUntil', title: '유효기한', render: (val) => <span style={{ color: 'var(--color-text-sub)', fontSize: '13px', whiteSpace: 'nowrap' }}>{val}</span> },
-    { key: 'totalAmount', title: '합계금액', align: 'right', render: (val) => <span style={{ fontWeight: 600 }}>{formatKRW(val)}</span> },
+    { key: 'contactName', title: '담당자', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px]">{val}</span> },
+    { key: 'createdAt', title: '발행일', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val}</span> },
+    { key: 'validUntil', title: '유효기한', render: (val) => <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val}</span> },
+    { key: 'totalAmount', title: '합계금액', align: 'right', render: (val) => <span className="font-semibold">{formatKRW(val)}</span> },
     { key: 'status', title: '상태', align: 'center', render: (val) => <StatusBadge status={val} type="quote" /> },
   ]
 
@@ -54,7 +53,7 @@ const QuoteListPage = () => {
     return (
       <div>
         <PageHeader breadcrumbs={['견적 관리', '견적 목록']} title="내 견적 목록" />
-        <p style={{ color: 'var(--color-danger)', fontSize: '14px' }}>목록을 불러올 수 없습니다.</p>
+        <p className="text-[var(--color-danger)] text-sm">목록을 불러올 수 없습니다.</p>
       </div>
     )
   }
@@ -95,7 +94,7 @@ const QuoteListPage = () => {
             onChange={(e) => setSearch(e.target.value)}
             style={{ width: '300px' }}
           />
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>
+          <span className="text-[13px] text-[var(--color-text-muted)] ml-2">
             {filtered.length}건 표시 중
           </span>
         </SearchRow>

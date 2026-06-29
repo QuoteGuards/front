@@ -4,7 +4,6 @@ import {
   getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi,
 } from '../../api/dashboardApi'
 import PageHeader from '../../components/common/PageHeader'
-import '../../components/common/FormControls.css'
 
 const PERIODS = [
   { key: '', label: '전체' },
@@ -71,23 +70,22 @@ export default function DashboardPage() {
         breadcrumbs={['통계', '대시보드']}
         title="통계 대시보드"
         actions={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+          <div className="flex items-center gap-1 flex-wrap">
             {PERIODS.map(p => (
               <button key={p.key} type="button" onClick={() => setPeriod(p.key)}
-                style={{
-                  padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: '13px',
-                  border: '1px solid', cursor: 'pointer',
-                  background: period === p.key ? 'var(--color-primary)' : '#fff',
-                  color: period === p.key ? '#fff' : 'var(--color-text-sub)',
-                  borderColor: period === p.key ? 'var(--color-primary)' : 'var(--color-border)',
-                }}>
+                className={[
+                  'px-3 py-1.5 rounded text-[13px] border transition-colors',
+                  period === p.key
+                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                    : 'bg-white text-[var(--color-text-sub)] border-[var(--color-border)] hover:bg-gray-50',
+                ].join(' ')}>
                 {p.label}
               </button>
             ))}
             {period === 'CUSTOM' && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '4px' }}>
+              <span className="flex items-center gap-1.5 ml-1">
                 <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={from} onChange={(e) => setFrom(e.target.value)} />
-                <span style={{ color: 'var(--color-text-muted)' }}>~</span>
+                <span className="text-[var(--color-text-muted)]">~</span>
                 <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={to} onChange={(e) => setTo(e.target.value)} />
               </span>
             )}
@@ -220,29 +218,29 @@ function num(v) { return v == null ? '0' : Number(v).toLocaleString('ko-KR') }
 function won(v) { return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원' }
 function pct(v) { return v == null || v === '' ? '0%' : `${Number(v)}%` }
 
-const ACCENT_COLOR = { green: 'var(--color-success)', red: 'var(--color-danger)', blue: 'var(--color-primary)' }
+const ACCENT_CLASS = {
+  green: 'text-[var(--color-success)]',
+  red: 'text-[var(--color-danger)]',
+  blue: 'text-[var(--color-primary)]',
+}
 function Card({ label, value, accent }) {
-  const color = ACCENT_COLOR[accent]
   return (
-    <div style={{
-      background: '#fff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-      boxShadow: 'var(--shadow-sm)', padding: '16px 20px',
-    }}>
-      <p style={{ fontSize: '12px', color: 'var(--color-text-sub)', marginBottom: '4px' }}>{label}</p>
-      <p style={{ fontSize: '22px', fontWeight: 700, color: color ?? 'var(--color-text-main)', lineHeight: 1.2 }}>{value}</p>
+    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-5 py-4">
+      <p className="text-xs text-[var(--color-text-sub)] mb-1">{label}</p>
+      <p className={`text-[22px] font-bold leading-tight ${ACCENT_CLASS[accent] ?? 'text-[var(--color-text-main)]'}`}>{value}</p>
     </div>
   )
 }
 
 function Panel({ title, children }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)', padding: '20px 24px' }}>
-      <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-main)', marginBottom: '16px' }}>{title}</h2>
+    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-6 py-5">
+      <h2 className="text-sm font-bold text-[var(--color-text-main)] mb-4">{title}</h2>
       {children}
     </div>
   )
 }
 
 function Empty() {
-  return <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '32px 0' }}>데이터가 없습니다</p>
+  return <p className="text-[var(--color-text-muted)] text-[13px] text-center py-8">데이터가 없습니다</p>
 }

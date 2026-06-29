@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/common/FormControls.css";
 
 :root {
   --color-primary: #005BFF;

@@ -50,13 +50,13 @@ export default function ChangePasswordModal() {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   }, []);
 
-  const validate = () => {
+  const validate = useCallback(() => {
     const errors = {};
     if (!form.currentPassword) errors.currentPassword = '현재 비밀번호를 입력해주세요.';
     if (!form.newPassword) errors.newPassword = '새 비밀번호를 입력해주세요.';
     if (!form.newPasswordConfirm) errors.newPasswordConfirm = '새 비밀번호 확인을 입력해주세요.';
     return errors;
-  };
+  }, [form]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -99,7 +99,7 @@ export default function ChangePasswordModal() {
         setIsSubmitting(false);
       }
     },
-    [isSubmitting, form, clearMustChangePassword]
+    [isSubmitting, form, validate, clearMustChangePassword]
   );
 
   return (
