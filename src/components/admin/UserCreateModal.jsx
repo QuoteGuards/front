@@ -100,14 +100,13 @@ export default function UserCreateModal({ onClose, onCreated }) {
             {created.position && <Row label="직급" value={created.position} />}
             <Row label="권한" value={ROLE_OPTIONS.find(r => r.value === created.role)?.label ?? created.role} />
             <Row label="상태" value="활성" />
+            <Row label="비밀번호" value="설정 대기 (이메일 링크 발송됨)" />
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
-            <p className="text-xs font-medium text-amber-700 mb-1">임시 비밀번호</p>
-            <p className="text-sm font-mono font-semibold text-amber-900 break-all select-all">
-              {created.temporaryPassword}
-            </p>
-            <p className="text-xs text-amber-600 mt-1">
-              이 비밀번호는 지금만 확인할 수 있습니다. 사원에게 안전하게 전달하세요.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5">
+            <p className="text-xs font-medium text-blue-700 mb-1">초기 비밀번호 설정 링크 발송</p>
+            <p className="text-xs text-blue-600">
+              등록된 이메일({created.email})로 초기 비밀번호 설정 링크를 발송했습니다.<br/>
+              사원이 링크를 통해 비밀번호를 설정한 후 로그인할 수 있습니다.
             </p>
           </div>
           <div className="flex justify-end">
