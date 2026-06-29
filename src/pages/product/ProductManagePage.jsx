@@ -14,6 +14,7 @@ import {
 import { getCategoriesApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import SearchableSelect from '../../components/common/SearchableSelect'
 import DataTable from '../../components/common/DataTable'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
@@ -54,6 +55,7 @@ export default function ProductManagePage() {
 
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
+  const [sort, setSort] = useState('createdAt,desc') // 정렬 (즉시 적용)
   const [pageData, setPageData] = useState({
     content: [],
     totalElements: 0,
@@ -99,6 +101,7 @@ export default function ProductManagePage() {
     if (applied.keyword) params.keyword = applied.keyword
     if (applied.active !== '') params.isActive = applied.active === 'true'
     if (applied.vat !== '') params.vatApplicable = applied.vat === 'true'
+    if (sort) params.sort = sort
 
     return params
   }
@@ -149,7 +152,7 @@ export default function ProductManagePage() {
     return () => {
       ignore = true
     }
-  }, [applied, page, size]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applied, page, size, sort]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSearch = () => {
     setApplied({
@@ -574,19 +577,9 @@ export default function ProductManagePage() {
 
         <SearchPanel>
           <SearchRow label="카테고리">
-            <select
-                className="form-select"
-                value={filter.categoryId}
-                onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
-                style={{ width: '240px' }}
-            >
-              <option value="">전체</option>
-              {allCats.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.path}
-                  </option>
-              ))}
-            </select>
+            <SearchableSelect width="240px" value={filter.categoryId} placeholder="전체"
+              options={[{ value: '', label: '전체' }, ...allCats.map((c) => ({ value: c.id, label: c.path }))]}
+              onChange={(v) => setFilter({ ...filter, categoryId: v })} />
           </SearchRow>
 
           <SearchRow label="검색">
@@ -636,24 +629,42 @@ export default function ProductManagePage() {
           총 <strong style={{ color: 'var(--color-text-main)' }}>{pageData.totalElements ?? 0}</strong>개
         </span>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
-            페이지당
-            <select
-                className="form-select"
-                value={size}
-                onChange={(e) => {
-                  setSize(Number(e.target.value))
-                  setPage(0)
-                }}
-                style={{ width: '80px', height: '32px' }}
-            >
-              {PAGE_SIZES.map((pageSize) => (
-                  <option key={pageSize} value={pageSize}>
-                    {pageSize}개
-                  </option>
-              ))}
-            </select>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+              정렬
+              <select
+                  className="form-select"
+                  value={sort}
+                  onChange={(e) => { setSort(e.target.value); setPage(0) }}
+                  style={{ width: '150px', height: '32px' }}
+              >
+                <option value="createdAt,desc">등록 최신순</option>
+                <option value="createdAt,asc">등록 오래된순</option>
+                <option value="name,asc">제품명 가나다순</option>
+                <option value="unitPrice,desc">단가 높은순</option>
+                <option value="unitPrice,asc">단가 낮은순</option>
+              </select>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+              페이지당
+              <select
+                  className="form-select"
+                  value={size}
+                  onChange={(e) => {
+                    setSize(Number(e.target.value))
+                    setPage(0)
+                  }}
+                  style={{ width: '80px', height: '32px' }}
+              >
+                {PAGE_SIZES.map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}개
+                    </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         {selectedIds.size > 0 && (
@@ -773,18 +784,9 @@ export default function ProductManagePage() {
                   </ModalRow>
 
                   <ModalRow label="카테고리 *">
-                    <select
-                        className="form-select"
-                        value={form.categoryId}
-                        onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                    >
-                      <option value="">선택</option>
-                      {leafCats.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.path}
-                          </option>
-                      ))}
-                    </select>
+                    <SearchableSelect value={form.categoryId} placeholder="카테고리 선택"
+                      options={leafCats.map((c) => ({ value: c.id, label: c.path }))}
+                      onChange={(v) => setForm({ ...form, categoryId: v })} />
                   </ModalRow>
 
                   <ModalRow label="규격">

@@ -10,6 +10,7 @@ import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import Button from '../../components/common/Button'
 import DataTable from '../../components/common/DataTable'
 import Pagination from '../../components/common/Pagination'
+import SearchableSelect from '../../components/common/SearchableSelect'
 
 const TABS = [
   { key: '', label: '전체' },
@@ -237,11 +238,10 @@ export default function DiscountManagePage() {
           <input className="form-input" style={{ width: '220px' }} placeholder="정책명 검색"
             value={keywordInput} onChange={e => setKeywordInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onSearch()} />
-          <select className="form-select" style={{ width: '200px' }} value={search.categoryId}
-            onChange={e => { setSearch(s => ({ ...s, categoryId: e.target.value })); setPage(0) }}>
-            <option value="">카테고리 전체</option>
-            {cats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
-          </select>
+          <SearchableSelect width="220px" value={search.categoryId}
+            placeholder="카테고리 전체"
+            options={[{ value: '', label: '카테고리 전체' }, ...cats.map(c => ({ value: c.id, label: c.path }))]}
+            onChange={v => { setSearch(s => ({ ...s, categoryId: v })); setPage(0) }} />
           <select className="form-select" style={{ width: '110px' }} value={search.active}
             onChange={e => { setSearch(s => ({ ...s, active: e.target.value })); setPage(0) }}>
             <option value="">상태 전체</option>
@@ -310,22 +310,18 @@ export default function DiscountManagePage() {
               {form.targetType === 'CATEGORY' && (
                 <div style={{ marginTop: '16px' }}>
                   <ModalRow label="대상 카테고리 *">
-                    <select className="form-select" value={form.categoryId}
-                      onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                      <option value="">선택</option>
-                      {cats.map(c => <option key={c.id} value={c.id}>{c.path}</option>)}
-                    </select>
+                    <SearchableSelect value={form.categoryId} placeholder="카테고리 선택"
+                      options={cats.map(c => ({ value: c.id, label: c.path }))}
+                      onChange={v => setForm({ ...form, categoryId: v })} />
                   </ModalRow>
                 </div>
               )}
               {form.targetType === 'PRODUCT' && (
                 <div style={{ marginTop: '16px' }}>
                   <ModalRow label="대상 제품 *">
-                    <select className="form-select" value={form.productId}
-                      onChange={e => setForm({ ...form, productId: e.target.value })}>
-                      <option value="">선택</option>
-                      {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.code})</option>)}
-                    </select>
+                    <SearchableSelect value={form.productId} placeholder="제품 검색·선택"
+                      options={products.map(p => ({ value: p.id, label: `${p.name} (${p.code})` }))}
+                      onChange={v => setForm({ ...form, productId: v })} />
                   </ModalRow>
                 </div>
               )}
