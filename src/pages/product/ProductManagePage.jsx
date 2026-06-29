@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi, createProductApi, updateProductApi,
   activateProductApi, deactivateProductApi, deleteProductApi,
+  bulkActivateProductsApi, bulkDeactivateProductsApi, bulkDeleteProductsApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 
@@ -29,6 +30,7 @@ export default function ProductManagePage() {
   const [allCats, setAllCats] = useState([])   // 대/중/소 전체 — 검색 필터용(자손 매칭)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set()) // 체크박스 선택 (일괄 처리용)
 
   // 모달
   const [modalOpen, setModalOpen] = useState(false)
@@ -53,6 +55,7 @@ export default function ProductManagePage() {
       if (applied.active !== '') params.isActive = applied.active === 'true'
       const data = await getProductsApi(params)
       setPageData(data)
+      setSelectedIds(new Set()) // 목록 갱신 시 선택 초기화
     } catch (e) {
       setError(e.response?.data?.message ?? '제품 목록 조회 실패')
     } finally {
@@ -150,6 +153,36 @@ export default function ProductManagePage() {
     }
   }
 
+  // ── 체크박스 선택 ──
+  const toggleOne = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+  const allChecked = rows.length > 0 && rows.every(p => selectedIds.has(p.id))
+  const toggleAll = () => {
+    setSelectedIds(allChecked ? new Set() : new Set(rows.map(p => p.id)))
+  }
+
+  // ── 일괄 처리 ──
+  const runBulk = async (fn, label) => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    if (label === '삭제' && !confirm(`선택한 ${ids.length}개 제품을 삭제할까요? (견적 연결 제품은 실패)`)) return
+    setError(null)
+    try {
+      await fn(ids)
+      await load()
+    } catch (e) {
+      setError(e.response?.data?.message ?? `일괄 ${label} 실패`)
+    }
+  }
+  const onBulkActivate = () => runBulk(bulkActivateProductsApi, '활성화')
+  const onBulkDeactivate = () => runBulk(bulkDeactivateProductsApi, '비활성화')
+  const onBulkDelete = () => runBulk(bulkDeleteProductsApi, '삭제')
+
   const exportCsv = () => {
     const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
     const lines = rows.map(p => [
@@ -223,6 +256,17 @@ export default function ProductManagePage() {
         </label>
       </div>
 
+      {/* ── 일괄 작업 바 ── */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 mb-2 bg-blue-50 border border-blue-200 rounded px-3 py-2 text-sm">
+          <span className="text-blue-700 font-medium">{selectedIds.size}개 선택됨</span>
+          <button onClick={onBulkActivate} className="ml-2 border border-green-300 text-green-600 px-2 py-1 rounded text-xs">일괄 활성화</button>
+          <button onClick={onBulkDeactivate} className="border border-amber-300 text-amber-600 px-2 py-1 rounded text-xs">일괄 비활성화</button>
+          <button onClick={onBulkDelete} className="border border-red-300 text-red-500 px-2 py-1 rounded text-xs">일괄 삭제</button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-gray-400 px-2 py-1 text-xs ml-auto">선택 해제</button>
+        </div>
+      )}
+
       {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
 
       {/* ── 테이블 ── */}
@@ -230,6 +274,9 @@ export default function ProductManagePage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600">
             <tr>
+              <th className="px-3 py-2 text-center w-8">
+                <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+              </th>
               <th className="px-3 py-2 text-left">제품코드</th>
               <th className="px-3 py-2 text-left">제품</th>
               <th className="px-3 py-2 text-left">카테고리</th>
@@ -242,11 +289,14 @@ export default function ProductManagePage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
+              <tr><td colSpan={9} className="text-center text-gray-400 py-10">불러오는 중…</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-10">제품이 없습니다</td></tr>
+              <tr><td colSpan={9} className="text-center text-gray-400 py-10">제품이 없습니다</td></tr>
             ) : rows.map(p => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
+              <tr key={p.id} className={`border-t hover:bg-gray-50 ${selectedIds.has(p.id) ? 'bg-blue-50/50' : ''}`}>
+                <td className="px-3 py-2 text-center">
+                  <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleOne(p.id)} />
+                </td>
                 <td className="px-3 py-2 font-mono text-xs text-gray-500">{p.code}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">

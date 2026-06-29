@@ -40,3 +40,14 @@ export async function deactivateProductApi(id) {
 export async function deleteProductApi(id) {
   await apiClient.delete(`/api/admin/products/${id}`)
 }
+
+// ── 일괄 처리 (체크박스 선택) ── ids: number[]
+export async function bulkActivateProductsApi(ids) {
+  await apiClient.patch('/api/admin/products/bulk/activate', { ids })
+}
+export async function bulkDeactivateProductsApi(ids) {
+  await apiClient.patch('/api/admin/products/bulk/deactivate', { ids })
+}
+export async function bulkDeleteProductsApi(ids) {
+  await apiClient.delete('/api/admin/products/bulk', { data: { ids } })
+}
