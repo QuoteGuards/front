@@ -15,6 +15,7 @@ import UserManagementPage from '../pages/admin/UserManagementPage'
 import LoginPage from '../pages/login/LoginPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
+import SetPasswordPage from '../pages/auth/SetPasswordPage'
 import CategoryManagePage from '../pages/category/CategoryManagePage'
 import ProductManagePage from '../pages/product/ProductManagePage'
 import DiscountManagePage from '../pages/discount/DiscountManagePage'
@@ -55,6 +56,7 @@ export default function AppRouter() {
         <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/set-password" element={<SetPasswordPage />} />
 
         {/* 보호 라우트 - AppLayout 단일 인스턴스 */}
         <Route element={<AppLayoutRoute />}>
@@ -161,11 +163,10 @@ export default function AppRouter() {
           } />
 
           {/* 계정 - 전체 */}
-          <Route path="/my-page" element={<MyPage />} />
           <Route path="/training" element={<TrainingPage />} />
+          <Route path="/my-page" element={<MyPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   )
