@@ -337,6 +337,7 @@ export default function CategoryManagePage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="카테고리명 검색"
+                aria-label="카테고리명 검색"
                 style={{ marginBottom: '12px', height: '36px', fontSize: '13px' }}
             />
 
