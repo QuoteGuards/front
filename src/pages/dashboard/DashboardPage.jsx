@@ -202,7 +202,7 @@ export default function DashboardPage() {
         <Panel title="영업사원별 통계"
           action={staff.length > 0 && (
             <input className="form-input" style={{ width: '170px', height: '32px', fontSize: '13px' }}
-              placeholder="사원 이름 검색" value={staffSearch}
+              aria-label="영업사원 이름 검색" placeholder="사원 이름 검색" value={staffSearch}
               onChange={e => { setStaffSearch(e.target.value); setStaffPage(0) }} />
           )}>
           {staff.length === 0 ? <Empty /> : staffFiltered.length === 0 ? (
