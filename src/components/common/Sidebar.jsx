@@ -10,13 +10,16 @@ const Sidebar = () => {
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
   const isManager = user?.role === 'SALES_MANAGER'
+  const canAccessQuoteWrite = user?.role === 'SALES_STAFF' || user?.role === 'SALES_MANAGER'
 
   const NAV_ITEMS = [
-    {
-      label: '견적 작성',
-      path: '/quotes/new',
-      locked: !loading && !canWriteQuote,
-    },
+    ...(canAccessQuoteWrite
+      ? [{
+          label: '견적 작성',
+          path: '/quotes/new',
+          locked: !loading && !canWriteQuote,
+        }]
+      : []),
     { label: '내 견적 목록', path: '/quotes' },
     // 제품 탐색·즐겨찾기 (전체 인증 사용자 — /catalog 권한과 동일)
     { label: '제품 탐색', path: '/catalog' },

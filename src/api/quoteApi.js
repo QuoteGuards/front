@@ -64,6 +64,14 @@ export const updateQuote = async (quoteId, form) => {
 }
 
 /**
+ * GET /api/quotes/product-context/{productId} — 견적 작성용 원가·할인정책
+ */
+export async function getQuoteProductContextApi(productId) {
+  const { data } = await apiClient.get(`/api/quotes/product-context/${productId}`)
+  return data?.data
+}
+
+/**
  * GET /api/quotes/{quoteId} - 견적 상세 조회 (원본 응답 그대로 반환, 폼 복원용)
  * toQuote()처럼 화면 표시용으로 가공하지 않고 discountRate/discountReason 등 원본 필드 유지
  */
