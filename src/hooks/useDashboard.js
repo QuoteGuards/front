@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
-    getDashboardSummary,
-    getMonthlyTrend,
-    getQuoteStatusCount,
-    getPopularProducts,
-    getSalesStaff,
-    getSalesAnalysis,
+    getSummaryApi,
+    getMonthlyTrendApi,
+    getQuoteStatusApi,
+    getPopularProductsApi,
+    getSalesStaffApi,
+    getSalesAnalysisApi,
 } from '../api/dashboardApi'
 
 export const useDashboard = (searchCondition) => {
@@ -22,6 +22,14 @@ export const useDashboard = (searchCondition) => {
         let cancelled = false
 
         const fetchDashboardData = async () => {
+            if (
+                searchCondition?.period === 'CUSTOM' &&
+                (!searchCondition.from || !searchCondition.to || searchCondition.from > searchCondition.to)
+            ) {
+                setLoading(false)
+                return
+            }
+
             try {
                 setLoading(true)
                 setError(null)
@@ -34,12 +42,12 @@ export const useDashboard = (searchCondition) => {
                     staffData,
                     analysisData,
                 ] = await Promise.all([
-                    getDashboardSummary(searchCondition),
-                    getMonthlyTrend(searchCondition),
-                    getQuoteStatusCount(searchCondition),
-                    getPopularProducts(searchCondition, 10),
-                    getSalesStaff(searchCondition),
-                    getSalesAnalysis(searchCondition),
+                    getSummaryApi(searchCondition),
+                    getMonthlyTrendApi(searchCondition),
+                    getQuoteStatusApi(searchCondition),
+                    getPopularProductsApi(searchCondition, 10),
+                    getSalesStaffApi(searchCondition),
+                    getSalesAnalysisApi(searchCondition),
                 ])
 
                 if (cancelled) return

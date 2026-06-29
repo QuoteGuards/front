@@ -300,6 +300,7 @@ const QuoteWritePage = () => {
 
         setSummaryLoading(true)
         setSummaryError('')
+        setMemoSummary('')
 
         try {
             const result = await summarizeConsultation(memo)
@@ -536,8 +537,9 @@ const QuoteWritePage = () => {
                         value={memo}
                         onChange={e => setMemo(e.target.value)}
                         rows={3}
+                        disabled={isLocked || summaryLoading}
                         placeholder="고객 상담 내용을 입력해주세요."
-                        className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none"
+                        className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
 
                     {summaryError && (
