@@ -390,22 +390,24 @@ export default function ProductManagePage() {
         return
       }
 
-      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
+      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', '마진율', 'VAT', '상태']
 
-      const lines = list.map((product) =>
-          [
-            product.code,
-            product.name,
-            product.spec ?? '',
-            catLabel(product),
-            product.unitPrice,
-            product.costPrice,
-            product.vatApplicable ? '적용' : '미적용',
-            isActiveOf(product) ? '사용' : '미사용',
-          ]
-              .map(csvCell)
-              .join(','),
-      )
+      const lines = list.map((product) => {
+        const rate = marginRate(product)
+        return [
+          product.code,
+          product.name,
+          product.spec ?? '',
+          catLabel(product),
+          product.unitPrice,
+          product.costPrice,
+          rate == null ? '-' : `${rate.toFixed(1)}%`,
+          product.vatApplicable ? '적용' : '미적용',
+          isActiveOf(product) ? '사용' : '미사용',
+        ]
+            .map(csvCell)
+            .join(',')
+      })
 
       const csv = '\uFEFF' + [header.join(','), ...lines].join('\n')
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
@@ -474,6 +476,20 @@ export default function ProductManagePage() {
       title: '원가',
       align: 'right',
       render: (value) => <span style={{ color: 'var(--color-text-sub)' }}>{won(value)}</span>,
+    },
+    {
+      key: '_margin',
+      title: '마진율',
+      align: 'right',
+      render: (_, row) => {
+        const rate = marginRate(row)
+        if (rate == null) return <span style={{ color: 'var(--color-text-muted)' }}>-</span>
+        return (
+          <span style={{ color: rate < 0 ? 'var(--color-danger)' : 'var(--color-text-main)', fontWeight: 500 }}>
+            {rate.toFixed(1)}%
+          </span>
+        )
+      },
     },
     {
       key: 'vatApplicable',
@@ -852,6 +868,17 @@ export default function ProductManagePage() {
                   </ModalRow>
                 </div>
 
+                {(() => {
+                  const rate = (form.unitPrice !== '' && form.costPrice !== '') ? marginRate(form) : null
+                  if (rate == null) return null
+                  return (
+                    <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+                      예상 마진율 <b style={{ color: rate < 0 ? 'var(--color-danger)' : 'var(--color-primary)' }}>{rate.toFixed(1)}%</b>
+                      {rate < 0 && <span style={{ color: 'var(--color-danger)', marginLeft: '6px' }}>※ 원가가 단가보다 높습니다</span>}
+                    </div>
+                  )
+                })()}
+
                 <div style={{ marginTop: '16px' }}>
                   <ModalRow label="설명">
                 <textarea
@@ -982,6 +1009,14 @@ function won(value) {
   if (value == null || value === '') return '-'
 
   return `${Number(value).toLocaleString('ko-KR')}원`
+}
+
+// 마진율(%) = (단가 - 원가) / 단가 * 100. 단가 0/유효치 않으면 null
+function marginRate(product) {
+  const u = Number(product?.unitPrice)
+  const c = Number(product?.costPrice)
+  if (!Number.isFinite(u) || u <= 0) return null
+  return ((u - c) / u) * 100
 }
 
 function csvCell(value) {
