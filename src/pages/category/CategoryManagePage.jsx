@@ -19,16 +19,18 @@ export default function CategoryManagePage() {
   const [error, setError] = useState(null)
 
   const load = async () => {
-    setError(null)
     try {
       const data = await getCategoriesApi()
       setTree(data)
+      setError(null)
       return data
     } catch (e) {
       setError(e.response?.data?.message ?? '목록 조회 실패')
       return []
     }
   }
+  // 마운트 시 카테고리 트리 1회 로드 (fetch-in-effect는 의도된 패턴)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load() }, [])
 
   // id → node, id → parentId 인덱스
@@ -223,12 +225,12 @@ export default function CategoryManagePage() {
               </Row>
               <Row label="카테고리명 *">
                 <input className="border px-3 py-2 rounded w-full" value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} placeholder="예: 세탁기" />
+                  onChange={e => setForm({ ...form, name: e.target.value })} />
               </Row>
               <Row label="카테고리 코드 *">
                 <input className="border px-3 py-2 rounded w-full" value={form.slug}
                   onChange={e => setForm({ ...form, slug: e.target.value })}
-                  placeholder="영소문자·숫자·하이픈 (예: elec-home-wm)" />
+                   />
               </Row>
               <Row label="정렬 순서">
                 <input type="number" className="border px-3 py-2 rounded w-32" value={form.sortOrder}
