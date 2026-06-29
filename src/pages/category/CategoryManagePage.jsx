@@ -189,7 +189,12 @@ export default function CategoryManagePage() {
             className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded">+ 대분류 추가</button>
         </div>
         {tree.map(renderNode)}
-        {tree.length === 0 && <div className="text-gray-400 text-sm py-6 text-center">카테고리 없음</div>}
+        {/* 로드 실패(error) ↔ 진짜 빈 상태 구분 */}
+        {tree.length === 0 && (
+          error
+            ? <div className="text-red-500 text-sm py-6 text-center">{error}</div>
+            : <div className="text-gray-400 text-sm py-6 text-center">카테고리 없음</div>
+        )}
       </div>
 
       {/* ── 우측: 상세 정보 ── */}
