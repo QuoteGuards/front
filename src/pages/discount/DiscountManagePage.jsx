@@ -42,6 +42,7 @@ export default function DiscountManagePage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
+  const [saving, setSaving] = useState(false) // 저장 중(중복 클릭 방지)
 
   useEffect(() => {
     getCategoriesApi().then(t => setCats(flattenAll(t))).catch(() => {})
@@ -110,6 +111,7 @@ export default function DiscountManagePage() {
   }
 
   const onSubmit = async () => {
+    if (saving) return // 중복 클릭 방지
     setModalError(null)
     if (!form.name.trim()) { setModalError('정책명을 입력하세요.'); return }
     if (form.targetType === 'CATEGORY' && !form.categoryId) { setModalError('카테고리를 선택하세요.'); return }
@@ -117,17 +119,32 @@ export default function DiscountManagePage() {
     if (form.maxDiscountRate === '' || form.minProfitRate === '' || form.highAmountThreshold === '') {
       setModalError('할인율·최소이익률·고액 기준은 필수입니다.'); return
     }
+    // 할인율/이익률: 0~100, 고액기준: 0 이상, 전부 유효한 숫자
+    const maxDiscount = Number(form.maxDiscountRate)
+    const minProfit = Number(form.minProfitRate)
+    const highAmount = Number(form.highAmountThreshold)
+    if (![maxDiscount, minProfit, highAmount].every(Number.isFinite)) {
+      setModalError('할인율·최소이익률·고액 기준은 유효한 숫자여야 합니다.'); return
+    }
+    if (maxDiscount < 0 || maxDiscount > 100) { setModalError('할인율은 0~100 사이여야 합니다.'); return }
+    if (minProfit < 0 || minProfit > 100) { setModalError('최소 이익률은 0~100 사이여야 합니다.'); return }
+    if (highAmount < 0) { setModalError('고액 기준 금액은 0 이상이어야 합니다.'); return }
+    // 기간 역순 차단 (시작일 > 종료일)
+    if (form.effectiveFrom && form.effectiveTo && form.effectiveFrom > form.effectiveTo) {
+      setModalError('종료일이 시작일보다 빠를 수 없습니다.'); return
+    }
     const payload = {
       name: form.name.trim(),
       targetType: form.targetType,
       categoryId: form.targetType === 'CATEGORY' ? Number(form.categoryId) : null,
       productId: form.targetType === 'PRODUCT' ? Number(form.productId) : null,
-      maxDiscountRate: Number(form.maxDiscountRate),
-      minProfitRate: Number(form.minProfitRate),
-      highAmountThreshold: Number(form.highAmountThreshold),
+      maxDiscountRate: maxDiscount,
+      minProfitRate: minProfit,
+      highAmountThreshold: highAmount,
       effectiveFrom: form.effectiveFrom ? `${form.effectiveFrom}T00:00:00` : null,
       effectiveTo: form.effectiveTo ? `${form.effectiveTo}T23:59:59` : null,
     }
+    setSaving(true)
     try {
       if (editId == null) await createDiscountApi(payload)
       else await updateDiscountApi(editId, payload)
@@ -135,6 +152,8 @@ export default function DiscountManagePage() {
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setModalError(e.response?.data?.message ?? '저장 실패 (입력값 확인)')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -342,7 +361,7 @@ export default function DiscountManagePage() {
                   <PctInput value={form.minProfitRate} onChange={v => setForm({ ...form, minProfitRate: v })} />
                 </Row>
                 <Row label="고액 견적 승인 기준 (원) *">
-                  <input type="number" className="border px-3 py-2 rounded w-full" value={form.highAmountThreshold}
+                  <input type="number" min="0" className="border px-3 py-2 rounded w-full" value={form.highAmountThreshold}
                     onChange={e => setForm({ ...form, highAmountThreshold: e.target.value })} placeholder="5000000" />
                 </Row>
                 <div />
@@ -361,8 +380,11 @@ export default function DiscountManagePage() {
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setModalOpen(false)} className="border px-4 py-2 rounded">취소</button>
-                <button onClick={onSubmit} className="bg-blue-600 text-white px-4 py-2 rounded">정책 저장</button>
+                <button onClick={() => setModalOpen(false)} disabled={saving} className="border px-4 py-2 rounded disabled:opacity-50">취소</button>
+                <button onClick={onSubmit} disabled={saving}
+                  className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">
+                  {saving ? '저장 중…' : '정책 저장'}
+                </button>
               </div>
             </div>
           </div>
@@ -405,7 +427,7 @@ function date(v) {
 function PctInput({ value, onChange }) {
   return (
     <div className="flex items-center gap-1">
-      <input type="number" step="0.01" className="border px-3 py-2 rounded w-full" value={value}
+      <input type="number" step="0.01" min="0" max="100" className="border px-3 py-2 rounded w-full" value={value}
         onChange={e => onChange(e.target.value)} placeholder="0" />
       <span className="text-gray-400 text-sm">%</span>
     </div>
