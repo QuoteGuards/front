@@ -125,8 +125,12 @@ const QuoteWritePage = () => {
             .finally(() => {
                 setAddingProduct(false)
                 catalogAddHandled.current = false
-                // state 비우기는 API 완료 후 — 먼저 비우면 effect cleanup으로 추가가 중단됨
-                navigate(location.pathname, { replace: true, state: {} })
+                // search(?id=)는 유지하고 location.state만 비움 — pathname만 navigate하면 쿼리가 사라짐
+                const search =
+                    draft?.savedQuote?.id != null
+                        ? `?id=${draft.savedQuote.id}`
+                        : location.search
+                navigate({ pathname: location.pathname, search }, { replace: true, state: {} })
             })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state])
