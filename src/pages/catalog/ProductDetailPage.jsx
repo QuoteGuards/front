@@ -4,6 +4,7 @@ import {
   getProductDetailApi, searchProductsApi, addFavoriteApi, removeFavoriteApi,
 } from '../../api/catalogApi'
 import { getCategoriesApi } from '../../api/categoryApi'
+import PageHeader from '../../components/common/PageHeader'
 
 export default function ProductDetailPage() {
   const { productId } = useParams()
@@ -77,6 +78,7 @@ export default function ProductDetailPage() {
 
   return (
     <div className="p-6">
+    <PageHeader breadcrumbs={['제품', '제품 상세']} />
       {/* 돌아가기 */}
       <button onClick={() => navigate('/catalog')} className="text-sm text-gray-500 hover:text-gray-800 mb-4">
         ← 제품 탐색으로 돌아가기

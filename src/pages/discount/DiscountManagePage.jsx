@@ -5,6 +5,7 @@ import {
 } from '../../api/discountApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 import { getProductsApi } from '../../api/productApi'
+import PageHeader from '../../components/common/PageHeader'
 
 const TABS = [
   { key: '', label: '전체' },
@@ -147,6 +148,7 @@ export default function DiscountManagePage() {
 
   return (
     <div className="p-6">
+    <PageHeader breadcrumbs={['제품', '할인 정책']} />
       {/* ── 정책 목록 헤더 ── */}
       <div className="border rounded-lg">
         <div className="flex items-center justify-between p-4 border-b">

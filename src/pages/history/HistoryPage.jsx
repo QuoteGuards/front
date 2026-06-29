@@ -1,3 +1,4 @@
+import PageHeader from '../../components/common/PageHeader'
 import { useHistoryFilter } from '../../hooks/useHistoryFilter'
 import HistoryHeader from '../../components/history/HistoryHeader'
 import HistoryFilter from '../../components/history/HistoryFilter'
@@ -19,7 +20,8 @@ const HistoryPage = () => {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
-      <HistoryHeader
+      <PageHeader breadcrumbs={['견적 관리', '발송 이력']} />
+    <HistoryHeader
         total={history.length}
         successCount={successCount}
         failCount={failCount}

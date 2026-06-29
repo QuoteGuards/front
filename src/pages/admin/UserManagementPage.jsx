@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import UserCreateModal from '../../components/admin/UserCreateModal'
 import UserDetailModal from '../../components/admin/UserDetailModal'
 import { getUserListApi } from '../../api/userManagementApi'
+import PageHeader from '../../components/common/PageHeader'
+import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import DataTable from '../../components/common/DataTable'
+import StatusBadge from '../../components/common/StatusBadge'
+import Button from '../../components/common/Button'
+import Pagination from '../../components/common/Pagination'
 
 const STATUS_OPTIONS = [
   { value: '', label: '전체' },
@@ -24,12 +30,6 @@ const SEARCH_TYPE_OPTIONS = [
   { value: 'memberNumber', label: '사원번호' },
 ]
 
-const STATUS_STYLE = {
-  ACTIVE:    { border: 'border-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50',  label: '활성'   },
-  SUSPENDED: { border: 'border-amber-400',   text: 'text-amber-600',   bg: 'bg-amber-50',    label: '정지'   },
-  DELETED:   { border: 'border-gray-300',    text: 'text-gray-400',    bg: 'bg-gray-50',     label: '삭제됨' },
-}
-
 const ROLE_LABEL = {
   SUPER_ADMIN:   '최고관리자',
   SALES_MANAGER: '영업관리자',
@@ -43,73 +43,6 @@ const fmtDate = (iso) => {
   const d = new Date(iso)
   const pad = (n) => String(n).padStart(2, '0')
   return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
-}
-
-function Pagination({ page, totalPages, onChange }) {
-  if (totalPages <= 1) return null
-
-  const blockSize = 5
-  const blockStart = Math.floor(page / blockSize) * blockSize
-  const blockEnd = Math.min(blockStart + blockSize, totalPages)
-  const pages = []
-  for (let i = blockStart; i < blockEnd; i++) pages.push(i)
-
-  const btnBase = 'w-8 h-8 flex items-center justify-center rounded text-sm transition-colors'
-  const btnActive = btnBase + ' bg-blue-600 text-white font-medium'
-  const btnInactive = btnBase + ' text-gray-600 hover:bg-gray-100'
-  const btnDisabled = btnBase + ' text-gray-300 cursor-not-allowed'
-
-  return (
-    <div className="flex items-center justify-center gap-1 mt-4">
-      <button
-        type="button"
-        onClick={() => onChange(0)}
-        disabled={page === 0}
-        className={page === 0 ? btnDisabled : btnInactive}
-        aria-label="첫 페이지"
-      >
-        {'<<'}
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange(page - 1)}
-        disabled={page === 0}
-        className={page === 0 ? btnDisabled : btnInactive}
-        aria-label="이전 페이지"
-      >
-        {'<'}
-      </button>
-      {pages.map((p) => (
-        <button
-          key={p}
-          type="button"
-          onClick={() => onChange(p)}
-          className={p === page ? btnActive : btnInactive}
-          aria-current={p === page ? 'page' : undefined}
-        >
-          {p + 1}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange(page + 1)}
-        disabled={page >= totalPages - 1}
-        className={page >= totalPages - 1 ? btnDisabled : btnInactive}
-        aria-label="다음 페이지"
-      >
-        {'>'}
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange(totalPages - 1)}
-        disabled={page >= totalPages - 1}
-        className={page >= totalPages - 1 ? btnDisabled : btnInactive}
-        aria-label="마지막 페이지"
-      >
-        {'>>'}
-      </button>
-    </div>
-  )
 }
 
 export default function UserManagementPage() {
@@ -130,13 +63,11 @@ export default function UserManagementPage() {
   const [selectedUser, setSelectedUser] = useState(null)
   const [fetchTick, setFetchTick] = useState(0)
 
-  // 스크롤 위치 보존: 페이지/필터 변경이 아닌 모달 액션 후 복원
   const scrollYRef = useRef(0)
   const restoreScrollRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
-
     const params = { page, size: PAGE_SIZE }
     if (statusFilter) params.status = statusFilter
     if (roleFilter)   params.role   = roleFilter
@@ -166,14 +97,7 @@ export default function UserManagementPage() {
     return () => { cancelled = true }
   }, [page, statusFilter, roleFilter, appliedKeyword, fetchTick])
 
-  // 생성 후: 1페이지로 이동
-  const refetch = useCallback(() => {
-    setLoading(true)
-    setPage(0)
-    setFetchTick((t) => t + 1)
-  }, [])
-
-  // 수정/삭제 후: 현재 페이지 유지 + 스크롤 위치 복원
+  const refetch = useCallback(() => { setLoading(true); setPage(0); setFetchTick((t) => t + 1) }, [])
   const refreshCurrentPage = useCallback(() => {
     scrollYRef.current = window.scrollY
     restoreScrollRef.current = true
@@ -185,214 +109,118 @@ export default function UserManagementPage() {
     if (overrides?.statusFilter !== undefined) setStatusFilter(overrides.statusFilter)
     if (overrides?.roleFilter !== undefined)   setRoleFilter(overrides.roleFilter)
     if (overrides?.appliedKeyword !== undefined) setAppliedKeyword(overrides.appliedKeyword)
-    setLoading(true)
-    setPage(0)
-    setFetchTick((t) => t + 1)
+    setLoading(true); setPage(0); setFetchTick((t) => t + 1)
   }, [])
 
   const handleStatusChange = (val) => resetAndFetch({ statusFilter: val })
   const handleRoleChange   = (val) => resetAndFetch({ roleFilter: val })
   const handleSearch       = ()    => resetAndFetch({ appliedKeyword: inputValue })
   const handleKeyDown      = (e)   => { if (e.key === 'Enter') handleSearch() }
+  const handlePageChange   = (p)   => { setLoading(true); setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-  const handlePageChange = (p) => {
-    setLoading(true)
-    setPage(p)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const columns = [
+    {
+      key: '_rowNum',
+      title: 'No.',
+      align: 'center',
+      width: '52px',
+      render: (_, row) => <span style={{ color: 'var(--color-text-sub)' }}>{row._rowNum}</span>,
+    },
+    {
+      key: 'status',
+      title: '상태',
+      align: 'center',
+      width: '80px',
+      render: (val) => <StatusBadge status={val} type="user" />,
+    },
+    { key: 'name', title: '이름', render: (val) => <strong className="text-[var(--color-text-main)]">{val}</strong> },
+    { key: 'memberNumber', title: '사원번호', render: (val) => <span className="font-mono text-[13px] text-[var(--color-text-sub)]">{val ?? '-'}</span> },
+    { key: 'email', title: '이메일', render: (val) => <span className="text-[var(--color-text-sub)] max-w-[200px] overflow-hidden text-ellipsis block">{val}</span> },
+    { key: 'deptPos', title: '부서/직급', render: (_, row) => <span className="text-[var(--color-text-sub)]">{[row.department, row.position].filter(Boolean).join(' / ') || '-'}</span> },
+    { key: 'role', title: '권한', align: 'center', render: (val) => <span className="text-[var(--color-text-sub)]">{ROLE_LABEL[val] ?? val}</span> },
+    { key: 'createdAt', title: '생성일시', render: (val) => <span className="text-[var(--color-text-muted)] text-xs tabular-nums">{fmtDate(val)}</span> },
+    {
+      key: '_action',
+      title: '상세보기',
+      align: 'center',
+      width: '96px',
+      render: (_, row) => (
+        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedUser(row) }}>
+          상세보기
+        </Button>
+      ),
+    },
+  ]
+
+  const tableData = users.map((u, idx) => ({ ...u, _rowNum: page * PAGE_SIZE + idx + 1, deptPos: '' }))
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-800">사용자 관리</h1>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-        >
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          신규등록
-        </button>
-      </div>
+    <div>
+      <PageHeader
+        breadcrumbs={['관리', '사용자 관리']}
+        title="사용자 관리"
+        actions={
+          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+            + 신규등록
+          </Button>
+        }
+      />
 
-      {/* 필터 박스 */}
-      <div className="border border-gray-300 rounded-md bg-white mb-4">
-        <div className="flex items-stretch border-b border-gray-200">
-          <div className="w-24 shrink-0 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
-            상태
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-1.5 px-4 py-3">
-            {STATUS_OPTIONS.map((opt) => (
-              <label key={opt.value} className="inline-flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="status-filter"
-                  value={opt.value}
-                  checked={statusFilter === opt.value}
-                  onChange={() => handleStatusChange(opt.value)}
-                  className="accent-blue-600"
-                />
-                <span className="text-sm text-gray-700">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-stretch border-b border-gray-200">
-          <div className="w-24 shrink-0 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
-            권한
-          </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-1.5 px-4 py-3">
-            {ROLE_OPTIONS.map((opt) => (
-              <label key={opt.value} className="inline-flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="radio"
-                  name="role-filter"
-                  value={opt.value}
-                  checked={roleFilter === opt.value}
-                  onChange={() => handleRoleChange(opt.value)}
-                  className="accent-blue-600"
-                />
-                <span className="text-sm text-gray-700">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-stretch">
-          <div className="w-24 shrink-0 px-4 py-3 text-sm font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
-            검색명
-          </div>
-          <div className="flex items-center gap-2 px-4 py-3 flex-1">
-            <label htmlFor="search-type-sel" className="sr-only">검색 기준</label>
-            <select
-              id="search-type-sel"
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-              className="border border-gray-300 rounded px-2.5 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-28"
-            >
-              {SEARCH_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <label htmlFor="search-keyword-inp" className="sr-only">검색어</label>
-            <input
-              id="search-keyword-inp"
-              type="search"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="검색어를 입력해주세요."
-              className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button
-              type="button"
-              onClick={handleSearch}
-              className="px-4 py-2 rounded text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white transition-colors"
-            >
-              검색
-            </button>
-          </div>
-        </div>
-      </div>
+      <SearchPanel>
+        <SearchRow label="상태">
+          {STATUS_OPTIONS.map((opt) => (
+            <label key={opt.value} className="form-checkbox">
+              <input type="radio" name="status-filter" value={opt.value} checked={statusFilter === opt.value} onChange={() => handleStatusChange(opt.value)} />
+              {opt.label}
+            </label>
+          ))}
+        </SearchRow>
+        <SearchRow label="권한">
+          {ROLE_OPTIONS.map((opt) => (
+            <label key={opt.value} className="form-checkbox">
+              <input type="radio" name="role-filter" value={opt.value} checked={roleFilter === opt.value} onChange={() => handleRoleChange(opt.value)} />
+              {opt.label}
+            </label>
+          ))}
+        </SearchRow>
+        <SearchRow label="검색">
+          <label htmlFor="search-type-sel" className="sr-only">검색 기준</label>
+          <select id="search-type-sel" className="form-select" value={searchType} onChange={(e) => setSearchType(e.target.value)} style={{ width: '110px' }}>
+            {SEARCH_TYPE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+          <label htmlFor="search-keyword-inp" className="sr-only">검색어</label>
+          <input id="search-keyword-inp" type="search" className="form-input" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} placeholder="검색어를 입력해주세요." style={{ width: '260px' }} />
+          <Button variant="secondary" onClick={handleSearch}>검색</Button>
+        </SearchRow>
+      </SearchPanel>
 
       {error && (
-        <div role="alert" className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2">
+        <div role="alert" className="mb-3 text-[13px] text-[var(--color-danger)] bg-red-50 border border-red-200 rounded px-4 py-2.5">
           {error}
         </div>
       )}
 
       {!loading && (
-        <p className="text-sm text-gray-700 mb-2">
-          전체 <span className="font-semibold">{totalElements}</span>건
+        <p className="text-[13px] text-[var(--color-text-sub)] mb-2">
+          전체 <strong>{totalElements}</strong>건
         </p>
       )}
 
-      {loading ? (
-        <div className="py-16 text-center text-sm text-gray-400">불러오는 중...</div>
-      ) : users.length === 0 ? (
-        <div className="py-16 text-center text-sm text-gray-400">조회된 사용자가 없습니다.</div>
-      ) : (
-        <div className="border border-gray-300 rounded-md overflow-hidden bg-white">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-sm text-gray-600">
-                <th className="px-3 py-3 text-center font-medium w-12 whitespace-nowrap">번호</th>
-                <th className="px-3 py-3 text-center font-medium w-20 whitespace-nowrap">상태</th>
-                <th className="px-3 py-3 text-left font-medium">이름</th>
-                <th className="px-3 py-3 text-left font-medium">사원번호</th>
-                <th className="px-3 py-3 text-left font-medium">이메일</th>
-                <th className="px-3 py-3 text-left font-medium hidden md:table-cell">부서 / 직급</th>
-                <th className="px-3 py-3 text-center font-medium">권한</th>
-                <th className="px-3 py-3 text-center font-medium hidden lg:table-cell">생성일시</th>
-                <th className="px-3 py-3 text-center font-medium hidden lg:table-cell">수정일시</th>
-                <th className="px-3 py-3 text-center font-medium w-24">상세보기</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {users.map((u, idx) => {
-                const st = STATUS_STYLE[u.status] ?? { border: 'border-gray-300', text: 'text-gray-500', bg: 'bg-gray-50', label: u.status }
-                const rowNum = page * PAGE_SIZE + idx + 1
-                return (
-                  <tr key={u.id} className="hover:bg-blue-50 transition-colors">
-                    <td className="px-3 py-3 text-center text-gray-500">{rowNum}</td>
-                    <td className="px-3 py-3 text-center">
-                      <span className={'inline-block w-14 text-center border rounded px-2 py-0.5 text-xs font-medium ' + st.border + ' ' + st.text + ' ' + st.bg}>
-                        {st.label}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 font-medium text-gray-800">{u.name}</td>
-                    <td className="px-3 py-3 text-gray-500 font-mono text-sm">{u.memberNumber ?? '-'}</td>
-                    <td className="px-3 py-3 text-gray-600 max-w-[200px] truncate" title={u.email}>{u.email}</td>
-                    <td className="px-3 py-3 text-gray-500 hidden md:table-cell">
-                      {[u.department, u.position].filter(Boolean).join(' / ') || '-'}
-                    </td>
-                    <td className="px-3 py-3 text-center text-gray-600">
-                      {ROLE_LABEL[u.role] ?? u.role}
-                    </td>
-                    <td className="px-3 py-3 text-center text-gray-500 text-xs tabular-nums hidden lg:table-cell">
-                      {fmtDate(u.createdAt)}
-                    </td>
-                    <td className="px-3 py-3 text-center text-gray-500 text-xs tabular-nums hidden lg:table-cell">
-                      {fmtDate(u.updatedAt)}
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedUser(u)}
-                        className="inline-flex items-center whitespace-nowrap gap-1 px-2.5 py-1.5 rounded text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M9 3a6 6 0 100 12A6 6 0 009 3zM1 9a8 8 0 1114.32 4.906l3.387 3.387a1 1 0 01-1.414 1.414l-3.387-3.387A8 8 0 011 9z" />
-                        </svg>
-                        상세보기
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={tableData}
+        rowKey="id"
+        loading={loading}
+        emptyText="조회된 사용자가 없습니다."
+      />
 
       <Pagination page={page} totalPages={totalPages} onChange={handlePageChange} />
 
       {showCreateModal && (
-        <UserCreateModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={refetch}
-        />
+        <UserCreateModal onClose={() => setShowCreateModal(false)} onCreated={refetch} />
       )}
-
       {selectedUser && (
-        <UserDetailModal
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onUpdated={() => { refreshCurrentPage(); setSelectedUser(null) }}
-        />
+        <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onUpdated={() => { refreshCurrentPage(); setSelectedUser(null) }} />
       )}
     </div>
   )

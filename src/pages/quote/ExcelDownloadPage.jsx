@@ -4,6 +4,7 @@ import { useQuote } from '../../hooks/useQuote'
 import { downloadQuoteExcel } from '../../utils/excelExport'
 import { buildSheets } from '../../utils/excelSheetBuilder'
 import ExcelPreview from '../../components/excel/ExcelPreview'
+import PageHeader from '../../components/common/PageHeader'
 
 const ExcelDownloadPage = () => {
   const { id } = useParams()
@@ -42,6 +43,7 @@ const ExcelDownloadPage = () => {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
+      <PageHeader breadcrumbs={['견적 관리', '엑셀 다운로드']} />
       <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
         <button
           onClick={() => navigate(-1)}

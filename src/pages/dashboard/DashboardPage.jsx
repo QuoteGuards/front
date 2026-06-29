@@ -3,6 +3,7 @@ import {
   getSummaryApi, getSalesAnalysisApi, getMonthlyTrendApi,
   getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi,
 } from '../../api/dashboardApi'
+import PageHeader from '../../components/common/PageHeader'
 
 const PERIODS = [
   { key: '', label: '전체' },
@@ -58,32 +59,39 @@ export default function DashboardPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       load({ period })
     }
-  }, [period, from, to]) // eslint-disable-line
+  }, [period, from, to])
 
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="text-xl font-bold">통계 대시보드</h1>
-        {/* 기간 필터 */}
-        <div className="flex items-center gap-1 flex-wrap">
-          {PERIODS.map(p => (
-            <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1.5 rounded text-sm border ${period === p.key ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600'}`}>
-              {p.label}
-            </button>
-          ))}
-          {period === 'CUSTOM' && (
-            <span className="flex items-center gap-1 ml-1">
-              <input type="date" className="border px-2 py-1.5 rounded text-sm" value={from} onChange={e => setFrom(e.target.value)} />
-              <span className="text-gray-400">~</span>
-              <input type="date" className="border px-2 py-1.5 rounded text-sm" value={to} onChange={e => setTo(e.target.value)} />
-            </span>
-          )}
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        breadcrumbs={['통계', '대시보드']}
+        title="통계 대시보드"
+        actions={
+          <div className="flex items-center gap-1 flex-wrap">
+            {PERIODS.map(p => (
+              <button key={p.key} type="button" onClick={() => setPeriod(p.key)}
+                className={[
+                  'px-3 py-1.5 rounded text-[13px] border transition-colors',
+                  period === p.key
+                    ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                    : 'bg-white text-[var(--color-text-sub)] border-[var(--color-border)] hover:bg-gray-50',
+                ].join(' ')}>
+                {p.label}
+              </button>
+            ))}
+            {period === 'CUSTOM' && (
+              <span className="flex items-center gap-1.5 ml-1">
+                <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={from} onChange={(e) => setFrom(e.target.value)} />
+                <span className="text-[var(--color-text-muted)]">~</span>
+                <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={to} onChange={(e) => setTo(e.target.value)} />
+              </span>
+            )}
+          </div>
+        }
+      />
 
       {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
       {period === 'CUSTOM' && (!from || !to) && (
@@ -210,21 +218,29 @@ function num(v) { return v == null ? '0' : Number(v).toLocaleString('ko-KR') }
 function won(v) { return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원' }
 function pct(v) { return v == null || v === '' ? '0%' : `${Number(v)}%` }
 
-const ACCENT = { green: 'text-green-600', red: 'text-red-500', blue: 'text-blue-600' }
+const ACCENT_CLASS = {
+  green: 'text-[var(--color-success)]',
+  red: 'text-[var(--color-danger)]',
+  blue: 'text-[var(--color-primary)]',
+}
 function Card({ label, value, accent }) {
   return (
-    <div className="border rounded-lg p-3">
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
-      <div className={`text-lg font-bold ${ACCENT[accent] ?? 'text-gray-800'}`}>{value}</div>
+    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-5 py-4">
+      <p className="text-xs text-[var(--color-text-sub)] mb-1">{label}</p>
+      <p className={`text-[22px] font-bold leading-tight ${ACCENT_CLASS[accent] ?? 'text-[var(--color-text-main)]'}`}>{value}</p>
     </div>
   )
 }
+
 function Panel({ title, children }) {
   return (
-    <div className="border rounded-lg p-4">
-      <h2 className="font-bold text-sm mb-3">{title}</h2>
+    <div className="bg-white border border-[var(--color-border)] rounded-lg shadow-[var(--shadow-sm)] px-6 py-5">
+      <h2 className="text-sm font-bold text-[var(--color-text-main)] mb-4">{title}</h2>
       {children}
     </div>
   )
 }
-function Empty() { return <div className="text-center text-gray-300 text-sm py-8">데이터 없음</div> }
+
+function Empty() {
+  return <p className="text-[var(--color-text-muted)] text-[13px] text-center py-8">데이터가 없습니다</p>
+}

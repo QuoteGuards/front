@@ -2,6 +2,7 @@ import { useState, useCallback, useId } from 'react';
 import { useMyProfile } from '../../hooks/useMyProfile';
 import { changeMyPasswordApi } from '../../api/myProfileApi';
 import Toast from '../../components/common/Toast';
+import PageHeader from '../../components/common/PageHeader'
 
 const ROLE_LABEL = {
   SUPER_ADMIN: '최고관리자',
@@ -375,6 +376,7 @@ export default function MyPage() {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      <PageHeader breadcrumbs={['계정', '마이페이지']} />
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}

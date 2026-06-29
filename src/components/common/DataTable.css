@@ -1,0 +1,70 @@
+.data-table-wrap {
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* 헤더 */
+.data-table__head {
+  background: #F9FAFB;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table__th {
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table__th--right { text-align: right; }
+.data-table__th--center { text-align: center; }
+
+/* 바디 */
+.data-table__row {
+  border-bottom: 1px solid var(--color-border);
+}
+.data-table__row:last-child {
+  border-bottom: none;
+}
+
+.data-table__row--clickable {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.data-table__row--clickable:hover {
+  background: #F0F4FF;
+}
+.data-table__row--clickable:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.data-table__td {
+  padding: 14px 16px;
+  color: var(--color-text-main);
+  text-align: left;
+  vertical-align: middle;
+  height: 52px;
+}
+
+.data-table__td--right { text-align: right; }
+.data-table__td--center { text-align: center; }
+
+/* 빈 상태 / 로딩 */
+.data-table__empty {
+  padding: 60px 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
