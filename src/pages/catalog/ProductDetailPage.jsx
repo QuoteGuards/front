@@ -24,6 +24,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true); setError(null)
+    setQty(1) // 제품(productId)이 바뀌면 수량 초기화 — 이전 제품 수량 이월 방지
     getProductDetailApi(productId)
       .then(async (p) => {
         setProduct(p)
