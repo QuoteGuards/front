@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   getCategoriesApi, createCategoryApi, updateCategoryApi,
   activateCategoryApi, deactivateCategoryApi, deleteCategoryApi,
@@ -8,6 +9,7 @@ const DEPTH_LABEL = { 1: '대분류', 2: '중분류', 3: '소분류' }
 const CHILD_LABEL = { 1: '중분류', 2: '소분류' }
 
 export default function CategoryManagePage() {
+  const navigate = useNavigate()
   const [tree, setTree] = useState([])
   const [expanded, setExpanded] = useState(new Set())
   const [selected, setSelected] = useState(null)   // 선택 노드
@@ -149,7 +151,7 @@ export default function CategoryManagePage() {
             {isSel && <span className="text-xs">[선택됨]</span>}
           </span>
           <span className="text-xs text-gray-400">
-            {node.depth === 3 ? `(${node.productCount} 제품)` : ''}
+            ({subtreeCount(node)} 제품)
           </span>
         </div>
 
@@ -248,8 +250,9 @@ export default function CategoryManagePage() {
 
             {mode === 'edit' && (
               <div className="mt-6 pt-4 border-t max-w-2xl text-sm flex items-center gap-6">
-                <span className="text-gray-600">연결된 제품 수 <b className="ml-1">{selected.productCount}개</b></span>
-                <span className="text-blue-600 cursor-not-allowed" title="제품 화면 연동 예정">제품 목록 보기 →</span>
+                <span className="text-gray-600">연결된 제품 수 <b className="ml-1">{subtreeCount(selected)}개</b><span className="text-gray-400 ml-1">(하위 포함)</span></span>
+                <button onClick={() => navigate(`/products?categoryId=${selected.id}`)}
+                  className="text-blue-600 hover:underline">제품 목록 보기 →</button>
               </div>
             )}
 
@@ -274,6 +277,14 @@ export default function CategoryManagePage() {
 // 백엔드가 boolean isActive를 JSON 키 "active"로 직렬화하므로 둘 다 수용
 function isActiveOf(n) {
   return n?.isActive ?? n?.active ?? false
+}
+
+// 해당 노드 + 모든 하위(자손) 제품 수 합산 (대/중분류는 직접 제품이 0이라 하위 합산이 의미 있음)
+function subtreeCount(node) {
+  if (!node) return 0
+  const own = node.productCount ?? 0
+  const children = (node.children ?? []).reduce((sum, c) => sum + subtreeCount(c), 0)
+  return own + children
 }
 
 function findInTree(nodes, id) {

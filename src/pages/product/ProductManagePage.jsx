@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi, createProductApi, updateProductApi,
   activateProductApi, deactivateProductApi, deleteProductApi,
@@ -12,10 +13,13 @@ const EMPTY_FORM = {
 }
 
 export default function ProductManagePage() {
+  // 카테고리 관리 화면에서 "제품 목록 보기"로 넘어올 때 ?categoryId= 로 초기 필터 지정
+  const [searchParams] = useSearchParams()
+  const initCategoryId = searchParams.get('categoryId') ?? ''
   // 검색 필터 (입력값)
-  const [filter, setFilter] = useState({ categoryId: '', keyword: '', vat: '', active: '' })
+  const [filter, setFilter] = useState({ categoryId: initCategoryId, keyword: '', vat: '', active: '' })
   // 실제 적용된 필터 (검색 버튼 눌렀을 때만 반영)
-  const [applied, setApplied] = useState({ categoryId: '', keyword: '', active: '' })
+  const [applied, setApplied] = useState({ categoryId: initCategoryId, keyword: '', active: '' })
   const [vatFilter, setVatFilter] = useState('') // VAT는 백엔드 미지원 → 클라 필터
 
   const [page, setPage] = useState(0)
