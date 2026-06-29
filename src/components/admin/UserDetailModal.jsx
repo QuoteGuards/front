@@ -250,7 +250,7 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
                 <ReadField label="사원번호" value={user.memberNumber} />
                 <ReadField label="이메일" value={user.email} />
               </div>
-              {!user.passwordInitialized && (
+              {!user.passwordInitialized && !isDeleted && (
                 <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   <span className="text-xs text-amber-700 font-medium">비밀번호 설정 대기 중</span>
                   <button
