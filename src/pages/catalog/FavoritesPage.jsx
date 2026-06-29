@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { getFavoriteProductsApi, removeFavoriteApi } from '../../api/catalogApi'
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
+import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import Button from '../../components/common/Button'
 
 const SORTS = [
   { key: 'recent', label: '최근 추가순' },
@@ -112,72 +114,87 @@ export default function FavoritesPage() {
   const addToQuote = (p) => navigate('/quotes/new', { state: { addProduct: p } })
 
   return (
-    <div className="p-6">
-    <PageHeader breadcrumbs={['제품', '즐겨찾기']} />
-      {/* ── 헤더 ── */}
-      <div className="border rounded-lg p-4 mb-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold">내 즐겨찾기</h1>
-          <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">{items.length}</span>
-        </div>
-        <input className="border px-3 py-2 rounded flex-1 min-w-[200px]"
-          placeholder="🔍 즐겨찾기 내 검색 (제품명/코드)"
-          value={search} onChange={e => setSearch(e.target.value)} />
-        <label className="text-sm text-gray-500 flex items-center gap-2">
-          정렬:
-          <select className="border px-2 py-2 rounded" value={sort} onChange={e => setSort(e.target.value)}>
+    <div>
+      <PageHeader
+        breadcrumbs={['제품', '즐겨찾기']}
+        title="즐겨찾기"
+        actions={
+          <Button variant="outline" onClick={removeAll} disabled={items.length === 0}>전체 해제</Button>
+        }
+      />
+
+      {/* ── 검색 패널 ── */}
+      <SearchPanel>
+        <SearchRow label="검색">
+          <input
+            type="text"
+            className="form-input"
+            style={{ width: '260px' }}
+            placeholder="즐겨찾기 내 검색 (제품명/코드)"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </SearchRow>
+        <SearchRow label="정렬">
+          <select className="form-select" style={{ width: '160px' }} value={sort} onChange={e => setSort(e.target.value)}>
             {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
-        </label>
-        <button onClick={removeAll}
-          className="border border-red-300 text-red-500 px-3 py-2 rounded text-sm hover:bg-red-50">전체 해제</button>
+        </SearchRow>
+      </SearchPanel>
+
+      <div className="mb-3 text-sm text-[var(--color-text-sub)]">
+        총 <b className="text-[var(--color-text-main)]">{items.length}</b>개
       </div>
 
       {/* ── 탭 ── */}
-      <div className="flex border-b mb-4 text-sm overflow-x-auto">
+      <div className="flex mb-4 text-sm overflow-x-auto" style={{ borderBottom: '1px solid var(--color-border)' }}>
         <TabBtn active={tab === ''} onClick={() => setTab('')}>전체 ({items.length})</TabBtn>
         {tabs.map(t => (
           <TabBtn key={t.name} active={tab === t.name} onClick={() => setTab(t.name)}>{t.name} ({t.count})</TabBtn>
         ))}
       </div>
 
-      {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
+      {error && (
+        <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
+          style={{ color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {error}
+        </div>
+      )}
 
       {/* ── 목록 ── */}
       {loading ? (
-        <div className="text-center text-gray-400 py-20">불러오는 중…</div>
+        <div className="text-center text-[var(--color-text-muted)] py-20">불러오는 중…</div>
       ) : items.length === 0 ? (
-        <div className="text-center py-24 border rounded-lg">
-          <div className="text-gray-500 mb-1">★ 즐겨찾기한 제품이 없습니다</div>
-          <button onClick={() => navigate('/catalog')} className="text-blue-600 text-sm mt-2">제품 탐색하러 가기 →</button>
+        <div className="text-center py-24 rounded-[var(--radius-md)]" style={{ border: '1px solid var(--color-border)' }}>
+          <div className="text-[var(--color-text-sub)] mb-1">★ 즐겨찾기한 제품이 없습니다</div>
+          <button onClick={() => navigate('/catalog')} className="text-sm mt-2" style={{ color: 'var(--color-primary)' }}>제품 탐색하러 가기 →</button>
         </div>
       ) : view.length === 0 ? (
-        <div className="text-center py-20 text-gray-400 border rounded-lg">검색 결과가 없습니다</div>
+        <div className="text-center py-20 text-[var(--color-text-muted)] rounded-[var(--radius-md)]" style={{ border: '1px solid var(--color-border)' }}>검색 결과가 없습니다</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {view.map(p => (
-            <div key={p.id} className="border rounded-lg overflow-hidden flex flex-col">
-              <div className="relative bg-gray-100 aspect-[16/9] flex items-center justify-center">
+            <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
+              style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
+              <div className="relative aspect-[16/9] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
                 {p.imageUrl
                   ? <img src={p.imageUrl} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
-                  : <span className="text-gray-300 text-sm">이미지</span>}
-                <span className="absolute top-2 right-2 text-yellow-400 text-xl">★</span>
+                  : <span className="text-[var(--color-text-muted)] text-sm">이미지</span>}
+                <span className="absolute top-2 right-2 text-xl" style={{ color: 'var(--color-warning)' }}>★</span>
               </div>
               <div className="p-3 flex flex-col flex-1">
-                <div className="text-xs text-gray-400 font-mono">{p.code}</div>
+                <div className="text-xs text-[var(--color-text-muted)] font-mono">{p.code}</div>
                 <div className="font-medium mt-0.5">{p.name}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{pathOf(p)}</div>
+                <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{pathOf(p)}</div>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-blue-600 font-bold">{won(p.unitPrice)}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${p.vatApplicable ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-50 text-gray-400 border-gray-200'}`}>
-                    VAT {p.vatApplicable ? '포함' : '별도'}
-                  </span>
+                  <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{won(p.unitPrice)}</span>
+                  <VatBadge applicable={p.vatApplicable} />
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <button onClick={() => addToQuote(p)} className="flex-1 bg-blue-600 text-white text-sm py-1.5 rounded">견적에 추가</button>
-                  <button onClick={() => removeOne(p)} className="flex-1 border border-red-300 text-red-500 text-sm py-1.5 rounded hover:bg-red-50">즐겨찾기 해제</button>
+                  <Button variant="primary" size="sm" className="flex-1" onClick={() => addToQuote(p)}>견적에 추가</Button>
+                  <Button variant="danger" size="sm" className="flex-1" onClick={() => removeOne(p)}>해제</Button>
                 </div>
-                <button onClick={() => goDetail(p)} className="border text-sm py-1.5 rounded text-gray-600 hover:bg-gray-50 mt-2">상세 보기 →</button>
+                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => goDetail(p)}>상세 보기</Button>
               </div>
             </div>
           ))}
@@ -191,11 +208,23 @@ function won(v) {
   return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원'
 }
 
+function VatBadge({ applicable }) {
+  return (
+    <span className="status-badge status-badge--gray" style={{ fontSize: '11px', padding: '2px 8px' }}>
+      VAT {applicable ? '적용' : '미적용'}
+    </span>
+  )
+}
+
 function TabBtn({ children, active, onClick }) {
   return (
     <button onClick={onClick}
-      className={`px-4 py-2.5 whitespace-nowrap border-b-2 -mb-px
-        ${active ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+      className="px-4 py-2.5 whitespace-nowrap -mb-px"
+      style={{
+        borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
+        color: active ? 'var(--color-primary)' : 'var(--color-text-sub)',
+        fontWeight: active ? 600 : 400,
+      }}>
       {children}
     </button>
   )
