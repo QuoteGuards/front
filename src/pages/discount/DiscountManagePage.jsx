@@ -39,6 +39,7 @@ export default function DiscountManagePage() {
   const [cats, setCats] = useState([])
   const [products, setProducts] = useState([])
   const [error, setError] = useState(null)
+  const [refError, setRefError] = useState(null) // 카테고리/제품 목록 로드 실패
   const [loading, setLoading] = useState(false)
 
   // 모달
@@ -49,7 +50,8 @@ export default function DiscountManagePage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    getCategoriesApi().then(t => setCats(flattenAll(t))).catch(() => {})
+    getCategoriesApi().then(t => setCats(flattenAll(t)))
+      .catch(() => setRefError('카테고리 목록을 불러오지 못했습니다.'))
 
     // 제품 전체 로드 (페이지 순회) — 500개 초과 제품도 정책 대상으로 선택 가능하도록
     ;(async () => {
@@ -64,7 +66,9 @@ export default function DiscountManagePage() {
           page += 1
         } while (data && data.last === false && page < 20) // 안전 상한(최대 10,000개)
         setProducts(all)
-      } catch { /* 무시 */ }
+      } catch {
+        setRefError('제품 목록을 불러오지 못했습니다.')
+      }
     })()
   }, [])
 
@@ -272,6 +276,13 @@ export default function DiscountManagePage() {
         총 <strong style={{ color: 'var(--color-text-main)' }}>{pageData.totalElements ?? 0}</strong>건
         {' · '}현재 활성 <strong style={{ color: 'var(--color-success)' }}>{activeCount}</strong>건
       </div>
+
+      {refError && (
+        <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
+          style={{ color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          {refError}
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
