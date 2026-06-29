@@ -87,24 +87,34 @@ export default function ProductSearchPage() {
   const rows = pageData.content ?? []
   const totalPages = pageData.totalPages ?? 0
 
-  const renderCatNode = (node, depth = 0) => {
+  const renderCatNode = (node) => {
     const isOpen = expanded.has(node.id)
     const hasChild = node.children?.length > 0
     const isSel = applied.categoryId === node.id
     return (
       <div key={node.id}>
-        <div className="flex items-center text-sm py-1" style={{ paddingLeft: depth * 12 }}>
-          {hasChild ? (
-            <button onClick={() => toggleExpand(node.id)} className="w-4 text-[var(--color-text-muted)] shrink-0">{isOpen ? '▼' : '▶'}</button>
-          ) : <span className="w-4 shrink-0" />}
-          <button onClick={() => selectCategory(node)}
-            className="flex-1 text-left truncate"
-            style={{ color: isSel ? 'var(--color-primary)' : 'var(--color-text-sub)', fontWeight: isSel ? 600 : 400 }}>
-            {node.name}
-            {node.productCount != null && <span className="text-[var(--color-text-muted)]"> ({node.productCount})</span>}
-          </button>
+        <div onClick={() => selectCategory(node)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', paddingLeft: (node.depth - 1) * 16 + 12,
+            cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+            background: isSel ? '#EFF6FF' : 'transparent',
+            color: isSel ? 'var(--color-primary)' : 'var(--color-text-main)',
+            fontWeight: isSel ? 600 : 400, fontSize: '13px',
+          }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+            <button type="button"
+              onClick={e => { e.stopPropagation(); if (hasChild) toggleExpand(node.id) }}
+              style={{ width: '16px', color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: hasChild ? 'pointer' : 'default', fontSize: '10px', padding: 0, flexShrink: 0 }}>
+              {hasChild ? (isOpen ? '▼' : '▶') : ''}
+            </button>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{node.name}</span>
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', flexShrink: 0, marginLeft: '8px' }}>
+            {subtreeCount(node)}개
+          </span>
         </div>
-        {isOpen && hasChild && <div>{node.children.map(c => renderCatNode(c, depth + 1))}</div>}
+        {isOpen && hasChild && <div>{node.children.map(renderCatNode)}</div>}
       </div>
     )
   }
@@ -147,18 +157,26 @@ export default function ProductSearchPage() {
 
       <div className="flex gap-6">
         {/* ── 좌측 카테고리 필터 ── */}
-        <aside className="w-56 shrink-0 self-start rounded-[var(--radius-md)] p-4"
+        <aside className="w-64 shrink-0 self-start rounded-[var(--radius-md)] p-4"
           style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
-          <h2 className="font-bold text-sm mb-3">카테고리 필터</h2>
-          <button onClick={clearCategory}
-            className="text-sm mb-2"
-            style={{ color: !applied.categoryId ? 'var(--color-primary)' : 'var(--color-text-sub)', fontWeight: !applied.categoryId ? 600 : 400 }}>
-            전체 제품
-          </button>
-          <div className="mt-1">{tree.map(n => renderCatNode(n))}</div>
-          {catError
-            ? <div className="text-[var(--color-danger)] text-xs py-4">{catError}</div>
-            : tree.length === 0 && <div className="text-[var(--color-text-muted)] text-xs py-4">카테고리 없음</div>}
+          <h2 className="font-bold text-sm mb-3" style={{ color: 'var(--color-text-main)' }}>카테고리 목록</h2>
+          <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+            {/* 전체 제품 (필터 해제) */}
+            <div onClick={clearCategory}
+              style={{
+                display: 'flex', alignItems: 'center', padding: '8px 12px', paddingLeft: '28px',
+                cursor: 'pointer', borderRadius: 'var(--radius-sm)', fontSize: '13px',
+                background: !applied.categoryId ? '#EFF6FF' : 'transparent',
+                color: !applied.categoryId ? 'var(--color-primary)' : 'var(--color-text-main)',
+                fontWeight: !applied.categoryId ? 600 : 400,
+              }}>
+              전체 제품
+            </div>
+            {tree.map(renderCatNode)}
+            {catError
+              ? <div className="text-[var(--color-danger)] text-xs py-10 text-center">{catError}</div>
+              : tree.length === 0 && <div className="text-[var(--color-text-muted)] text-xs py-10 text-center">카테고리 없음</div>}
+          </div>
         </aside>
 
         {/* ── 우측 결과 ── */}
@@ -228,6 +246,14 @@ export default function ProductSearchPage() {
 // isFavorite(primitive boolean) → JSON "favorite". 둘 다 수용
 function favoriteOf(p) {
   return p?.isFavorite ?? p?.favorite ?? false
+}
+
+// 자기 제품수 + 모든 자손 카테고리 제품수 합산 (관리자 카테고리 목록과 동일)
+function subtreeCount(node) {
+  if (!node) return 0
+  const own = node.productCount ?? 0
+  const children = (node.children ?? []).reduce((sum, c) => sum + subtreeCount(c), 0)
+  return own + children
 }
 function won(v) {
   return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원'
