@@ -148,7 +148,12 @@ export default function DashboardPage() {
         <Card label="발송 완료" value={`${num(summary?.sentQuotes)}건`} accent="blue" />
         <Card label="총 견적 금액" value={won(summary?.totalAmount)} />
         <Card label="총 공급가액" value={won(summary?.totalSupplyAmount)} />
-        <Card label="총 예상 이익금" value={won(summary?.totalProfitAmount)} accent="green" />
+        <Card label="총 예상 이익금" value={won(summary?.totalProfitAmount)} accent="green"
+          info={<>
+            <b>예상 이익금</b> = 공급가액 − 원가 (= 판매가 − 사들인 원가). 각 견적의 이익금을 합산한 값입니다.
+            <br /><br />
+            ※ 견적금액 − 공급가액은 <b>부가세(VAT)</b>이며 이익이 아닙니다. 이익은 원가를 뺀 값입니다.
+          </>} />
         <Card label="평균 할인율 / 이익률" value={`${pct(summary?.averageDiscountRate)} / ${pct(summary?.averageProfitRate)}`}
           info={<>
             <b>평균 할인율</b> = 각 견적의 (할인액 ÷ 공급가 합계 × 100)을 구해 견적끼리 단순 평균낸 값입니다. (공급가 0인 견적 제외, 견적 1건당 동일 비중)
