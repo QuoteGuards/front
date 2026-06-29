@@ -67,7 +67,7 @@ export default function AppRouter() {
             </ProtectedRoute>
           } />
           <Route path="/quotes/new" element={
-            <ProtectedRoute roles={['SALES_STAFF']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
               <QuoteWritePage />
             </ProtectedRoute>
           } />
