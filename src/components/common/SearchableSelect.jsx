@@ -47,7 +47,8 @@ export default function SearchableSelect({
   const onInputKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIndex(i => Math.min(i + 1, filtered.length - 1))
+      // filtered가 비면 length-1이 -1이 되므로 하한을 0으로 고정
+      setActiveIndex(i => Math.max(0, Math.min(i + 1, filtered.length - 1)))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIndex(i => Math.max(i - 1, 0))
