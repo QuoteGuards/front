@@ -4,6 +4,10 @@ import {
   getCategoriesApi, createCategoryApi, updateCategoryApi,
   activateCategoryApi, deactivateCategoryApi, deleteCategoryApi,
 } from '../../api/categoryApi'
+import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
+import Card from '../../components/common/Card'
+import '../../components/common/FormControls.css'
 
 const DEPTH_LABEL = { 1: '대분류', 2: '중분류', 3: '소분류' }
 const CHILD_LABEL = { 1: '중분류', 2: '소분류' }
@@ -141,19 +145,29 @@ export default function CategoryManagePage() {
       <div key={node.id}>
         <div
           onClick={() => selectNode(node)}
-          className={`flex items-center justify-between px-3 py-2 cursor-pointer rounded
-            ${isSel ? 'bg-blue-50 text-blue-700 font-semibold' : 'hover:bg-gray-50'}`}
-          style={{ paddingLeft: (node.depth - 1) * 16 + 12 }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 12px', paddingLeft: (node.depth - 1) * 16 + 12,
+            cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+            background: isSel ? '#EFF6FF' : 'transparent',
+            color: isSel ? 'var(--color-primary)' : 'var(--color-text-main)',
+            fontWeight: isSel ? 600 : 400, fontSize: '13px',
+          }}
         >
-          <span className="flex items-center gap-1">
-            <button onClick={(e) => { e.stopPropagation(); toggle(node.id) }} className="w-4 text-gray-400">
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); toggle(node.id) }}
+              style={{ width: '16px', color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px' }}
+            >
               {(node.children?.length || canHaveChild) ? (isOpen ? '▼' : '▶') : ''}
             </button>
             <span>{node.name}</span>
-            {isSel && <span className="text-xs">[선택됨]</span>}
           </span>
           <span className="text-xs text-gray-400">
             ({subtreeCount(node)} 제품)
+          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+            {node.depth === 3 ? `(${node.productCount}개)` : ''}
           </span>
         </div>
 
@@ -161,9 +175,12 @@ export default function CategoryManagePage() {
           <div>
             {node.children?.map(renderNode)}
             {canHaveChild && (
-              <div style={{ paddingLeft: node.depth * 16 + 12 }} className="my-1">
-                <button onClick={() => startCreate(node.id, node.depth + 1)}
-                  className="text-xs text-gray-400 border border-dashed rounded px-2 py-1">
+              <div style={{ paddingLeft: node.depth * 16 + 12, margin: '4px 0' }}>
+                <button
+                  type="button"
+                  onClick={() => startCreate(node.id, node.depth + 1)}
+                  style={{ fontSize: '11px', color: 'var(--color-text-muted)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', background: 'transparent', cursor: 'pointer' }}
+                >
                   + {CHILD_LABEL[node.depth]} 추가
                 </button>
               </div>
@@ -196,26 +213,48 @@ export default function CategoryManagePage() {
             : <div className="text-gray-400 text-sm py-6 text-center">카테고리 없음</div>
         )}
       </div>
+    <div>
+      <PageHeader
+        breadcrumbs={['제품', '카테고리 관리']}
+        title="카테고리 관리"
+        actions={
+          <Button variant="primary" onClick={() => startCreate(null, 1)}>+ 대분류 추가</Button>
+        }
+      />
 
-      {/* ── 우측: 상세 정보 ── */}
-      <div className="flex-1 border rounded-lg p-6">
-        {mode === 'empty' ? (
-          <div className="text-gray-400 text-center py-20">카테고리를 선택하거나 추가하세요</div>
-        ) : (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-bold text-lg">카테고리 {mode === 'create' ? '추가' : '상세 정보'}</h2>
-              {mode === 'edit' && (
-                <div className="flex gap-2">
-                  <button onClick={onToggleActive}
-                    className="border border-amber-400 text-amber-600 text-sm px-3 py-1.5 rounded">
-                    {isActiveOf(selected) ? '비활성화' : '활성화'}
-                  </button>
-                  <button onClick={onDelete}
-                    className="bg-red-400 text-white text-sm px-3 py-1.5 rounded">삭제</button>
+      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        {/* 좌측: 카테고리 목록 */}
+        <Card style={{ width: '360px', flexShrink: 0, padding: '16px' }}>
+          <h2 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: 'var(--color-text-main)' }}>카테고리 목록</h2>
+          {tree.map(renderNode)}
+          {tree.length === 0 && <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>카테고리 없음</div>}
+        </Card>
+
+        {/* 우측: 상세 정보 */}
+        <Card style={{ flex: 1 }}>
+          {mode === 'empty' ? (
+            <div style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: '60px 0', fontSize: '14px' }}>
+              카테고리를 선택하거나 추가하세요
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-main)' }}>
+                  카테고리 {mode === 'create' ? '추가' : '상세 정보'}
+                </h2>
+                {mode === 'edit' && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button variant="ghost" size="sm" onClick={onToggleActive}>{isActiveOf(selected) ? '비활성화' : '활성화'}</Button>
+                    <Button variant="danger" size="sm" onClick={onDelete}>삭제</Button>
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div role="alert" style={{ marginBottom: '16px', fontSize: '13px', color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                  {error}
                 </div>
               )}
-            </div>
 
             {error && <div className="mb-3 text-red-500 text-sm">{error}</div>}
 
@@ -252,6 +291,38 @@ export default function CategoryManagePage() {
                     <span className="text-sm text-gray-600">{isActiveOf(selected) ? '사용 중' : '미사용'}</span>
                   </div>
                 </Row>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '560px' }}>
+                <Row label="상위 카테고리">
+                  <div style={{ background: '#F9FAFB', color: 'var(--color-text-sub)', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
+                    <span>{detailParentPath}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>읽기 전용</span>
+                  </div>
+                </Row>
+                <Row label="카테고리 유형">
+                  <span style={{ display: 'inline-block', background: '#EFF6FF', color: 'var(--color-primary)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 600 }}>
+                    {DEPTH_LABEL[detailDepth]}
+                  </span>
+                </Row>
+                <Row label="카테고리명 *">
+                  <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="예: 세탁기" />
+                </Row>
+                <Row label="카테고리 코드 *">
+                  <input className="form-input" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="영소문자·숫자·하이픈 (예: elec-home-wm)" />
+                </Row>
+                <Row label="정렬 순서">
+                  <input type="number" className="form-input" style={{ width: '120px' }} value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
+                </Row>
+                {mode === 'edit' && (
+                  <Row label="사용 여부">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <button type="button" onClick={onToggleActive}
+                        style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '12px', background: isActiveOf(selected) ? 'var(--color-primary)' : '#D1D5DB', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}>
+                        <span style={{ position: 'absolute', top: '2px', left: isActiveOf(selected) ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+
+                      </button>
+                      <span style={{ fontSize: '13px', color: 'var(--color-text-sub)' }}>{isActiveOf(selected) ? '사용 중' : '미사용'}</span>
+                    </div>
+                  </Row>
               )}
             </div>
 
@@ -260,30 +331,35 @@ export default function CategoryManagePage() {
                 <span className="text-gray-600">연결된 제품 수 <b className="ml-1">{subtreeCount(selected)}개</b><span className="text-gray-400 ml-1">(하위 포함)</span></span>
                 <button onClick={() => navigate(`/products?categoryId=${selected.id}`)}
                   className="text-blue-600 hover:underline">제품 목록 보기 →</button>
+            <Row label=''>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button variant='outline' size='md' onClick={() => { setMode('empty'); setSelected(null); setError(null) }}>취소</Button>
+                <Button variant='primary' size='md' onClick={onSave}>저장</Button>
               </div>
-            )}
-
-            {mode === 'edit' && (
-              <div className="mt-4 bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-700 max-w-2xl">
-                <div className="font-semibold mb-1">⚠️ 삭제 제한 안내</div>
-                연결된 제품이 있거나 하위 카테고리가 있는 경우 삭제할 수 없습니다. 비활성화를 사용하세요.
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-6 max-w-2xl">
-              <button onClick={() => { setMode('empty'); setSelected(null) }} className="border px-4 py-2 rounded">취소</button>
-              <button onClick={onSave} className="bg-blue-600 text-white px-4 py-2 rounded">저장</button>
-            </div>
+            </Row>
           </>
         )}
+      </Card>
+    </div>
+  </div>
+)
+}
+
+function Row({ label, children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+      <label style={{ minWidth: '120px', paddingTop: '10px', fontSize: '13px', color: 'var(--color-text-sub)', fontWeight: 500 }}>
+        {label}
+      </label>
+      <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        {children}
       </div>
     </div>
   )
 }
 
-// 백엔드가 boolean isActive를 JSON 키 "active"로 직렬화하므로 둘 다 수용
-function isActiveOf(n) {
-  return n?.isActive ?? n?.active ?? false
+function isActiveOf(node) {
+  return node?.active === true || node?.status === 'ACTIVE'
 }
 
 // 해당 노드 + 모든 하위(자손) 제품 수 합산 (대/중분류는 직접 제품이 0이라 하위 합산이 의미 있음)
@@ -297,17 +373,8 @@ function subtreeCount(node) {
 function findInTree(nodes, id) {
   for (const n of nodes ?? []) {
     if (n.id === id) return n
-    const f = findInTree(n.children, id)
-    if (f) return f
+    const found = findInTree(n.children, id)
+    if (found) return found
   }
   return null
-}
-
-function Row({ label, children }) {
-  return (
-    <div className="flex items-center gap-4">
-      <div className="w-32 text-sm text-gray-600 shrink-0">{label}</div>
-      <div className="flex-1">{children}</div>
-    </div>
-  )
 }

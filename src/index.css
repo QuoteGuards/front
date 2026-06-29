@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+:root {
+  --color-primary: #005BFF;
+  --color-primary-dark: #003C9E;
+
+  --color-navy: #1A233D;
+  --color-navy-active: #222D4D;
+
+  --color-bg-main: #F5F7FA;
+  --color-bg-white: #FFFFFF;
+
+  --color-border: #E5E8EF;
+  --color-text-main: #111827;
+  --color-text-sub: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-success: #22C55E;
+  --color-info: #3B82F6;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  --gnb-height: 70px;
+  --lnb-width: 200px;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -26,7 +57,6 @@
     margin: 15mm 20mm;
   }
 
-  /* 모든 요소 숨기고 .print-area만 표시 */
   body * {
     visibility: hidden !important;
   }
@@ -35,7 +65,6 @@
     visibility: visible !important;
   }
 
-  /* .print-area를 페이지 최상단에 전체 너비로 배치 */
   .print-area {
     position: absolute !important;
     inset: 0 !important;

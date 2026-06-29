@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getApprovalDetail, approveQuote, rejectQuote } from '../../api/approvalApi'
+import PageHeader from '../../components/common/PageHeader'
 
 const REASON_LABEL = {
   DISCOUNT_EXCEEDED: '할인율 초과',
@@ -58,6 +59,7 @@ export default function AdminApprovalDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { loadDetail() }, [approvalRequestId])
 
   const loadDetail = async () => {
@@ -116,6 +118,7 @@ export default function AdminApprovalDetailPage() {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
+      <PageHeader breadcrumbs={['승인 관리', '승인 상세']} />
       {/* 헤더 */}
       <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white flex items-center gap-4">
         <button

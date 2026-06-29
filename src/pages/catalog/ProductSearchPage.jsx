@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { searchProductsApi, addFavoriteApi, removeFavoriteApi } from '../../api/catalogApi'
 import { getActiveCategoryTreeApi } from '../../api/categoryApi'
+import PageHeader from '../../components/common/PageHeader'
 
 export default function ProductSearchPage() {
   const navigate = useNavigate()
@@ -105,6 +106,7 @@ export default function ProductSearchPage() {
 
   return (
     <div className="p-6">
+      <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" />
       {/* ── 상단 검색 바 ── */}
       <div className="flex gap-2 mb-3">
         <input

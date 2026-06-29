@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import PageHeader from '../../components/common/PageHeader'
 import {
   reRequestApproval,
   updateApprovalMemo,
@@ -70,6 +71,7 @@ function RequestTab() {
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState('')
 
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { load() }, [])
 
   const load = async () => {
@@ -339,6 +341,7 @@ function RejectReRequestTab() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { load() }, [])
 
   const load = async () => {
@@ -617,6 +620,7 @@ function HistoryTab() {
   const [histories, setHistories] = useState([])
   const [histLoading, setHistLoading] = useState(false)
 
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { load() }, [])
 
   const load = async () => {
@@ -802,6 +806,7 @@ export default function StaffApprovalPage() {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
+      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} />
       <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
         <h1 className="text-xl font-bold text-gray-800">승인 요청 관리</h1>
         <p className="text-sm text-gray-400 mt-1">

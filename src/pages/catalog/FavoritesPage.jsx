@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getFavoriteProductsApi, removeFavoriteApi } from '../../api/catalogApi'
 import { getCategoriesApi } from '../../api/categoryApi'
+import PageHeader from '../../components/common/PageHeader'
 
 const SORTS = [
   { key: 'recent', label: '최근 추가순' },
@@ -112,6 +113,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="p-6">
+    <PageHeader breadcrumbs={['제품', '즐겨찾기']} />
       {/* ── 헤더 ── */}
       <div className="border rounded-lg p-4 mb-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
