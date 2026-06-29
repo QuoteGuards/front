@@ -22,6 +22,11 @@ export default function SearchableSelect({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
+  // disabled 전환 시 열린 메뉴 강제 닫기 + 검색어 초기화
+  useEffect(() => {
+    if (disabled) { setOpen(false); setQuery('') }
+  }, [disabled])
+
   const selected = options.find(o => String(o.value) === String(value ?? ''))
   const q = query.trim().toLowerCase()
   const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
@@ -36,7 +41,7 @@ export default function SearchableSelect({
     if (el) el.scrollIntoView({ block: 'nearest' })
   }, [activeIndex, open])
 
-  const pick = (v) => { onChange(v); setOpen(false); setQuery('') }
+  const pick = (v) => { if (disabled) return; onChange(v); setOpen(false); setQuery('') }
 
   const onInputKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -72,7 +77,7 @@ export default function SearchableSelect({
         {selected ? selected.label : placeholder}
       </button>
 
-      {open && (
+      {open && !disabled && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50,
           background: 'var(--color-bg-white)', border: '1px solid var(--color-border)',
