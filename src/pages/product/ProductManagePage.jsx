@@ -852,8 +852,9 @@ export default function ProductManagePage() {
                         <input
                             className="form-input"
                             value={form.imageUrl}
-                            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                            placeholder="파일 업로드 또는 https:// URL 직접 입력"
+                            readOnly
+                            placeholder="파일을 선택하면 저장된 이미지 주소가 표시됩니다"
+                            style={{ background: 'var(--color-bg-main)', color: 'var(--color-text-sub)' }}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <button type="button" className="btn btn--outline btn--sm" disabled={uploading}
