@@ -125,13 +125,17 @@ export default function DashboardPage() {
 
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
 
-  // 차트용 월별 데이터 ("2026-06" → "6월", 마지막 달 강조 플래그)
-  const trendChart = useMemo(() => trend.map((t, i) => ({
-    month: monthLabel(t.month),
-    quoteCount: Number(t.quoteCount) || 0,
-    totalAmount: Number(t.totalAmount) || 0,
-    isLast: i === trend.length - 1,
-  })), [trend])
+  // 차트용 월별 데이터 ("2026-06" → "6월", 이번 달 강조 플래그)
+  const trendChart = useMemo(() => {
+    const now = new Date()
+    const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    return trend.map((t) => ({
+      month: monthLabel(t.month),
+      quoteCount: Number(t.quoteCount) || 0,
+      totalAmount: Number(t.totalAmount) || 0,
+      isCurrent: t.month === curKey, // 배열 순서가 아닌 실제 이번 달(YYYY-MM)과 비교
+    }))
+  }, [trend])
 
   // 금액 축 단위 자동 결정 (최대값 기준: 억원 / 만원 / 원)
   const amountUnit = useMemo(() => {
@@ -264,7 +268,7 @@ export default function DashboardPage() {
                 <RBar dataKey="quoteCount" radius={[4, 4, 0, 0]} maxBarSize={48}>
                   <LabelList dataKey="quoteCount" position="top" style={{ fontSize: 11, fill: CHART.axis }} />
                   {trendChart.map((d, i) => (
-                    <Cell key={i} fill={d.isLast ? CHART.barLast : CHART.bar} />
+                    <Cell key={i} fill={d.isCurrent ? CHART.barLast : CHART.bar} />
                   ))}
                 </RBar>
               </BarChart>
