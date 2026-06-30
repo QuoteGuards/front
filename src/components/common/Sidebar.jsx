@@ -83,14 +83,19 @@ const Sidebar = ({ collapsed }) => {
   const isManager = user?.role === 'SALES_MANAGER'
   const isStaff = user?.role === 'SALES_STAFF'
 
+  const quoteListLabel = isAdmin
+    ? '전체 견적 목록'
+    : isManager
+      ? '견적 목록'
+      : '내 견적 목록'
 
   const NAV_GROUPS = [
-    // ── 견적 (영업사원·영업관리자만) ─────────────
-    ...(isStaff || isManager ? [{
+    // ── 견적 ─────────────────────────────────
+    ...(isStaff || isManager || isAdmin ? [{
       group: '견적',
       items: [
         ...((isStaff || isManager) ? [{ label: '견적 작성', path: '/quotes/new', icon: <PlusIcon />, locked: !loading && !canWriteQuote }] : []),
-        { label: '견적 목록', path: '/quotes', icon: <ListIcon />, end: true },
+        { label: quoteListLabel, path: '/quotes', icon: <ListIcon />, end: true },
         { label: '발송 이력', path: '/history', icon: <SendIcon /> },
       ],
     }] : []),

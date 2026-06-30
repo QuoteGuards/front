@@ -7,6 +7,7 @@ import QuoteActionBar from '../../components/quote/QuoteActionBar'
 import EmailModal from '../../components/quote/EmailModal'
 import Toast from '../../components/common/Toast'
 import PageHeader from '../../components/common/PageHeader'
+import { canSendQuoteEmail, quoteSendBlockedMessage } from '../../utils/quoteUtils'
 
 const QuotePreviewPage = () => {
   const { id } = useParams()
@@ -67,6 +68,8 @@ const QuotePreviewPage = () => {
         onExcelDownload={() => navigate(`/quotes/${id}/excel`)}
         onEmailOpen={() => setEmailOpen(true)}
         pdfLoading={pdfLoading}
+        canSendEmail={canSendQuoteEmail(quote)}
+        sendBlockedMessage={quoteSendBlockedMessage(quote)}
       />
 
       <div className="px-8 pb-10">
