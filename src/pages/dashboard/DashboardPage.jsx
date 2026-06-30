@@ -8,6 +8,18 @@ import PageHeader from '../../components/common/PageHeader'
 import SegmentedControl from '../../components/common/SegmentedControl'
 import Pagination from '../../components/common/Pagination'
 import Button from '../../components/common/Button'
+import {
+  ResponsiveContainer, BarChart, Bar as RBar, AreaChart, Area, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
+} from 'recharts'
+
+// 차트 색상 팔레트
+const CHART = {
+  bar: '#60A5FA', barLast: '#1D4ED8',
+  line: '#7C3AED', area: '#7C3AED',
+  approved: '#22C55E', rejected: '#EF4444', pending: '#F59E0B',
+  grid: '#EEF0F4', axis: '#9CA3AF',
+}
 
 const STAFF_PAGE_SIZE = 8
 
@@ -111,8 +123,34 @@ export default function DashboardPage() {
     getPopularByViewsApi(10).then(setPopularViews).catch(() => {})
   }, [])
 
-  const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
+
+  // 차트용 월별 데이터 ("2026-06" → "6월", 마지막 달 강조 플래그)
+  const trendChart = useMemo(() => trend.map((t, i) => ({
+    month: monthLabel(t.month),
+    quoteCount: Number(t.quoteCount) || 0,
+    totalAmount: Number(t.totalAmount) || 0,
+    isLast: i === trend.length - 1,
+  })), [trend])
+
+  // 금액 축 단위 자동 결정 (최대값 기준: 억원 / 만원 / 원)
+  const amountUnit = useMemo(() => {
+    const max = Math.max(0, ...trendChart.map(t => t.totalAmount))
+    if (max >= 1e8) return { div: 1e8, label: '억원', digits: 1 }
+    if (max >= 1e4) return { div: 1e4, label: '만원', digits: 0 }
+    return { div: 1, label: '원', digits: 0 }
+  }, [trendChart])
+
+  // 승인/반려/대기 도넛 (승인·반려는 summary, 대기는 상태별 건수의 승인대기)
+  const donutData = useMemo(() => {
+    const pending = statusCounts.find(s => s.status === 'APPROVAL_PENDING')?.count ?? 0
+    return [
+      { name: '승인', value: Number(summary?.approvedQuotes) || 0, color: CHART.approved },
+      { name: '반려', value: Number(summary?.rejectedQuotes) || 0, color: CHART.rejected },
+      { name: '대기', value: Number(pending) || 0, color: CHART.pending },
+    ]
+  }, [summary, statusCounts])
+  const donutTotal = useMemo(() => donutData.reduce((a, b) => a + b.value, 0), [donutData])
 
   const handlePeriodChange = (key) => {
     setPeriod(key)
@@ -128,11 +166,7 @@ export default function DashboardPage() {
   // 영업사원별: 이름/사번 검색 + 페이징 (클라이언트 처리)
   const staffFiltered = useMemo(() => {
     const q = staffSearch.trim().toLowerCase()
-    return q ? staff.filter(s =>
-      s.userName?.toLowerCase().includes(q) ||
-      String(s.employeeNumber ?? '').includes(q) ||
-      String(s.userId ?? '').includes(q)
-    ) : staff
+    return q ? staff.filter(s => s.userName?.toLowerCase().includes(q)) : staff
   }, [staff, staffSearch])
   const staffTotalPages = Math.ceil(staffFiltered.length / STAFF_PAGE_SIZE)
   const staffSafePage = Math.min(staffPage, Math.max(0, staffTotalPages - 1))
@@ -218,19 +252,85 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ── 월별 추이 ── */}
-        <Panel title="월별 견적 추이">
-          {trend.length === 0 ? <Empty /> : (
-            <div className="space-y-2">
-              {trend.map(t => (
-                <div key={t.month} className="text-xs">
-                  <div className="flex justify-between mb-0.5">
-                    <span className="text-[var(--color-text-sub)]">{t.month}</span>
-                    <span className="text-[var(--color-text-main)]"><b>{num(t.quoteCount)}건</b> · {won(t.totalAmount)}</span>
-                  </div>
-                  <Bar ratio={(Number(t.totalAmount) || 0) / maxTrend} />
+        {/* ── 월별 견적 수 (세로 막대) ── */}
+        <Panel title="월별 견적 수">
+          {trendChart.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={trendChart} margin={{ top: 16, right: 8, left: -16, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={CHART.grid} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} allowDecimals={false} />
+                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} formatter={(v) => [`${num(v)}건`, '견적 수']} />
+                <RBar dataKey="quoteCount" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                  <LabelList dataKey="quoteCount" position="top" style={{ fontSize: 11, fill: CHART.axis }} />
+                  {trendChart.map((d, i) => (
+                    <Cell key={i} fill={d.isLast ? CHART.barLast : CHART.bar} />
+                  ))}
+                </RBar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* ── 월별 견적 총액 및 추이 (꺾은선 + 영역) ── */}
+        <Panel title="월별 견적 총액 및 추이"
+          action={<span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>단위: {amountUnit.label}</span>}>
+          {trendChart.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={trendChart} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="amountFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART.area} stopOpacity={0.22} />
+                    <stop offset="100%" stopColor={CHART.area} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} stroke={CHART.grid} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }}
+                  tickFormatter={(v) => amountTick(v, amountUnit)} width={48} />
+                <Tooltip formatter={(v) => [won(v), '견적 총액']} />
+                <Area type="monotone" dataKey="totalAmount" stroke={CHART.line} strokeWidth={2.5}
+                  fill="url(#amountFill)" dot={{ r: 3, fill: CHART.line }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+
+        {/* ── 승인 / 반려 비율 (도넛) ── */}
+        <Panel title="승인 / 반려 비율">
+          {donutTotal === 0 ? <Empty /> : (
+            <div className="flex items-center gap-4">
+              <div style={{ position: 'relative', width: 180, height: 180 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={donutData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                      innerRadius={56} outerRadius={80} paddingAngle={2} startAngle={90} endAngle={-270}>
+                      {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <Tooltip formatter={(v, n) => [`${num(v)}건`, n]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <span className="text-[20px] font-bold text-[var(--color-text-main)]">{num(donutTotal)}건</span>
+                  <span className="text-[11px] text-[var(--color-text-muted)]">합계</span>
                 </div>
-              ))}
+              </div>
+              <div className="flex-1 space-y-2">
+                {donutData.map(d => (
+                  <div key={d.name} className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />
+                      <span className="text-[var(--color-text-sub)]">{d.name}</span>
+                    </span>
+                    <span className="text-[var(--color-text-main)]">
+                      <b>{num(d.value)}건</b>
+                      <span className="text-[var(--color-text-muted)] ml-1">
+                        ({donutTotal ? Math.round((d.value / donutTotal) * 100) : 0}%)
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </Panel>
@@ -304,7 +404,7 @@ export default function DashboardPage() {
         <Panel title="영업사원별 통계"
           action={staff.length > 0 && (
             <input className="form-input" style={{ width: '170px', height: '32px', fontSize: '13px' }}
-              aria-label="영업사원 검색" placeholder="이름 또는 사번 검색" value={staffSearch}
+              aria-label="영업사원 이름 검색" placeholder="이름 검색" value={staffSearch}
               onChange={e => { setStaffSearch(e.target.value); setStaffPage(0) }} />
           )}>
           {staff.length === 0 ? <Empty /> : staffFiltered.length === 0 ? (
@@ -372,6 +472,18 @@ export default function DashboardPage() {
 function num(v) { return v == null ? '0' : Number(v).toLocaleString('ko-KR') }
 function won(v) { return v == null || v === '' ? '-' : Number(v).toLocaleString('ko-KR') + '원' }
 function pct(v) { return v == null || v === '' ? '0%' : `${Number(v)}%` }
+
+// "2026-06" → "6월" (포맷 어긋나면 원본 반환)
+function monthLabel(m) {
+  const mm = String(m ?? '').split('-')[1]
+  return mm ? `${Number(mm)}월` : String(m ?? '')
+}
+
+// 금액 축 라벨: 선택된 단위(억/만/원)로 나눠 표시 (예: unit=억원 → 427000000 → "4.3")
+function amountTick(v, unit) {
+  const n = (Number(v) || 0) / unit.div
+  return n.toLocaleString('ko-KR', { maximumFractionDigits: unit.digits })
+}
 
 const ACCENT_COLOR = {
   green: 'var(--color-success)',
