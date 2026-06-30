@@ -819,9 +819,7 @@ function HistoryTab() {
       const res = await getMyAllQuotes()
       const all = res.data?.data ?? []
       setQuotes(
-        all.filter((q) =>
-          ['APPROVAL_PENDING', 'REVISING', 'APPROVED', 'SENT'].includes(q.status)
-        )
+        all.filter((q) => ['APPROVED', 'SENT'].includes(q.status))
       )
     } catch {
       //
