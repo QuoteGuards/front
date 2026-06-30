@@ -4,7 +4,7 @@ import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
 import CustomerSection from '../../components/quote/CustomerSection'
 import TrainingGuideModal from '../../components/training/TrainingGuideModal'
-import { getQuoteWritingGuide, confirmQuoteWritingGuide } from '../../api/guideApi'
+import { getQuoteWritingGuide } from '../../api/guideApi'
 import { createQuote, updateQuote, completeQuote, getQuoteById, getInternalAnalysis, getQuoteProductContextApi } from '../../api/quoteApi'
 import { summarizeConsultation } from '../../api/aiApi'
 import {
@@ -33,14 +33,14 @@ const QuoteWritePage = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const [searchParams, setSearchParams] = useSearchParams()
-    const { loading, canWriteQuote, trainingStatus } = useTrainingStatus()
+    const { loading, canWriteQuote, trainingStatus, confirmGuide } = useTrainingStatus()
     const catalogAddHandled = useRef(false)
 
     const [restoring, setRestoring] = useState(() => !!searchParams.get('id') && !location.state?.addProduct)
 
     const [guideOpen, setGuideOpen] = useState(false)
-    const [guideData, setGuideData] = useState(null)
     const [loadingGuide, setLoadingGuide] = useState(false)
+    const [guideConfirming, setGuideConfirming] = useState(false)
 
     const [customer, setCustomer] = useState(initialCustomer)
     const [memo, setMemo] = useState('')
@@ -189,13 +189,24 @@ const QuoteWritePage = () => {
     const openGuide = async () => {
         setLoadingGuide(true)
         try {
-            const data = await getQuoteWritingGuide()
-            setGuideData(data)
+            await getQuoteWritingGuide()
             setGuideOpen(true)
         } catch {
             alert('가이드 로드 실패')
         } finally {
             setLoadingGuide(false)
+        }
+    }
+
+    const handleConfirmGuide = async () => {
+        setGuideConfirming(true)
+        try {
+            await confirmGuide()
+            setGuideOpen(false)
+        } catch {
+            alert('가이드 확인 처리에 실패했습니다.')
+        } finally {
+            setGuideConfirming(false)
         }
     }
 
@@ -337,7 +348,7 @@ const QuoteWritePage = () => {
     const isLocked = !!savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)
 
     return (
-        <div className="quote-page-page">
+        <div className="quote-page">
             <PageHeader
                 breadcrumbs={['견적 관리', '견적 작성']}
                 title="견적 작성"
@@ -348,7 +359,7 @@ const QuoteWritePage = () => {
                 onClick={openGuide}
                 disabled={loadingGuide}
                 aria-label="견적 작성 가이드 확인"
-                className="quote-page-page__fab"
+                className="quote-page__fab"
             >
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -356,7 +367,7 @@ const QuoteWritePage = () => {
                 {loadingGuide ? '로딩 중...' : '견적 작성 가이드'}
             </button>
 
-            <div className="quote-page-page__stack">
+            <div className="quote-page__stack">
                 {savedQuote && (
                     <div className="quote-page-alert quote-page-alert--success">
                         ✓ 저장되었습니다. (견적번호: {savedQuote.quoteNumber}, 상태: {savedQuote.status})
@@ -652,12 +663,10 @@ const QuoteWritePage = () => {
 
             {guideOpen && (
                 <TrainingGuideModal
-                    guideContent={guideData?.guideContent ?? '내용 없음'}
+                    alreadyConfirmed={!!trainingStatus?.guideConfirmed}
+                    confirming={guideConfirming}
                     onClose={() => setGuideOpen(false)}
-                    onConfirm={async () => {
-                        await confirmQuoteWritingGuide()
-                        setGuideOpen(false)
-                    }}
+                    onConfirm={handleConfirmGuide}
                 />
             )}
         </div>

@@ -13,34 +13,34 @@ export default function AdminTrainingManagePage() {
   const [uploadError, setUploadError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const fileInputRef = useRef(null)
+  const requestIdRef = useRef(0)
 
-  const loadContent = useCallback(() => {
-    setLoading(true)
-    setError('')
+  const fetchContent = useCallback((requestId) => {
     return getAdminQuoteWritingTrainingApi()
-      .then(setContent)
-      .catch((err) => setError(err.response?.data?.message ?? '교육 콘텐츠를 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    let ignore = false
-
-    getAdminQuoteWritingTrainingApi()
       .then((data) => {
-        if (!ignore) setContent(data)
+        if (requestIdRef.current === requestId) setContent(data)
       })
       .catch((err) => {
-        if (!ignore) setError(err.response?.data?.message ?? '교육 콘텐츠를 불러오지 못했습니다.')
+        if (requestIdRef.current === requestId) {
+          setError(err.response?.data?.message ?? '교육 콘텐츠를 불러오지 못했습니다.')
+        }
       })
       .finally(() => {
-        if (!ignore) setLoading(false)
+        if (requestIdRef.current === requestId) setLoading(false)
       })
-
-    return () => {
-      ignore = true
-    }
   }, [])
+
+  const loadContent = useCallback(() => {
+    const requestId = ++requestIdRef.current
+    setLoading(true)
+    setError('')
+    return fetchContent(requestId)
+  }, [fetchContent])
+
+  useEffect(() => {
+    const requestId = ++requestIdRef.current
+    fetchContent(requestId)
+  }, [fetchContent])
 
   const onPickVideo = async (e) => {
     const file = e.target.files?.[0]

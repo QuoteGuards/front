@@ -7,7 +7,7 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-            onClick={(e) => e.target === e.currentTarget && onClose?.()}
+            onClick={(e) => e.target === e.currentTarget && !confirming && onClose?.()}
         >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[700px] flex flex-col overflow-hidden">
                 {/* 헤더 */}
@@ -19,8 +19,9 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                     <button
                         type="button"
                         onClick={onClose}
+                        disabled={confirming}
                         aria-label="닫기"
-                        className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+                        className="text-gray-400 hover:text-gray-600 text-3xl leading-none disabled:opacity-50"
                     >
                         &times;
                     </button>

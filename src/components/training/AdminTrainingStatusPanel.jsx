@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DataTable from '../common/DataTable'
 import SearchPanel, { SearchRow } from '../common/SearchPanel'
 import SegmentedControl from '../common/SegmentedControl'
@@ -71,34 +71,34 @@ export default function AdminTrainingStatusPanel() {
   const [appliedKeyword, setAppliedKeyword] = useState('')
   const [onlyIncomplete, setOnlyIncomplete] = useState(false)
   const [selectedRow, setSelectedRow] = useState(null)
+  const requestIdRef = useRef(0)
 
-  const loadRows = useCallback(() => {
-    setLoading(true)
-    setError('')
+  const fetchRows = useCallback((requestId) => {
     return getAdminTrainingStatusListApi()
-      .then((data) => setRows(Array.isArray(data) ? data : []))
-      .catch((err) => setError(err.response?.data?.message ?? '교육 이수 현황을 불러오지 못했습니다.'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    let ignore = false
-
-    getAdminTrainingStatusListApi()
       .then((data) => {
-        if (!ignore) setRows(Array.isArray(data) ? data : [])
+        if (requestIdRef.current === requestId) setRows(Array.isArray(data) ? data : [])
       })
       .catch((err) => {
-        if (!ignore) setError(err.response?.data?.message ?? '교육 이수 현황을 불러오지 못했습니다.')
+        if (requestIdRef.current === requestId) {
+          setError(err.response?.data?.message ?? '교육 이수 현황을 불러오지 못했습니다.')
+        }
       })
       .finally(() => {
-        if (!ignore) setLoading(false)
+        if (requestIdRef.current === requestId) setLoading(false)
       })
-
-    return () => {
-      ignore = true
-    }
   }, [])
+
+  const loadRows = useCallback(() => {
+    const requestId = ++requestIdRef.current
+    setLoading(true)
+    setError('')
+    return fetchRows(requestId)
+  }, [fetchRows])
+
+  useEffect(() => {
+    const requestId = ++requestIdRef.current
+    fetchRows(requestId)
+  }, [fetchRows])
 
   const departmentOptions = useMemo(() => {
     const set = new Set(rows.map((row) => row.department).filter(Boolean))
