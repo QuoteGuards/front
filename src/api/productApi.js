@@ -20,8 +20,10 @@ export async function getProductApi(id) {
 export async function uploadProductImageApi(file) {
   const fd = new FormData()
   fd.append('file', file)
+  // Content-Type 을 undefined 로 둬서 apiClient 기본값(application/json)을 제거 →
+  // axios 가 FormData 를 감지해 boundary 포함 multipart 헤더를 자동 설정
   const res = await apiClient.post('/api/admin/products/image', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { 'Content-Type': undefined },
   })
   return res.data.data.url
 }
