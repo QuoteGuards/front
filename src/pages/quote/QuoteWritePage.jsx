@@ -23,7 +23,7 @@ import {
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import { todayLocal } from '../../utils/quoteUtils'
-import './QuoteWritePage.css'
+import './QuotePage.css'
 
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
 
@@ -330,14 +330,14 @@ const QuoteWritePage = () => {
         }
     }
 
-    if (loading && !trainingStatus) return <div className="quote-write-loading">로딩 중...</div>
+    if (loading && !trainingStatus) return <div className="quote-page-loading">로딩 중...</div>
     if (!canWriteQuote) return <QuoteAccessRestricted reason="TRAINING_NOT_COMPLETED" />
-    if (restoring) return <div className="quote-write-loading">이전 견적을 불러오는 중...</div>
+    if (restoring) return <div className="quote-page-loading">이전 견적을 불러오는 중...</div>
 
     const isLocked = !!savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)
 
     return (
-        <div className="quote-write-page">
+        <div className="quote-page-page">
             <PageHeader
                 breadcrumbs={['견적 관리', '견적 작성']}
                 title="견적 작성"
@@ -348,7 +348,7 @@ const QuoteWritePage = () => {
                 onClick={openGuide}
                 disabled={loadingGuide}
                 aria-label="견적 작성 가이드 확인"
-                className="quote-write-page__fab"
+                className="quote-page-page__fab"
             >
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -356,28 +356,28 @@ const QuoteWritePage = () => {
                 {loadingGuide ? '로딩 중...' : '견적 작성 가이드'}
             </button>
 
-            <div className="quote-write-page__stack">
+            <div className="quote-page-page__stack">
                 {savedQuote && (
-                    <div className="quote-write-alert quote-write-alert--success">
+                    <div className="quote-page-alert quote-page-alert--success">
                         ✓ 저장되었습니다. (견적번호: {savedQuote.quoteNumber}, 상태: {savedQuote.status})
                     </div>
                 )}
                 {isLocked && (
-                    <div className="quote-write-alert quote-write-alert--locked">
+                    <div className="quote-page-alert quote-page-alert--locked">
                         🔒 이 견적은 이미 작성 완료되어(상태: {savedQuote.status}) 더 이상 직접 수정할 수 없습니다. 관리자가 반려하면 다시 수정 가능해집니다.
                     </div>
                 )}
                 {saveError && (
-                    <div className="quote-write-alert quote-write-alert--error">
+                    <div className="quote-page-alert quote-page-alert--error">
                         {saveError}
                     </div>
                 )}
 
                 <CustomerSection customer={customer} onSelect={setCustomer} onFieldChange={(f, v) => setCustomer((p) => ({ ...p, [f]: v }))} />
 
-                <div className="quote-write-card">
-                    <div className="quote-write-card__header">
-                        <h2 className="quote-write-card__title">제품 선택</h2>
+                <div className="quote-page-card">
+                    <div className="quote-page-card__header">
+                        <h2 className="quote-page-card__title">제품 선택</h2>
                         <Button
                             type="button"
                             variant="primary"
@@ -388,18 +388,18 @@ const QuoteWritePage = () => {
                             {addingProduct ? '제품 추가 중...' : '+ 제품 추가'}
                         </Button>
                     </div>
-                    <p className="quote-write-card__hint">
+                    <p className="quote-page-card__hint">
                         ※ 「+ 제품 추가」로 제품 탐색 화면에서 제품을 선택하면 수량·단가·할인율이 자동 채워집니다. 할인율은 정책 한도 내에서 자유롭게 조정할 수 있습니다.
                     </p>
-                    <div className="quote-write-table-wrap">
-                    <table className="quote-write-table data-table">
+                    <div className="quote-page-table-wrap">
+                    <table className="quote-page-table data-table">
                         <thead>
                             <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계', '삭제'].map((h) => <th key={h}>{h}</th>)}</tr>
                         </thead>
                         <tbody>
                             {items.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="quote-write-table__empty">
+                                    <td colSpan={8} className="quote-page-table__empty">
                                         추가된 제품이 없습니다. 「+ 제품 추가」 버튼으로 제품을 선택해주세요.
                                     </td>
                                 </tr>
@@ -411,25 +411,25 @@ const QuoteWritePage = () => {
                                     const profitRateLabel = formatProfitRate(profitRate)
                                     const profitRateTone =
                                         profitRate != null && profitRate < 0
-                                            ? 'quote-write-meta--danger'
+                                            ? 'quote-page-meta--danger'
                                             : profitRate != null && profitRate < (item.minProfitRate ?? 0)
-                                                ? 'quote-write-meta--warn'
-                                                : 'quote-write-meta'
+                                                ? 'quote-page-meta--warn'
+                                                : 'quote-page-meta'
 
                                     return (
                                         <Fragment key={item.key}>
                                             <tr>
                                                 <td>
                                                     {item.productName}
-                                                    <p className="quote-write-meta">{item.spec}</p>
+                                                    <p className="quote-page-meta">{item.spec}</p>
                                                 </td>
                                                 <td>
-                                                    <div className="quote-write-qty">
+                                                    <div className="quote-page-qty">
                                                         <button
                                                             type="button"
                                                             disabled={isLocked}
                                                             onClick={() => updateItem(item.key, { quantity: Math.max(1, item.quantity - 1) })}
-                                                            className="quote-write-qty__btn"
+                                                            className="quote-page-qty__btn"
                                                         >
                                                             −
                                                         </button>
@@ -441,13 +441,13 @@ const QuoteWritePage = () => {
                                                             onChange={(e) =>
                                                                 updateItem(item.key, { quantity: Math.max(1, Number(e.target.value) || 1) })
                                                             }
-                                                            className="form-input quote-write-qty__input"
+                                                            className="form-input quote-page-qty__input"
                                                         />
                                                         <button
                                                             type="button"
                                                             disabled={isLocked}
                                                             onClick={() => updateItem(item.key, { quantity: item.quantity + 1 })}
-                                                            className="quote-write-qty__btn"
+                                                            className="quote-page-qty__btn"
                                                         >
                                                             +
                                                         </button>
@@ -473,14 +473,14 @@ const QuoteWritePage = () => {
                                                             updateItem(item.key, { discountRate: Math.min(100, Math.max(0, num)) })
                                                         }}
                                                         className={[
-                                                            'form-input quote-write-discount-input',
-                                                            needsReason ? 'quote-write-discount-input--warn' : '',
+                                                            'form-input quote-page-discount-input',
+                                                            needsReason ? 'quote-page-discount-input--warn' : '',
                                                         ].filter(Boolean).join(' ')}
                                                     />
-                                                    <p className="quote-write-meta">
+                                                    <p className="quote-page-meta">
                                                         {item.maxDiscountRate != null ? `최대 ${item.maxDiscountRate}%` : '최대 할인율: 임시저장 후 반영'}
                                                     </p>
-                                                    <p className={`quote-write-meta ${profitRateTone}`}>
+                                                    <p className={`quote-page-meta ${profitRateTone}`}>
                                                         {policyMissing
                                                             ? '이익률 기준: 임시저장 후 반영'
                                                             : `이익률 ${profitRateLabel}% (최소 ${item.minProfitRate}%)`}
@@ -502,7 +502,7 @@ const QuoteWritePage = () => {
                                                 </td>
                                             </tr>
                                             {needsReason && (
-                                                <tr className="quote-write-reason-row">
+                                                <tr className="quote-page-reason-row">
                                                     <td colSpan={8}>
                                                         <label className="block text-xs font-semibold text-[var(--color-text-sub)] mb-1">
                                                             「{item.productName}」 할인율 조정 사유 <span className="text-[var(--color-danger)]">*</span>
@@ -532,9 +532,9 @@ const QuoteWritePage = () => {
                     </div>
                 </div>
 
-                <div className="quote-write-card">
-                    <h2 className="quote-write-card__title">발행 정보</h2>
-                    <div className="quote-write-field-grid">
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title">발행 정보</h2>
+                    <div className="quote-page-field-grid">
                         <div>
                             <label htmlFor="quote-issued-date">발행일</label>
                             <input id="quote-issued-date" type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} className="form-input" disabled={isLocked} />
@@ -550,9 +550,9 @@ const QuoteWritePage = () => {
                     </div>
                 </div>
 
-                <div className="quote-write-card">
-                    <div className="quote-write-card__header">
-                        <h2 className="quote-write-card__title">상담 메모</h2>
+                <div className="quote-page-card">
+                    <div className="quote-page-card__header">
+                        <h2 className="quote-page-card__title">상담 메모</h2>
                         <Button
                             type="button"
                             variant="secondary"
@@ -585,19 +585,19 @@ const QuoteWritePage = () => {
                     )}
                 </div>
 
-                <div className="quote-write-card">
-                    <h2 className="quote-write-card__title mb-4">금액 자동 계산</h2>
-                    <div className="quote-write-summary">
-                        <div className="quote-write-summary__row"><span>공급가액 (할인 전)</span><span>{Math.round(totals.subtotal).toLocaleString('ko-KR')}원</span></div>
-                        <div className="quote-write-summary__row quote-write-summary__row--discount"><span>할인 금액</span><span>- {Math.round(totals.subtotal - totals.supplyAmount).toLocaleString('ko-KR')}원</span></div>
-                        <div className="quote-write-summary__row"><span>VAT</span><span>{Math.round(totals.taxAmount).toLocaleString('ko-KR')}원</span></div>
-                        <div className="quote-write-summary__total"><span>최종 견적 금액</span><span>{Math.round(totals.totalAmount).toLocaleString('ko-KR')}원</span></div>
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title mb-4">금액 자동 계산</h2>
+                    <div className="quote-page-summary">
+                        <div className="quote-page-summary__row"><span>공급가액 (할인 전)</span><span>{Math.round(totals.subtotal).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-page-summary__row quote-page-summary__row--discount"><span>할인 금액</span><span>- {Math.round(totals.subtotal - totals.supplyAmount).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-page-summary__row"><span>VAT</span><span>{Math.round(totals.taxAmount).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-page-summary__total"><span>최종 견적 금액</span><span>{Math.round(totals.totalAmount).toLocaleString('ko-KR')}원</span></div>
                     </div>
-                    <p className="quote-write-card__hint mt-3">※ 실제 저장 금액은 서버에서 재계산됩니다.</p>
+                    <p className="quote-page-card__hint mt-3">※ 실제 저장 금액은 서버에서 재계산됩니다.</p>
                 </div>
 
                 {submitResult && (
-                    <div className={`quote-write-alert ${submitResult.approvalRequired ? 'quote-write-alert--warning' : 'quote-write-alert--success'}`}>
+                    <div className={`quote-page-alert ${submitResult.approvalRequired ? 'quote-page-alert--warning' : 'quote-page-alert--success'}`}>
                         {submitResult.approvalRequired ? (
                             <>
                                 <p className="font-semibold">⚠ 작성 완료 — 승인이 필요한 견적입니다.</p>
@@ -617,13 +617,13 @@ const QuoteWritePage = () => {
                     </div>
                 )}
                 {submitError && (
-                    <div className="quote-write-alert quote-write-alert--error">
+                    <div className="quote-page-alert quote-page-alert--error">
                         {submitError}
                     </div>
                 )}
 
-                <div className="quote-write-actions">
-                    <div className="quote-write-actions__left">
+                <div className="quote-page-actions">
+                    <div className="quote-page-actions__left">
                         <Button
                             variant="outline"
                             onClick={handleSaveDraft}
