@@ -228,7 +228,19 @@ export default function ProductManagePage() {
 
   const onPickImage = async (e) => {
     const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일 재선택 허용 (file은 위에서 캡처됨)
     if (!file) return
+
+    // 업로드 전 클라이언트 검증 — 서버도 동일 검증하지만 즉시 피드백 + 불필요한 업로드 방지
+    if (!file.type.startsWith('image/')) {
+      setModalError('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError('파일 크기가 너무 큽니다. (최대 5MB)')
+      return
+    }
+
     const session = uploadSession.current // 이 업로드가 속한 모달 세션
     setModalError(null)
     setUploading(true)
@@ -241,7 +253,6 @@ export default function ProductManagePage() {
       setModalError(err.response?.data?.message ?? '이미지 업로드 실패')
     } finally {
       if (uploadSession.current === session) setUploading(false)
-      e.target.value = '' // 같은 파일 재선택 허용
     }
   }
 
