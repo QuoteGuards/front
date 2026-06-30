@@ -81,9 +81,9 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
     }
 
     return (
-        <div className="quote-write-card">
-            <div className="quote-write-card__header">
-                <h2 className="quote-write-card__title">고객 정보</h2>
+        <div className="quote-page-card">
+            <div className="quote-page-card__header">
+                <h2 className="quote-page-card__title">고객 정보</h2>
                 <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
                     + 신규 고객 등록
                 </Button>
