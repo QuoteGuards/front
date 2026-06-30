@@ -224,6 +224,23 @@
   color: var(--color-danger);
 }
 
+.quote-page-meta--success {
+  color: #15803D;
+}
+
+.quote-page-profit-cell {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quote-page-profit-cell--danger {
+  color: var(--color-danger);
+}
+
+.quote-page-profit-cell--success {
+  color: #15803D;
+}
+
 .quote-page-meta--warn {
   color: #D97706;
 }
@@ -309,6 +326,10 @@
 
 .quote-page-stat__value--danger {
   color: var(--color-danger);
+}
+
+.quote-page-stat__value--success {
+  color: #15803D;
 }
 
 .quote-page-actions {

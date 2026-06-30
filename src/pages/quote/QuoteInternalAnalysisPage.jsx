@@ -148,11 +148,15 @@ const QuoteInternalAnalysisPage = () => {
                         { title: '공급가액', val: formatKRW(analysis.supplyAmount) },
                         { title: '총 원가', val: formatKRW(analysis.totalCostAmount) },
                         { title: '예상 이익금', val: formatKRW(analysis.expectedProfitAmount) },
-                        { title: '전체 이익률', val: `${profitRate.toFixed(1)}%`, highlight: profitRate < 20 },
+                        {
+                            title: '전체 이익률',
+                            val: `${profitRate.toFixed(1)}%`,
+                            tone: profitRate < 20 ? 'danger' : 'success',
+                        },
                     ].map((item) => (
                         <div key={item.title} className="quote-page-stat">
                             <p className="quote-page-stat__label">{item.title}</p>
-                            <p className={`quote-page-stat__value${item.highlight ? ' quote-page-stat__value--danger' : ''}`}>
+                            <p className={`quote-page-stat__value${item.tone ? ` quote-page-stat__value--${item.tone}` : ''}`}>
                                 {item.val}
                             </p>
                         </div>
@@ -185,7 +189,9 @@ const QuoteInternalAnalysisPage = () => {
                                             <td>{item.quantity}</td>
                                             <td>{Number(item.discountRate ?? 0)}%</td>
                                             <td>{formatKRW(item.lineSupplyAmount)}</td>
-                                            <td className={lineProfitRate < 20 ? 'quote-page-meta--danger' : ''} style={{ fontWeight: 700 }}>
+                                            <td
+                                                className={`quote-page-profit-cell ${lineProfitRate < 20 ? 'quote-page-profit-cell--danger' : 'quote-page-profit-cell--success'}`}
+                                            >
                                                 {formatKRW(lineProfit)} ({lineProfitRate.toFixed(1)}%)
                                             </td>
                                         </tr>
