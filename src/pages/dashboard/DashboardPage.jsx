@@ -129,8 +129,10 @@ export default function DashboardPage() {
   const trendChart = useMemo(() => {
     const now = new Date()
     const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    // 데이터가 2개 연도 이상 걸치면 "6월" 중복으로 모호 → 라벨에 연도 표시
+    const multiYear = new Set(trend.map(t => String(t.month ?? '').split('-')[0])).size > 1
     return trend.map((t) => ({
-      month: monthLabel(t.month),
+      month: monthLabel(t.month, multiYear),
       quoteCount: Number(t.quoteCount) || 0,
       totalAmount: Number(t.totalAmount) || 0,
       isCurrent: t.month === curKey, // 배열 순서가 아닌 실제 이번 달(YYYY-MM)과 비교
@@ -478,9 +480,12 @@ function won(v) { return v == null || v === '' ? '-' : Number(v).toLocaleString(
 function pct(v) { return v == null || v === '' ? '0%' : `${Number(v)}%` }
 
 // "2026-06" → "6월" (포맷 어긋나면 원본 반환)
-function monthLabel(m) {
-  const mm = String(m ?? '').split('-')[1]
-  return mm ? `${Number(mm)}월` : String(m ?? '')
+// withYear=true면 여러 해가 섞일 때 연도 모호성 방지용으로 "25년 6월" 형태로 표시
+function monthLabel(m, withYear = false) {
+  const [yyyy, mm] = String(m ?? '').split('-')
+  if (!mm) return String(m ?? '')
+  const label = `${Number(mm)}월`
+  return withYear && yyyy ? `${yyyy.slice(2)}년 ${label}` : label
 }
 
 // 금액 축 라벨: 선택된 단위(억/만/원)로 나눠 표시 (예: unit=억원 → 427000000 → "4.3")
