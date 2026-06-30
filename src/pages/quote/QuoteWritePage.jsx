@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
@@ -339,16 +339,40 @@ const QuoteWritePage = () => {
             <PageHeader
                 breadcrumbs={['견적 관리', '견적 작성']}
                 title="견적 작성"
-                actions={
-                    <button
-                        type="button"
-                        onClick={openGuide}
-                        className="text-sm text-violet-600 font-medium hover:underline"
-                    >
-                        {loadingGuide ? '...' : '견적 작성 가이드 확인'}
-                    </button>
-                }
             />
+
+            {/* 스크롤을 내려도 항상 보이는 가이드 FAB */}
+            <button
+                type="button"
+                onClick={openGuide}
+                disabled={loadingGuide}
+                aria-label="견적 작성 가이드 확인"
+                style={{
+                    position: 'fixed',
+                    bottom: '32px',
+                    right: '32px',
+                    zIndex: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: 'var(--color-primary)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '999px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 16px rgba(0,91,255,0.28)',
+                    cursor: loadingGuide ? 'default' : 'pointer',
+                    opacity: loadingGuide ? 0.7 : 1,
+                    transition: 'opacity 0.15s, box-shadow 0.15s',
+                }}
+            >
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                {loadingGuide ? '로딩 중...' : '견적 작성 가이드'}
+            </button>
 
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
                 {savedQuote && (

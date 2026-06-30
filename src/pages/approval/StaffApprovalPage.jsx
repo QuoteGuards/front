@@ -805,32 +805,40 @@ export default function StaffApprovalPage() {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} />
-      <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-gray-800">승인 요청 관리</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          승인 요청 현황과 이력을 확인하세요.
-        </p>
-      </div>
+    <div>
+      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} title="승인 요청 현황" />
 
-      <div className="px-8 border-b border-gray-200 bg-white flex gap-0">
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '1px solid var(--color-border)',
+          background: '#fff',
+          marginBottom: '24px',
+        }}
+      >
         {TABS.map((tab, idx) => (
           <button
             key={tab}
             onClick={() => setActiveTab(idx)}
-            className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === idx
-                ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
+            style={{
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: activeTab === idx ? 600 : 400,
+              color: activeTab === idx ? 'var(--color-primary)' : 'var(--color-text-sub)',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === idx ? '2px solid var(--color-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      <div className="px-8 py-6">
+      <div>
         {activeTab === 0 && <RequestTab />}
         {activeTab === 1 && <RejectReRequestTab />}
         {activeTab === 2 && <HistoryTab />}

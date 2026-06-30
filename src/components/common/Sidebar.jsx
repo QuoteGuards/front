@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { useTrainingStatus } from '../../hooks/useTrainingStatus'
+import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
 import './Sidebar.css'
 
 const PlusIcon = () => (
@@ -77,7 +77,7 @@ const LockIcon = () => (
 
 const Sidebar = ({ collapsed }) => {
   const { user } = useAuth()
-  const { canWriteQuote, loading } = useTrainingStatus()
+  const { canWriteQuote, loading } = useTrainingStatusContext()
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
   const isManager = user?.role === 'SALES_MANAGER'
@@ -180,7 +180,7 @@ const Sidebar = ({ collapsed }) => {
                   <span className="lnb__item-icon">{item.icon}</span>
                   <span className="lnb__item-label">{item.label}</span>
                   {item.locked && <span className="lnb__item-lock"><LockIcon /></span>}
-                  {item.badge && <span className="lnb__item-badge">{item.badge}</span>}
+{item.badge && <span className="lnb__item-badge">{item.badge}</span>}
                 </NavLink>
               ))}
             </div>

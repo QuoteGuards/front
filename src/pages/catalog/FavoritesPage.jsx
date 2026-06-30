@@ -124,6 +124,11 @@ export default function FavoritesPage() {
 
       {/* ── 검색 패널 ── */}
       <SearchPanel>
+        <SearchRow label="정렬">
+          <select className="form-select" style={{ width: '160px' }} value={sort} onChange={e => setSort(e.target.value)}>
+            {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </SearchRow>
         <SearchRow label="검색">
           <input
             type="text"
@@ -132,12 +137,9 @@ export default function FavoritesPage() {
             placeholder="즐겨찾기 내 검색 (제품명/코드)"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') setSearch(search) }}
           />
-        </SearchRow>
-        <SearchRow label="정렬">
-          <select className="form-select" style={{ width: '160px' }} value={sort} onChange={e => setSort(e.target.value)}>
-            {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
+          <Button variant="secondary" onClick={() => setSearch(search)}>검색</Button>
         </SearchRow>
       </SearchPanel>
 
@@ -220,8 +222,9 @@ function TabBtn({ children, active, onClick }) {
       style={{
         borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
         color: active ? 'var(--color-primary)' : 'var(--color-text-sub)',
-        fontWeight: active ? 600 : 400,
-      }}>
+        background: 'none', border: 'none', cursor: 'pointer', fontWeight: active ? 600 : 400,
+      }}
+    >
       {children}
     </button>
   )

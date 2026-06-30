@@ -33,8 +33,8 @@ function fmtDateTime(iso) {
 function ReadonlyField({ label, value, children }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-500 mb-1">{label}</dt>
-      <dd className="text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 select-none">
+      <dt style={{ fontSize: '12px', fontWeight: 500, color: 'var(--color-text-sub)', marginBottom: '4px' }}>{label}</dt>
+      <dd style={{ fontSize: '13px', color: 'var(--color-text-sub)', background: 'var(--color-bg-main)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '7px 12px', userSelect: 'none', margin: 0 }}>
         {children ?? value ?? '-'}
       </dd>
     </div>
@@ -162,10 +162,10 @@ function PasswordSection({ onClose }) {
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
 
-      <div className="border border-gray-200 rounded-lg p-5 bg-white mt-4">
+      <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '20px', background: 'var(--color-bg-main)', marginTop: '16px' }}>
         <div className="flex items-center gap-2 mb-4">
           <LockIcon />
-          <h3 className="text-sm font-semibold text-gray-800">비밀번호 변경</h3>
+          <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-main)', margin: 0 }}>비밀번호 변경</h3>
         </div>
 
         {formError && (
@@ -272,15 +272,10 @@ function PasswordSection({ onClose }) {
             )}
           </div>
 
-          <div className="flex gap-2 pt-1">
+          <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
             <button
               type="submit"
-              className={[
-                'flex-1 py-2 px-4 rounded-md text-sm font-medium text-white transition-colors flex items-center justify-center gap-2',
-                isSubmitting
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800',
-              ].join(' ')}
+              style={{ flex: 1, padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, color: '#fff', background: isSubmitting ? '#93C5FD' : 'var(--color-primary)', border: 'none', cursor: isSubmitting ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               disabled={isSubmitting}
               aria-busy={isSubmitting}
             >
@@ -288,7 +283,7 @@ function PasswordSection({ onClose }) {
             </button>
             <button
               type="button"
-              className="py-2 px-4 rounded-md text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
+              style={{ padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, color: 'var(--color-text-sub)', background: 'transparent', border: '1px solid var(--color-border)', cursor: 'pointer' }}
               onClick={onClose}
               disabled={isSubmitting}
             >
@@ -356,11 +351,13 @@ export default function MyPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 w-32 bg-gray-200 rounded" />
-          <div className="h-40 bg-gray-100 rounded-lg" />
-          <div className="h-40 bg-gray-100 rounded-lg" />
+      <div>
+        <PageHeader breadcrumbs={['계정', '마이페이지']} title="마이페이지" />
+        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ height: '160px', background: 'var(--color-bg-main)', borderRadius: 'var(--radius-md)' }} />
+            <div style={{ height: '160px', background: 'var(--color-bg-main)', borderRadius: 'var(--radius-md)' }} />
+          </div>
         </div>
       </div>
     );
@@ -368,30 +365,30 @@ export default function MyPage() {
 
   if (error) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-4">{error}</p>
+      <div>
+        <PageHeader breadcrumbs={['계정', '마이페이지']} title="마이페이지" />
+        <p style={{ fontSize: '13px', color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '12px 16px' }}>{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <PageHeader breadcrumbs={['계정', '마이페이지']} />
+    <div>
+      <PageHeader breadcrumbs={['계정', '마이페이지']} title="마이페이지" />
+      <div style={{ maxWidth: '860px', margin: '0 auto' }}>
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
 
-      <h1 className="text-lg font-bold text-gray-900 mb-6">마이페이지</h1>
-
       {/* ── 내 정보 카드 ── */}
-      <section aria-labelledby="profile-section-title" className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="profile-section-title" className="text-sm font-semibold text-gray-800">내 정보</h2>
+      <section aria-labelledby="profile-section-title" style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '32px', marginBottom: '20px' }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 id="profile-section-title" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)', margin: 0 }}>내 정보</h2>
           {!isEditing && (
             <button
               type="button"
               onClick={startEdit}
-              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <PencilIcon />
               수정
@@ -455,15 +452,12 @@ export default function MyPage() {
         </dl>
 
         {isEditing && (
-          <div className="flex gap-2 mt-5 pt-4 border-t border-gray-100">
+          <div style={{ display: 'flex', gap: '8px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className={[
-                'flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors',
-                isSaving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700',
-              ].join(' ')}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, color: '#fff', background: isSaving ? '#93C5FD' : 'var(--color-primary)', border: 'none', cursor: isSaving ? 'default' : 'pointer' }}
               aria-busy={isSaving}
             >
               {isSaving ? <><Spinner />저장 중...</> : '저장'}
@@ -472,7 +466,7 @@ export default function MyPage() {
               type="button"
               onClick={cancelEdit}
               disabled={isSaving}
-              className="px-4 py-2 rounded-md text-sm font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
+              style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 500, color: 'var(--color-text-sub)', background: 'transparent', border: '1px solid var(--color-border)', cursor: 'pointer' }}
             >
               취소
             </button>
@@ -481,14 +475,14 @@ export default function MyPage() {
       </section>
 
       {/* ── 보안 / 비밀번호 변경 ── */}
-      <section aria-labelledby="password-section-title" className="bg-white border border-gray-200 rounded-lg p-5">
+      <section aria-labelledby="password-section-title" style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '32px' }}>
         <div className="flex items-center justify-between">
-          <h2 id="password-section-title" className="text-sm font-semibold text-gray-800">보안</h2>
+          <h2 id="password-section-title" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-main)', margin: 0 }}>보안</h2>
           {!showPasswordSection && (
             <button
               type="button"
               onClick={() => setShowPasswordSection(true)}
-              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--color-primary)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <LockIcon size={14} />
               비밀번호 변경
@@ -504,6 +498,7 @@ export default function MyPage() {
           <PasswordSection onClose={() => setShowPasswordSection(false)} />
         )}
       </section>
+      </div>
     </div>
   );
 }
@@ -549,8 +544,7 @@ function EyeIcon() {
 }
 
 function EyeOffIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+  return (    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
       <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
     </svg>
   );

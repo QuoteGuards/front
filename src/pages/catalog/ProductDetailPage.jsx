@@ -85,10 +85,9 @@ export default function ProductDetailPage() {
       <PageHeader breadcrumbs={['제품', '제품 상세']} />
 
       {/* 돌아가기 */}
-      <button onClick={() => navigate('/catalog')} className="text-sm mb-4"
-        style={{ color: 'var(--color-text-sub)' }}>
-        ← 제품 탐색으로 돌아가기
-      </button>
+      <div style={{ marginBottom: '16px' }}>
+        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>← 제품 탐색으로</Button>
+      </div>
 
       {error && (
         <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
@@ -105,9 +104,17 @@ export default function ProductDetailPage() {
             <ProductImage src={product.imageUrl} label="제품 이미지" />
           </div>
 
-          <Button variant={fav ? 'secondary' : 'outline'} className="w-full mt-4" onClick={toggleFavorite}>
-            ★ {fav ? '즐겨찾기 해제' : '즐겨찾기에 추가'}
-          </Button>
+          <button className="w-full mt-4" onClick={toggleFavorite}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600,
+              cursor: 'pointer', border: `1px solid ${fav ? '#F59E0B' : 'var(--color-border)'}`,
+              background: fav ? '#FFFBEB' : 'transparent',
+              color: fav ? '#D97706' : 'var(--color-text-sub)',
+            }}>
+            <span style={{ fontSize: '18px', lineHeight: 1 }}>{fav ? '★' : '☆'}</span>
+            {fav ? '즐겨찾기 해제' : '즐겨찾기에 추가'}
+          </button>
 
           <Button variant="primary" className="w-full mt-2" onClick={addToQuote}>견적에 추가</Button>
 
@@ -132,9 +139,8 @@ export default function ProductDetailPage() {
         {/* ── 우측: 정보 ── */}
         <div className="flex-1">
           <div className="text-xs text-[var(--color-text-muted)]">{catPath}</div>
-          <div className="flex items-start justify-between mt-1">
+          <div className="mt-1">
             <h1 className="text-2xl font-bold">{product.name}</h1>
-            <Button variant={fav ? 'secondary' : 'ghost'} size="sm" onClick={toggleFavorite}>★ 즐겨찾기</Button>
           </div>
           <div className="text-sm text-[var(--color-text-sub)] mt-2">
             제품코드: <span className="font-mono ml-1" style={{ color: 'var(--color-primary)' }}>{product.code}</span>

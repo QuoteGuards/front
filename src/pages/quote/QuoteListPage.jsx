@@ -5,6 +5,7 @@ import { formatKRW } from '../../utils/quoteUtils'
 import { QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import SegmentedControl from '../../components/common/SegmentedControl'
 import DataTable from '../../components/common/DataTable'
 import StatusBadge from '../../components/common/StatusBadge'
 import Button from '../../components/common/Button'
@@ -80,6 +81,7 @@ const QuoteListPage = () => {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
 
   const statuses = Object.keys(QUOTE_STATUS_FILTERS)
+  const statusOptions = statuses.map((s) => ({ value: s, label: s }))
 
   const baseColumns = [
     {
@@ -213,18 +215,13 @@ const QuoteListPage = () => {
 
       <SearchPanel>
         <SearchRow label="상태 필터">
-          {statuses.map((s) => (
-            <label key={s} className="form-checkbox">
-              <input
-                type="radio"
-                name="statusFilter"
-                value={s}
-                checked={statusFilter === s}
-                onChange={() => setStatusFilter(s)}
-              />
-              {s}
-            </label>
-          ))}
+          <SegmentedControl
+            variant="pills"
+            name="statusFilter"
+            options={statusOptions}
+            value={statusFilter}
+            onChange={setStatusFilter}
+          />
         </SearchRow>
         <SearchRow label="검색">
           {serverSearch ? (
@@ -276,6 +273,7 @@ const QuoteListPage = () => {
             {filtered.length}건 표시 중
           </span>
         </SearchRow>
+ 
       </SearchPanel>
 
       <DataTable
@@ -283,7 +281,6 @@ const QuoteListPage = () => {
         data={filtered.map((q) => ({ ...q, _dbId: q.dbId }))}
         rowKey="id"
         loading={loading}
-        emptyText="견적서가 없습니다."
         onRowClick={(row) => navigate(`/quotes/${row._dbId}/detail`)}
       />
     </div>
