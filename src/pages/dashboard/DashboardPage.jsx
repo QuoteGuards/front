@@ -14,9 +14,20 @@ function getDateRange(periodKey) {
   const pad = (n) => String(n).padStart(2, '0')
   const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   const toStr = fmt(today)
-  if (periodKey === 'ONE_MONTH') { const f = new Date(today); f.setMonth(f.getMonth() - 1); return { from: fmt(f), to: toStr } }
-  if (periodKey === 'THREE_MONTHS') { const f = new Date(today); f.setMonth(f.getMonth() - 3); return { from: fmt(f), to: toStr } }
-  if (periodKey === 'SIX_MONTHS') { const f = new Date(today); f.setMonth(f.getMonth() - 6); return { from: fmt(f), to: toStr } }
+
+  // setMonth()는 월말(31일 등)에서 overflow가 발생하므로 직접 생성자 방식 사용
+  // new Date(y, m, d)에서 d > 해당 월 말일이면 overflow → 말일로 clamp
+  const subtractMonths = (months) => {
+    const y = today.getFullYear()
+    const m = today.getMonth() - months  // 음수여도 JS Date가 이월 처리
+    const d = today.getDate()
+    const lastDay = new Date(y, m + 1, 0).getDate()  // 목표 월의 말일
+    return fmt(new Date(y, m, Math.min(d, lastDay)))
+  }
+
+  if (periodKey === 'ONE_MONTH') return { from: subtractMonths(1), to: toStr }
+  if (periodKey === 'THREE_MONTHS') return { from: subtractMonths(3), to: toStr }
+  if (periodKey === 'SIX_MONTHS') return { from: subtractMonths(6), to: toStr }
   return { from: '', to: '' }
 }
 

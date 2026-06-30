@@ -86,7 +86,10 @@ export default function ProductDetailPage() {
 
       {/* 돌아가기 */}
       <div style={{ marginBottom: '16px' }}>
-        <Button variant="outline" size="sm" onClick={() => navigate(-1)}>← 제품 탐색으로</Button>
+        <Button variant="outline" size="sm" onClick={() => {
+          if (window.history.state?.idx > 0) navigate(-1)
+          else navigate('/catalog')
+        }}>← 제품 탐색으로</Button>
       </div>
 
       {error && (

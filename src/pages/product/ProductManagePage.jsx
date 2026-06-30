@@ -880,6 +880,8 @@ export default function ProductManagePage() {
                       <ModalRow label="사용 상태">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <button type="button"
+                              aria-label={form.isActive ? '사용 중 — 클릭하면 미사용으로 변경' : '미사용 — 클릭하면 사용으로 변경'}
+                              aria-pressed={form.isActive}
                               onClick={() => setForm({ ...form, isActive: !form.isActive })}
                               aria-label={form.isActive ? '사용 중 — 클릭하면 미사용으로 변경' : '미사용 — 클릭하면 사용으로 변경'}
                               aria-pressed={form.isActive}

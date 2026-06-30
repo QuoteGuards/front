@@ -221,8 +221,9 @@ export default function ProductSearchPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {rows.map(p => (
                 <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
-                  onClick={() => goDetail(p)}
-                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  role="group"
+                  aria-label={p.name}
+                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', transition: 'box-shadow 0.15s' }}
                   onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                   onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
                   {/* 이미지 + 즐겨찾기 */}
@@ -246,9 +247,11 @@ export default function ProductSearchPage() {
                       <VatBadge applicable={p.vatApplicable} />
                     </div>
 
-                    <div className="mt-3">
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      <Button variant="outline" size="sm" className="w-full"
+                        onClick={() => goDetail(p)}>상세 보기</Button>
                       <Button variant="primary" size="sm" className="w-full"
-                        onClick={(e) => { e.stopPropagation(); addToQuote(p) }}>견적에 추가</Button>
+                        onClick={() => addToQuote(p)}>견적에 추가</Button>
                     </div>
                   </div>
                 </div>
