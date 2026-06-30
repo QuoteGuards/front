@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react'
+﻿import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
@@ -21,7 +21,9 @@ import {
     clearQuoteWriteDraft,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
 import { todayLocal } from '../../utils/quoteUtils'
+import './QuoteWritePage.css'
 
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
 
@@ -328,45 +330,25 @@ const QuoteWritePage = () => {
         }
     }
 
-    if (loading && !trainingStatus) return <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">로딩 중...</div>
+    if (loading && !trainingStatus) return <div className="quote-write-loading">로딩 중...</div>
     if (!canWriteQuote) return <QuoteAccessRestricted reason="TRAINING_NOT_COMPLETED" />
-    if (restoring) return <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">이전 견적을 불러오는 중...</div>
+    if (restoring) return <div className="quote-write-loading">이전 견적을 불러오는 중...</div>
 
     const isLocked = !!savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)
 
     return (
-        <div>
+        <div className="quote-write-page">
             <PageHeader
                 breadcrumbs={['견적 관리', '견적 작성']}
                 title="견적 작성"
             />
 
-            {/* 스크롤을 내려도 항상 보이는 가이드 FAB */}
             <button
                 type="button"
                 onClick={openGuide}
                 disabled={loadingGuide}
                 aria-label="견적 작성 가이드 확인"
-                style={{
-                    position: 'fixed',
-                    bottom: '32px',
-                    right: '32px',
-                    zIndex: 100,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 18px',
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '999px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    boxShadow: '0 4px 16px rgba(0,91,255,0.28)',
-                    cursor: loadingGuide ? 'default' : 'pointer',
-                    opacity: loadingGuide ? 0.7 : 1,
-                    transition: 'opacity 0.15s, box-shadow 0.15s',
-                }}
+                className="quote-write-page__fab"
             >
                 <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -374,48 +356,50 @@ const QuoteWritePage = () => {
                 {loadingGuide ? '로딩 중...' : '견적 작성 가이드'}
             </button>
 
-            <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+            <div className="quote-write-page__stack">
                 {savedQuote && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-700">
+                    <div className="quote-write-alert quote-write-alert--success">
                         ✓ 저장되었습니다. (견적번호: {savedQuote.quoteNumber}, 상태: {savedQuote.status})
                     </div>
                 )}
                 {isLocked && (
-                    <div className="bg-gray-100 border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-600">
+                    <div className="quote-write-alert quote-write-alert--locked">
                         🔒 이 견적은 이미 작성 완료되어(상태: {savedQuote.status}) 더 이상 직접 수정할 수 없습니다. 관리자가 반려하면 다시 수정 가능해집니다.
                     </div>
                 )}
                 {saveError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                    <div className="quote-write-alert quote-write-alert--error">
                         {saveError}
                     </div>
                 )}
 
                 <CustomerSection customer={customer} onSelect={setCustomer} onFieldChange={(f, v) => setCustomer((p) => ({ ...p, [f]: v }))} />
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-sm font-bold text-gray-800">② 제품 선택</h2>
-                        <button
+                <div className="quote-write-card">
+                    <div className="quote-write-card__header">
+                        <h2 className="quote-write-card__title">제품 선택</h2>
+                        <Button
                             type="button"
+                            variant="primary"
+                            size="sm"
                             onClick={handleGoToCatalog}
                             disabled={isLocked || addingProduct}
-                            className="text-sm bg-violet-600 text-white px-4 py-1.5 rounded-lg font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {addingProduct ? '제품 추가 중...' : '+ 제품 추가'}
-                        </button>
+                        </Button>
                     </div>
-                    <p className="text-[11px] text-gray-400 mb-3">
+                    <p className="quote-write-card__hint">
                         ※ 「+ 제품 추가」로 제품 탐색 화면에서 제품을 선택하면 수량·단가·할인율이 자동 채워집니다. 할인율은 정책 한도 내에서 자유롭게 조정할 수 있습니다.
                     </p>
-                    <table className="w-full text-sm text-center">
-                        <thead className="bg-gray-50 text-gray-500">
-                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계', '삭제'].map((h) => <th key={h} className="py-3 font-medium">{h}</th>)}</tr>
+                    <div className="quote-write-table-wrap">
+                    <table className="quote-write-table data-table">
+                        <thead>
+                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계', '삭제'].map((h) => <th key={h}>{h}</th>)}</tr>
                         </thead>
                         <tbody>
                             {items.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="py-10 text-gray-400">
+                                    <td colSpan={8} className="quote-write-table__empty">
                                         추가된 제품이 없습니다. 「+ 제품 추가」 버튼으로 제품을 선택해주세요.
                                     </td>
                                 </tr>
@@ -427,25 +411,25 @@ const QuoteWritePage = () => {
                                     const profitRateLabel = formatProfitRate(profitRate)
                                     const profitRateTone =
                                         profitRate != null && profitRate < 0
-                                            ? 'text-red-500'
+                                            ? 'quote-write-meta--danger'
                                             : profitRate != null && profitRate < (item.minProfitRate ?? 0)
-                                                ? 'text-amber-600'
-                                                : 'text-gray-400'
+                                                ? 'quote-write-meta--warn'
+                                                : 'quote-write-meta'
 
                                     return (
                                         <Fragment key={item.key}>
-                                            <tr className="border-t border-gray-100 align-top">
-                                                <td className="py-3 text-left">
+                                            <tr>
+                                                <td>
                                                     {item.productName}
-                                                    <p className="text-[10px] text-gray-400">{item.spec}</p>
+                                                    <p className="quote-write-meta">{item.spec}</p>
                                                 </td>
                                                 <td>
-                                                    <div className="inline-flex items-center gap-1">
+                                                    <div className="quote-write-qty">
                                                         <button
                                                             type="button"
                                                             disabled={isLocked}
                                                             onClick={() => updateItem(item.key, { quantity: Math.max(1, item.quantity - 1) })}
-                                                            className="w-6 h-6 rounded border border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+                                                            className="quote-write-qty__btn"
                                                         >
                                                             −
                                                         </button>
@@ -457,13 +441,13 @@ const QuoteWritePage = () => {
                                                             onChange={(e) =>
                                                                 updateItem(item.key, { quantity: Math.max(1, Number(e.target.value) || 1) })
                                                             }
-                                                            className="w-12 border rounded text-center px-1 py-1 disabled:bg-gray-50"
+                                                            className="form-input quote-write-qty__input"
                                                         />
                                                         <button
                                                             type="button"
                                                             disabled={isLocked}
                                                             onClick={() => updateItem(item.key, { quantity: item.quantity + 1 })}
-                                                            className="w-6 h-6 rounded border border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+                                                            className="quote-write-qty__btn"
                                                         >
                                                             +
                                                         </button>
@@ -488,12 +472,15 @@ const QuoteWritePage = () => {
                                                             if (!Number.isFinite(num)) return
                                                             updateItem(item.key, { discountRate: Math.min(100, Math.max(0, num)) })
                                                         }}
-                                                        className={`w-16 border rounded text-center px-1 py-1 disabled:bg-gray-50 ${needsReason ? 'border-amber-400 bg-amber-50' : ''}`}
+                                                        className={[
+                                                            'form-input quote-write-discount-input',
+                                                            needsReason ? 'quote-write-discount-input--warn' : '',
+                                                        ].filter(Boolean).join(' ')}
                                                     />
-                                                    <p className="text-[10px] text-gray-300 mt-0.5">
+                                                    <p className="quote-write-meta">
                                                         {item.maxDiscountRate != null ? `최대 ${item.maxDiscountRate}%` : '최대 할인율: 임시저장 후 반영'}
                                                     </p>
-                                                    <p className={`text-[10px] mt-0.5 ${profitRateTone}`}>
+                                                    <p className={`quote-write-meta ${profitRateTone}`}>
                                                         {policyMissing
                                                             ? '이익률 기준: 임시저장 후 반영'
                                                             : `이익률 ${profitRateLabel}% (최소 ${item.minProfitRate}%)`}
@@ -503,23 +490,23 @@ const QuoteWritePage = () => {
                                                 <td>{lineVat.toLocaleString('ko-KR')}</td>
                                                 <td>{Math.round(lineTotal).toLocaleString('ko-KR')}</td>
                                                 <td>
-                                                    <button
+                                                    <Button
                                                         type="button"
+                                                        variant="ghost"
+                                                        size="sm"
                                                         disabled={isLocked}
                                                         onClick={() => removeItem(item.key)}
-                                                        className="text-red-400 font-bold hover:text-red-600 disabled:opacity-40"
-                                                        title="항목 삭제"
                                                     >
-                                                        X
-                                                    </button>
+                                                        삭제
+                                                    </Button>
                                                 </td>
                                             </tr>
                                             {needsReason && (
-                                                <tr className="border-t border-gray-50">
-                                                    <td colSpan={8} className="py-3 px-2 text-left bg-amber-50/50">
-                                                        <label className="block text-xs font-semibold text-gray-500 mb-1">
-                                                            「{item.productName}」 할인율 조정 사유 <span className="text-red-500">*</span>
-                                                            <span className="text-gray-400 font-normal ml-1">
+                                                <tr className="quote-write-reason-row">
+                                                    <td colSpan={8}>
+                                                        <label className="block text-xs font-semibold text-[var(--color-text-sub)] mb-1">
+                                                            「{item.productName}」 할인율 조정 사유 <span className="text-[var(--color-danger)]">*</span>
+                                                            <span className="text-[var(--color-text-muted)] font-normal ml-1">
                                                                 {exceedsMaxDiscount && `할인율 ${discountRate}%가 최대 ${item.maxDiscountRate}%를 초과`}
                                                                 {exceedsMaxDiscount && belowMinProfit && ', '}
                                                                 {belowMinProfit && `이익률 ${profitRateLabel}%가 최소 ${item.minProfitRate}% 미달`}
@@ -531,7 +518,7 @@ const QuoteWritePage = () => {
                                                             disabled={isLocked}
                                                             onChange={(e) => updateItem(item.key, { discountReason: e.target.value })}
                                                             placeholder="예: 장기 거래처 우대 할인"
-                                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:bg-gray-50"
+                                                            className="form-input"
                                                         />
                                                     </td>
                                                 </tr>
@@ -542,77 +529,87 @@ const QuoteWritePage = () => {
                             )}
                         </tbody>
                     </table>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-                    <h2 className="text-sm font-bold text-gray-800">발행 정보</h2>
-                    <div className="grid grid-cols-3 gap-4">
-                        <input type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                        <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                        <input value={deliveryTerm} onChange={(e) => setDeliveryTerm(e.target.value)} placeholder="납기 조건" className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                <div className="quote-write-card">
+                    <h2 className="quote-write-card__title">발행 정보</h2>
+                    <div className="quote-write-field-grid">
+                        <div>
+                            <label htmlFor="quote-issued-date">발행일</label>
+                            <input id="quote-issued-date" type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} className="form-input" disabled={isLocked} />
+                        </div>
+                        <div>
+                            <label htmlFor="quote-valid-until">견적 유효기간</label>
+                            <input id="quote-valid-until" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="form-input" disabled={isLocked} />
+                        </div>
+                        <div>
+                            <label htmlFor="quote-delivery-term">납기 조건</label>
+                            <input id="quote-delivery-term" value={deliveryTerm} onChange={(e) => setDeliveryTerm(e.target.value)} placeholder="납기 조건" className="form-input" disabled={isLocked} />
+                        </div>
+                    </div>
+                </div>
 
-                    <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-sm font-bold text-gray-800">③ 상담 메모</h2>
-
-                        <button
+                <div className="quote-write-card">
+                    <div className="quote-write-card__header">
+                        <h2 className="quote-write-card__title">상담 메모</h2>
+                        <Button
                             type="button"
+                            variant="secondary"
+                            size="sm"
                             onClick={handleSummarizeMemo}
-                            disabled={summaryLoading}
-                            className="text-sm bg-violet-600 text-white px-4 py-1.5 rounded-lg font-medium hover:bg-violet-700 disabled:bg-gray-300"
+                            disabled={summaryLoading || isLocked}
                         >
                             {summaryLoading ? '요약 중...' : 'AI 요약'}
-                        </button>
+                        </Button>
                     </div>
 
                     <textarea
                         value={memo}
-                        onChange={e => setMemo(e.target.value)}
+                        onChange={(e) => setMemo(e.target.value)}
                         rows={3}
                         disabled={isLocked || summaryLoading}
                         placeholder="고객 상담 내용을 입력해주세요."
-                        className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        className="form-textarea"
                     />
 
                     {summaryError && (
-                        <p className="mt-2 text-sm text-red-500">{summaryError}</p>
+                        <p className="mt-2 text-sm text-[var(--color-danger)]">{summaryError}</p>
                     )}
 
                     {memoSummary && (
-                        <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                            <p className="text-sm font-semibold text-gray-700 mb-2">AI 요약 결과</p>
-                            <p className="text-sm text-gray-700 whitespace-pre-line">{memoSummary}</p>
+                        <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[#F9FAFB] p-4">
+                            <p className="text-sm font-semibold text-[var(--color-text-main)] mb-2">AI 요약 결과</p>
+                            <p className="text-sm text-[var(--color-text-sub)] whitespace-pre-line">{memoSummary}</p>
                         </div>
                     )}
-
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">④ 금액 자동 계산</h2>
-                    <div className="space-y-2 text-sm">
-                        <div className="flex justify-between text-gray-500"><span>공급가액 (할인 전)</span><span>{Math.round(totals.subtotal).toLocaleString('ko-KR')}원</span></div>
-                        <div className="flex justify-between text-red-500"><span>할인 금액</span><span>- {Math.round(totals.subtotal - totals.supplyAmount).toLocaleString('ko-KR')}원</span></div>
-                        <div className="flex justify-between text-gray-500"><span>VAT</span><span>{Math.round(totals.taxAmount).toLocaleString('ko-KR')}원</span></div>
-                        <div className="flex justify-between border-t pt-2 font-bold text-base"><span>최종 견적 금액</span><span className="text-lg">{Math.round(totals.totalAmount).toLocaleString('ko-KR')}원</span></div>
+                <div className="quote-write-card">
+                    <h2 className="quote-write-card__title mb-4">금액 자동 계산</h2>
+                    <div className="quote-write-summary">
+                        <div className="quote-write-summary__row"><span>공급가액 (할인 전)</span><span>{Math.round(totals.subtotal).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-write-summary__row quote-write-summary__row--discount"><span>할인 금액</span><span>- {Math.round(totals.subtotal - totals.supplyAmount).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-write-summary__row"><span>VAT</span><span>{Math.round(totals.taxAmount).toLocaleString('ko-KR')}원</span></div>
+                        <div className="quote-write-summary__total"><span>최종 견적 금액</span><span>{Math.round(totals.totalAmount).toLocaleString('ko-KR')}원</span></div>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-3">※ 실제 저장 금액은 서버에서 재계산됩니다.</p>
+                    <p className="quote-write-card__hint mt-3">※ 실제 저장 금액은 서버에서 재계산됩니다.</p>
                 </div>
 
                 {submitResult && (
-                    <div className={`border rounded-xl px-4 py-3 text-sm ${submitResult.approvalRequired ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                    <div className={`quote-write-alert ${submitResult.approvalRequired ? 'quote-write-alert--warning' : 'quote-write-alert--success'}`}>
                         {submitResult.approvalRequired ? (
                             <>
                                 <p className="font-semibold">⚠ 작성 완료 — 승인이 필요한 견적입니다.</p>
                                 <p className="mt-0.5 text-xs">사유: {(submitResult.approvalReasons ?? []).join(', ') || '정책 기준 초과'}</p>
-                                <button
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="mt-3"
                                     onClick={() => navigate(`/quotes/analysis/${savedQuote.id}`)}
-                                    className="mt-3 px-4 py-2 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700"
                                 >
                                     내부 분석에서 확인하고 승인 요청하기 →
-                                </button>
+                                </Button>
                             </>
                         ) : (
                             <p className="font-semibold">✓ 작성 완료 — 승인이 필요 없는 견적입니다. 바로 발행 가능합니다.</p>
@@ -620,36 +617,36 @@ const QuoteWritePage = () => {
                     </div>
                 )}
                 {submitError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                    <div className="quote-write-alert quote-write-alert--error">
                         {submitError}
                     </div>
                 )}
 
-                <div className="flex justify-between items-center pt-6 pb-10">
-                    <div className="flex gap-3">
-                        <button
+                <div className="quote-write-actions">
+                    <div className="quote-write-actions__left">
+                        <Button
+                            variant="outline"
                             onClick={handleSaveDraft}
                             disabled={saving || isLocked}
-                            title={isLocked ? '작성 완료된 견적은 수정할 수 없습니다.' : undefined}
-                            className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {saving ? '저장 중...' : isLocked ? '수정 불가' : savedQuote ? '수정 저장' : '임시저장'}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="outline"
                             onClick={() => savedQuote && navigate(`/quotes/${savedQuote.quoteNumber}/preview`)}
                             disabled={!savedQuote}
-                            className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             미리보기
-                        </button>
+                        </Button>
                     </div>
-                    <button
+                    <Button
+                        variant="primary"
+                        size="lg"
                         onClick={handleSubmitApproval}
                         disabled={!savedQuote || submitting || isLocked}
-                        className="px-10 py-2.5 rounded-lg bg-violet-600 text-white font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {submitting ? '제출 중...' : isLocked ? '이미 작성 완료됨' : '작성 완료'}
-                    </button>
+                    </Button>
                 </div>
             </div>
 

@@ -5,7 +5,10 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
     const TABS = ['견적 작성 절차', '할인율 기준', '승인 요청 조건', '견적 작성 예시']
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={(e) => e.target === e.currentTarget && onClose?.()}
+        >
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[700px] flex flex-col overflow-hidden">
                 {/* 헤더 */}
                 <div className="flex justify-between items-center px-8 py-5 border-b border-gray-100 shrink-0">
@@ -13,7 +16,14 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                         <h3 className="font-bold text-lg text-gray-800">견적 작성 가이드</h3>
                         <p className="text-sm text-gray-400">견적 작성 전 아래 내용을 반드시 확인하세요</p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-3xl">&times;</button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="닫기"
+                        className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+                    >
+                        &times;
+                    </button>
                 </div>
 
                 {/* 탭 */}
@@ -67,12 +77,27 @@ const TrainingGuideModal = ({ onClose, onConfirm, alreadyConfirmed, confirming }
                     )}
                 </div>
 
-                {/* 하단 확인 버튼 */}
+                {/* 하단 버튼 */}
                 <div className="px-8 py-5 border-t border-gray-200 flex justify-between items-center shrink-0">
                     <span className="text-xs text-gray-400">{alreadyConfirmed ? '✓ 확인 완료' : '내용 확인 후 버튼을 눌러주세요.'}</span>
-                    <button onClick={onConfirm} disabled={confirming || alreadyConfirmed} className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:bg-gray-400">
-                        {alreadyConfirmed ? '확인 완료' : '가이드를 확인하였습니다.'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={confirming}
+                            className="px-5 py-3 text-sm font-semibold rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                        >
+                            닫기
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={confirming || alreadyConfirmed}
+                            className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 disabled:bg-gray-400 transition-colors"
+                        >
+                            {alreadyConfirmed ? '확인 완료' : confirming ? '처리 중...' : '가이드를 확인하였습니다.'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
