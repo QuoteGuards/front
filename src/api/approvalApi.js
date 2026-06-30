@@ -20,9 +20,17 @@ export const requestApproval = (quoteId, requestMemo) =>
 export const getApprovalDetail = (approvalRequestId) =>
   apiClient.get(`/api/approval-requests/${approvalRequestId}`)
 
-// 승인 대기 목록 (관리자)
+// 승인 요청 상세 조회 (SALES_MANAGER - 동일 부서 영업사원만)
+export const getManagerApprovalDetail = (approvalRequestId) =>
+  apiClient.get(`/api/manager/approval-requests/${approvalRequestId}`)
+
+// 승인 대기 목록 (SUPER_ADMIN - 전체)
 export const getPendingList = () =>
   apiClient.get('/api/admin/approval-requests')
+
+// 승인 대기 목록 (SALES_MANAGER - 동일 부서 영업사원만)
+export const getManagerPendingList = () =>
+  apiClient.get('/api/manager/approval-requests')
 
 // 이달 승인/반려 통계 (관리자)
 export const getApprovalMonthlyStats = () =>
