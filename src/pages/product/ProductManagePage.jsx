@@ -75,6 +75,7 @@ export default function ProductManagePage() {
   const [modalError, setModalError] = useState(null)
   const [uploading, setUploading] = useState(false) // 이미지 업로드 중
   const uploadSession = useRef(0) // 모달 세션 토큰 — 늦게 도착한 업로드가 다른 세션에 쓰는 것 방지
+  const fileInputRef = useRef(null) // 파일 input (버튼으로 트리거)
 
   useEffect(() => {
     let ignore = false
@@ -933,10 +934,11 @@ export default function ProductManagePage() {
                             placeholder="파일 업로드 또는 https:// URL 직접 입력"
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <label className="btn btn--outline btn--sm" style={{ cursor: uploading ? 'not-allowed' : 'pointer' }}>
+                          <button type="button" className="btn btn--outline btn--sm" disabled={uploading}
+                              onClick={() => fileInputRef.current?.click()}>
                             {uploading ? '업로드 중…' : '파일 선택'}
-                            <input type="file" accept="image/*" hidden disabled={uploading} onChange={onPickImage} />
-                          </label>
+                          </button>
+                          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onPickImage} />
                           {form.imageUrl && !uploading && (
                             <button type="button" onClick={() => setForm({ ...form, imageUrl: '' })}
                                 style={{ fontSize: '12px', color: 'var(--color-text-sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
