@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getApprovalDetail, approveQuote, rejectQuote } from '../../api/approvalApi'
+import { getApprovalDetail, getManagerApprovalDetail, approveQuote, rejectQuote } from '../../api/approvalApi'
+import { useAuth } from '../../hooks/useAuth'
 import PageHeader from '../../components/common/PageHeader'
 
 const REASON_LABEL = {
@@ -52,6 +53,7 @@ function InfoRow({ label, value }) {
 export default function AdminApprovalDetailPage() {
   const { approvalRequestId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [decision, setDecision] = useState(null) // 'approve' | 'reject'
@@ -61,12 +63,13 @@ export default function AdminApprovalDetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    getApprovalDetail(approvalRequestId)
+    const fetchDetail = user?.role === 'SALES_MANAGER' ? getManagerApprovalDetail : getApprovalDetail
+    fetchDetail(approvalRequestId)
       .then((res) => { if (!cancelled) setDetail(res.data) })
       .catch((e) => { if (!cancelled) setError(e.response?.data?.message ?? '상세 정보를 불러오지 못했습니다.') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [approvalRequestId])
+  }, [approvalRequestId, user?.role])
 
   const handleSubmit = async () => {
     if (!decision) { setError('승인 또는 반려를 선택해주세요.'); return }

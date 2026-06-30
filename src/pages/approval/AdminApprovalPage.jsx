@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getPendingList, getApprovalReasons, getApprovalMonthlyStats } from '../../api/approvalApi'
+import { getPendingList, getManagerPendingList, getApprovalReasons, getApprovalMonthlyStats } from '../../api/approvalApi'
+import { useAuth } from '../../hooks/useAuth'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import DataTable from '../../components/common/DataTable'
@@ -43,6 +44,7 @@ function StatCard({ label, value, sub, color }) {
 
 export default function AdminApprovalPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [pendingList, setPendingList] = useState([])
   const [reasonsMap, setReasonsMap] = useState({})
   const [monthlyStats, setMonthlyStats] = useState({ monthlyApproved: 0, monthlyRejected: 0 })
@@ -54,8 +56,9 @@ export default function AdminApprovalPage() {
   const loadData = async () => {
     setLoading(true)
     try {
+      const fetchList = user?.role === 'SALES_MANAGER' ? getManagerPendingList : getPendingList
       const [res, statsRes] = await Promise.all([
-        getPendingList(),
+        fetchList(),
         getApprovalMonthlyStats(),
       ])
       const list = res.data ?? []
