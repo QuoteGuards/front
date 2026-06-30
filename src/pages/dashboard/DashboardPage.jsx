@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   getSummaryApi, getSalesAnalysisApi, getMonthlyTrendApi,
   getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi, getDepartmentStatsApi, getDepartmentsApi,
+  getPopularByViewsApi,
 } from '../../api/dashboardApi'
 import PageHeader from '../../components/common/PageHeader'
 import SegmentedControl from '../../components/common/SegmentedControl'
 import Pagination from '../../components/common/Pagination'
+import Button from '../../components/common/Button'
 
 const STAFF_PAGE_SIZE = 8
 
@@ -58,6 +60,8 @@ export default function DashboardPage() {
   const [trend, setTrend] = useState([])
   const [statusCounts, setStatusCounts] = useState([])
   const [popular, setPopular] = useState([])
+  const [popularViews, setPopularViews] = useState([]) // 조회수 순위(누적)
+  const [popularTab, setPopularTab] = useState('orders') // orders | views
   const [staff, setStaff] = useState([])
   const [staffSearch, setStaffSearch] = useState('')
   const [staffPage, setStaffPage] = useState(0)
@@ -100,6 +104,11 @@ export default function DashboardPage() {
     getDepartmentsApi()
       .then(d => { setDepartments(d); setDeptError(null) })
       .catch(() => setDeptError('부서 목록을 불러오지 못했습니다.'))
+  }, [])
+
+  // 조회수 순위는 누적(기간/부서 무관)이라 1회만 로드
+  useEffect(() => {
+    getPopularByViewsApi(10).then(setPopularViews).catch(() => {})
   }, [])
 
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
@@ -241,25 +250,53 @@ export default function DashboardPage() {
           )}
         </Panel>
 
-        {/* ── 인기 제품 순위 ── */}
-        <Panel title="인기 제품 순위 (TOP 10)">
-          {popular.length === 0 ? <Empty /> : (
-            <table className="w-full text-sm">
-              <thead className="text-xs text-[var(--color-text-muted)]">
-                <tr><th className="text-left py-1 w-8">#</th><th className="text-left">제품</th><th className="text-right">견적포함</th><th className="text-right">수량</th><th className="text-right">매출기여</th></tr>
-              </thead>
-              <tbody>
-                {popular.map((p, i) => (
-                  <tr key={p.productId} style={{ borderTop: '1px solid var(--color-border)' }}>
-                    <td className="py-1.5 text-[var(--color-text-muted)]">{i + 1}</td>
-                    <td className="font-medium">{p.productName}</td>
-                    <td className="text-right">{num(p.orderCount)}</td>
-                    <td className="text-right text-[var(--color-text-sub)]">{num(p.totalQuantity)}</td>
-                    <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(p.totalSalesAmount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* ── 인기 제품 순위 (주문순 / 조회순) ── */}
+        <Panel title="인기 제품 순위 (TOP 10)"
+          action={
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <Button size="sm" variant={popularTab === 'orders' ? 'primary' : 'ghost'} onClick={() => setPopularTab('orders')}>주문순</Button>
+              <Button size="sm" variant={popularTab === 'views' ? 'primary' : 'ghost'} onClick={() => setPopularTab('views')}>조회순</Button>
+            </div>
+          }>
+          {popularTab === 'orders' ? (
+            popular.length === 0 ? <Empty /> : (
+              <table className="w-full text-sm">
+                <thead className="text-xs text-[var(--color-text-muted)]">
+                  <tr><th className="text-left py-1 w-8">#</th><th className="text-left">제품</th><th className="text-right">견적포함</th><th className="text-right">수량</th><th className="text-right">매출기여</th></tr>
+                </thead>
+                <tbody>
+                  {popular.map((p, i) => (
+                    <tr key={p.productId} style={{ borderTop: '1px solid var(--color-border)' }}>
+                      <td className="py-1.5 text-[var(--color-text-muted)]">{i + 1}</td>
+                      <td className="font-medium">{p.productName}</td>
+                      <td className="text-right">{num(p.orderCount)}</td>
+                      <td className="text-right text-[var(--color-text-sub)]">{num(p.totalQuantity)}</td>
+                      <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(p.totalSalesAmount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          ) : (
+            <>
+              <div className="text-xs mb-2" style={{ color: 'var(--color-text-muted)' }}>※ 조회수는 전체 누적 기준 (기간·부서 필터 미적용)</div>
+              {popularViews.length === 0 ? <Empty /> : (
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-[var(--color-text-muted)]">
+                    <tr><th className="text-left py-1 w-8">#</th><th className="text-left">제품</th><th className="text-right">조회수</th></tr>
+                  </thead>
+                  <tbody>
+                    {popularViews.map((p, i) => (
+                      <tr key={p.productId} style={{ borderTop: '1px solid var(--color-border)' }}>
+                        <td className="py-1.5 text-[var(--color-text-muted)]">{i + 1}</td>
+                        <td className="font-medium">{p.productName}</td>
+                        <td className="text-right" style={{ color: 'var(--color-primary)' }}>{num(p.viewCount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
         </Panel>
 
