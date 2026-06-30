@@ -4,6 +4,7 @@ import UserDetailModal from '../../components/admin/UserDetailModal'
 import { getUserListApi } from '../../api/userManagementApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import SegmentedControl from '../../components/common/SegmentedControl'
 import DataTable from '../../components/common/DataTable'
 import StatusBadge from '../../components/common/StatusBadge'
 import Button from '../../components/common/Button'
@@ -168,20 +169,22 @@ export default function UserManagementPage() {
 
       <SearchPanel>
         <SearchRow label="상태">
-          {STATUS_OPTIONS.map((opt) => (
-            <label key={opt.value} className="form-checkbox">
-              <input type="radio" name="status-filter" value={opt.value} checked={statusFilter === opt.value} onChange={() => handleStatusChange(opt.value)} />
-              {opt.label}
-            </label>
-          ))}
+          <SegmentedControl
+            variant="pills"
+            name="status-filter"
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={handleStatusChange}
+          />
         </SearchRow>
         <SearchRow label="권한">
-          {ROLE_OPTIONS.map((opt) => (
-            <label key={opt.value} className="form-checkbox">
-              <input type="radio" name="role-filter" value={opt.value} checked={roleFilter === opt.value} onChange={() => handleRoleChange(opt.value)} />
-              {opt.label}
-            </label>
-          ))}
+          <SegmentedControl
+            variant="pills"
+            name="role-filter"
+            options={ROLE_OPTIONS}
+            value={roleFilter}
+            onChange={handleRoleChange}
+          />
         </SearchRow>
         <SearchRow label="검색">
           <label htmlFor="search-type-sel" className="sr-only">검색 기준</label>

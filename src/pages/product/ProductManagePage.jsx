@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi,
@@ -10,14 +10,33 @@ import {
   bulkActivateProductsApi,
   bulkDeactivateProductsApi,
   bulkDeleteProductsApi,
+  uploadProductImageApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import SearchableSelect from '../../components/common/SearchableSelect'
+import SegmentedControl from '../../components/common/SegmentedControl'
 import DataTable from '../../components/common/DataTable'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
+
+const VAT_FILTER_OPTIONS = [
+  { value: '', label: 'VAT 전체' },
+  { value: 'true', label: '적용' },
+  { value: 'false', label: '미적용' },
+]
+
+const ACTIVE_FILTER_OPTIONS = [
+  { value: '', label: '상태 전체' },
+  { value: 'true', label: '사용' },
+  { value: 'false', label: '미사용' },
+]
+
+const VAT_MODAL_OPTIONS = [
+  { value: true, label: '적용' },
+  { value: false, label: '미적용' },
+]
 
 const PAGE_SIZES = [10, 20, 50]
 
@@ -72,6 +91,9 @@ export default function ProductManagePage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
+  const [uploading, setUploading] = useState(false) // 이미지 업로드 중
+  const uploadSession = useRef(0) // 모달 세션 토큰 — 늦게 도착한 업로드가 다른 세션에 쓰는 것 방지
+  const fileInputRef = useRef(null) // 파일 input (버튼으로 트리거)
 
   useEffect(() => {
     let ignore = false
@@ -193,6 +215,8 @@ export default function ProductManagePage() {
   }
 
   const openCreate = () => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(null)
     setForm(EMPTY_FORM)
     setModalError(null)
@@ -200,6 +224,8 @@ export default function ProductManagePage() {
   }
 
   const openEdit = (product) => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(product.id)
     setForm({
       code: product.code,
@@ -218,8 +244,43 @@ export default function ProductManagePage() {
     setModalOpen(true)
   }
 
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일 재선택 허용 (file은 위에서 캡처됨)
+    if (!file) return
+
+    // 업로드 전 클라이언트 검증 — 서버도 동일 검증하지만 즉시 피드백 + 불필요한 업로드 방지
+    if (!file.type.startsWith('image/')) {
+      setModalError('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError('파일 크기가 너무 큽니다. (최대 5MB)')
+      return
+    }
+
+    const session = uploadSession.current // 이 업로드가 속한 모달 세션
+    setModalError(null)
+    setUploading(true)
+    try {
+      const url = await uploadProductImageApi(file)
+      if (uploadSession.current !== session) return // 모달이 닫히거나 다른 제품으로 전환됨 → 폐기
+      setForm((f) => ({ ...f, imageUrl: url }))
+    } catch (err) {
+      if (uploadSession.current !== session) return
+      setModalError(err.response?.data?.message ?? '이미지 업로드 실패')
+    } finally {
+      if (uploadSession.current === session) setUploading(false)
+    }
+  }
+
   const onSubmit = async () => {
     setModalError(null)
+
+    if (uploading) {
+      setModalError('이미지 업로드 중입니다. 완료 후 저장하세요.')
+      return
+    }
 
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
       setModalError('제품코드, 제품명, 카테고리는 필수입니다.')
@@ -609,27 +670,21 @@ export default function ProductManagePage() {
                 style={{ width: '220px' }}
             />
 
-            <select
-                className="form-select"
-                value={filter.vat}
-                onChange={(e) => setFilter({ ...filter, vat: e.target.value })}
-                style={{ width: '110px' }}
-            >
-              <option value="">VAT 전체</option>
-              <option value="true">적용</option>
-              <option value="false">미적용</option>
-            </select>
+            <SegmentedControl
+              variant="toggle"
+              name="vat-filter"
+              options={VAT_FILTER_OPTIONS}
+              value={filter.vat}
+              onChange={(v) => setFilter({ ...filter, vat: v })}
+            />
 
-            <select
-                className="form-select"
-                value={filter.active}
-                onChange={(e) => setFilter({ ...filter, active: e.target.value })}
-                style={{ width: '110px' }}
-            >
-              <option value="">상태 전체</option>
-              <option value="true">사용</option>
-              <option value="false">미사용</option>
-            </select>
+            <SegmentedControl
+              variant="toggle"
+              name="active-filter"
+              options={ACTIVE_FILTER_OPTIONS}
+              value={filter.active}
+              onChange={(v) => setFilter({ ...filter, active: v })}
+            />
 
             <Button variant="secondary" onClick={onSearch}>
               검색
@@ -698,35 +753,16 @@ export default function ProductManagePage() {
                 }}
             >
               <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{selectedIds.size}개 선택됨</span>
-
-              <Button variant="outline" size="sm" onClick={onBulkActivate}>
-                일괄 활성화
-              </Button>
-              <Button variant="outline" size="sm" onClick={onBulkDeactivate}>
-                일괄 비활성화
-              </Button>
-              <Button variant="danger" size="sm" onClick={onBulkDelete}>
-                일괄 삭제
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
-                선택 해제
-              </Button>
+              <Button variant="outline" size="sm" onClick={onBulkActivate}>일괄 활성화</Button>
+              <Button variant="outline" size="sm" onClick={onBulkDeactivate}>일괄 비활성화</Button>
+              <Button variant="danger" size="sm" onClick={onBulkDelete}>일괄 삭제</Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>선택 해제</Button>
             </div>
         )}
 
         {error && (
-            <div
-                role="alert"
-                style={{
-                  marginBottom: '12px',
-                  fontSize: '13px',
-                  color: 'var(--color-danger)',
-                  background: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '10px 16px',
-                }}
-            >
+            <div role="alert"
+                style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--color-danger)', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-sm)', padding: '10px 16px' }}>
               {error}
             </div>
         )}
@@ -737,28 +773,11 @@ export default function ProductManagePage() {
 
         {modalOpen && (
             <div
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  zIndex: 200,
-                  padding: '16px',
-                }}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
                 onClick={() => setModalOpen(false)}
             >
               <div
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: 'var(--radius-md)',
-                    width: '100%',
-                    maxWidth: '640px',
-                    maxHeight: '90vh',
-                    overflowY: 'auto',
-                    padding: '28px',
-                  }}
+                  style={{ background: '#FFFFFF', borderRadius: 'var(--radius-md)', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '28px' }}
                   onClick={(e) => e.stopPropagation()}
               >
                 <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>
@@ -766,104 +785,44 @@ export default function ProductManagePage() {
                 </h2>
 
                 {modalError && (
-                    <div
-                        style={{
-                          marginBottom: '12px',
-                          fontSize: '13px',
-                          color: 'var(--color-danger)',
-                          background: '#FEF2F2',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '10px 14px',
-                        }}
-                    >
+                    <div style={{ marginBottom: '12px', fontSize: '13px', color: 'var(--color-danger)', background: '#FEF2F2', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
                       {modalError}
                     </div>
                 )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <ModalRow label="제품코드 *">
-                    <input
-                        className="form-input"
-                        value={form.code}
-                        onChange={(e) => setForm({ ...form, code: e.target.value })}
-                        placeholder="예: WM-1024"
-                    />
+                    <input className="form-input" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="예: WM-1024" />
                   </ModalRow>
-
                   <ModalRow label="제품명 *">
-                    <input
-                        className="form-input"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        placeholder="예: 드럼 세탁기 12kg"
-                    />
+                    <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="예: 드럼 세탁기 12kg" />
                   </ModalRow>
-
                   <ModalRow label="카테고리 *">
                     <SearchableSelect value={form.categoryId} placeholder="카테고리 선택"
                       options={leafCats.map((c) => ({ value: c.id, label: c.path }))}
                       onChange={(v) => setForm({ ...form, categoryId: v })} />
                   </ModalRow>
-
                   <ModalRow label="규격">
-                    <input
-                        className="form-input"
-                        value={form.spec}
-                        onChange={(e) => setForm({ ...form, spec: e.target.value })}
-                        placeholder="예: 600x850x600mm"
-                    />
+                    <input className="form-input" value={form.spec} onChange={(e) => setForm({ ...form, spec: e.target.value })} placeholder="예: 600x850x600mm" />
                   </ModalRow>
-
                   <ModalRow label="단가 *">
-                    <input
-                        type="number"
-                        min="0"
-                        className="form-input"
-                        value={form.unitPrice}
-                        onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-                        placeholder="0"
-                    />
+                    <input type="number" min="0" className="form-input" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} placeholder="0" />
                   </ModalRow>
-
                   <ModalRow label="원가 *">
-                    <input
-                        type="number"
-                        min="0"
-                        className="form-input"
-                        value={form.costPrice}
-                        onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
-                        placeholder="0"
-                    />
+                    <input type="number" min="0" className="form-input" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} placeholder="0" />
                   </ModalRow>
-
                   <ModalRow label="단위">
-                    <input
-                        className="form-input"
-                        value={form.unit}
-                        onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                        placeholder="EA"
-                    />
+                    <input className="form-input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="EA" />
                   </ModalRow>
-
                   <ModalRow label="VAT">
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center', height: '40px' }}>
-                      <label className="form-checkbox">
-                        <input
-                            type="radio"
-                            checked={form.vatApplicable === true}
-                            onChange={() => setForm({ ...form, vatApplicable: true })}
-                        />
-                        적용
-                      </label>
-
-                      <label className="form-checkbox">
-                        <input
-                            type="radio"
-                            checked={form.vatApplicable === false}
-                            onChange={() => setForm({ ...form, vatApplicable: false })}
-                        />
-                        미적용
-                      </label>
+                    <div style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
+                      <SegmentedControl
+                        variant="toggle"
+                        name="modal-vat"
+                        options={VAT_MODAL_OPTIONS}
+                        value={form.vatApplicable}
+                        onChange={(v) => setForm({ ...form, vatApplicable: v })}
+                      />
                     </div>
                   </ModalRow>
                 </div>
@@ -881,26 +840,37 @@ export default function ProductManagePage() {
 
                 <div style={{ marginTop: '16px' }}>
                   <ModalRow label="설명">
-                <textarea
-                    className="form-textarea"
-                    style={{ height: '80px' }}
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="제품 설명 (선택)"
-                />
+                    <textarea className="form-textarea" style={{ height: '80px' }} value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="제품 설명 (선택)" />
                   </ModalRow>
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
-                  <ModalRow label="이미지 URL">
+                  <ModalRow label="이미지">
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <input
-                          className="form-input"
-                          value={form.imageUrl}
-                          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                          placeholder="https://..."
-                          style={{ flex: 1 }}
-                      />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input
+                            className="form-input"
+                            value={form.imageUrl}
+                            readOnly
+                            placeholder="파일을 선택하면 저장된 이미지 주소가 표시됩니다"
+                            style={{ background: 'var(--color-bg-main)', color: 'var(--color-text-sub)' }}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button type="button" className="btn btn--outline btn--sm" disabled={uploading}
+                              onClick={() => fileInputRef.current?.click()}>
+                            {uploading ? '업로드 중…' : '파일 선택'}
+                          </button>
+                          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onPickImage} />
+                          {form.imageUrl && !uploading && (
+                            <button type="button" onClick={() => setForm({ ...form, imageUrl: '' })}
+                                style={{ fontSize: '12px', color: 'var(--color-text-sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              이미지 제거
+                            </button>
+                          )}
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>JPG·PNG 등, 최대 5MB</span>
+                        </div>
+                      </div>
                       <Thumb src={form.imageUrl} size={56} />
                     </div>
                   </ModalRow>
@@ -910,37 +880,17 @@ export default function ProductManagePage() {
                     <div style={{ marginTop: '16px' }}>
                       <ModalRow label="사용 상태">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <button
-                              type="button"
+                          <button type="button"
+                              aria-label={form.isActive ? '사용 중 — 클릭하면 미사용으로 변경' : '미사용 — 클릭하면 사용으로 변경'}
+                              aria-pressed={form.isActive}
                               onClick={() => setForm({ ...form, isActive: !form.isActive })}
-                              style={{
-                                position: 'relative',
-                                width: '44px',
-                                height: '24px',
-                                borderRadius: '12px',
-                                background: form.isActive ? 'var(--color-primary)' : '#D1D5DB',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'background 0.2s',
-                              }}
+                              aria-label={form.isActive ? '사용 중 — 클릭하면 미사용으로 변경' : '미사용 — 클릭하면 사용으로 변경'}
+                              aria-pressed={form.isActive}
+                              style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '12px', background: form.isActive ? 'var(--color-primary)' : '#D1D5DB', border: 'none', cursor: 'pointer', transition: 'background 0.2s' }}
                           >
-                      <span
-                          style={{
-                            position: 'absolute',
-                            top: '2px',
-                            left: form.isActive ? '22px' : '2px',
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            background: '#FFFFFF',
-                            transition: 'left 0.2s',
-                          }}
-                      />
+                            <span style={{ position: 'absolute', top: '2px', left: form.isActive ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: '#FFFFFF', transition: 'left 0.2s' }} />
                           </button>
-
-                          <span style={{ fontSize: '13px', color: 'var(--color-text-sub)' }}>
-                      {form.isActive ? '사용 중' : '미사용'}
-                    </span>
+                          <span style={{ fontSize: '13px', color: 'var(--color-text-sub)' }}>{form.isActive ? '사용 중' : '미사용'}</span>
                         </div>
                       </ModalRow>
                     </div>
@@ -950,8 +900,8 @@ export default function ProductManagePage() {
                   <Button variant="ghost" onClick={() => setModalOpen(false)}>
                     취소
                   </Button>
-                  <Button variant="primary" onClick={onSubmit}>
-                    저장
+                  <Button variant="primary" onClick={onSubmit} disabled={uploading}>
+                    {uploading ? '업로드 중…' : '저장'}
                   </Button>
                 </div>
               </div>
@@ -967,52 +917,35 @@ function isActiveOf(product) {
 
 function flattenLeaves(tree) {
   const out = []
-
   const walk = (nodes, path) => {
     for (const node of nodes ?? []) {
       const nextPath = [...path, node.name]
-
-      if (node.children?.length) {
-        walk(node.children, nextPath)
-      } else {
-        out.push({ id: node.id, path: nextPath.join(' > ') })
-      }
+      if (node.children?.length) { walk(node.children, nextPath) }
+      else { out.push({ id: node.id, path: nextPath.join(' > ') }) }
     }
   }
-
   walk(tree, [])
-
   return out
 }
 
 function flattenAll(tree) {
   const out = []
-
   const walk = (nodes, path) => {
     for (const node of nodes ?? []) {
       const nextPath = [...path, node.name]
-
       out.push({ id: node.id, path: nextPath.join(' > ') })
-
-      if (node.children?.length) {
-        walk(node.children, nextPath)
-      }
+      if (node.children?.length) { walk(node.children, nextPath) }
     }
   }
-
   walk(tree, [])
-
   return out
 }
 
 function won(value) {
   if (value == null || value === '') return '-'
-
   return `${Number(value).toLocaleString('ko-KR')}원`
 }
 
-// 마진율(%) = (단가 - 원가) / 단가 * 100
-// 단가는 0 이하/비유효, 원가는 비유효(NaN 등)/음수면 null (원가 0은 유효: 마진 100%)
 function marginRate(product) {
   const u = Number(product?.unitPrice)
   const c = Number(product?.costPrice)
@@ -1023,47 +956,21 @@ function marginRate(product) {
 
 function csvCell(value) {
   const text = String(value ?? '')
-
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
 function Thumb({ src, size = 36 }) {
   if (!src) {
     return (
-        <div
-            style={{
-              width: size,
-              height: size,
-              background: '#F3F4F6',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#D1D5DB',
-              fontSize: '11px',
-              flexShrink: 0,
-            }}
-        >
+        <div style={{ width: size, height: size, background: '#F3F4F6', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D1D5DB', fontSize: '11px', flexShrink: 0 }}>
           無
         </div>
     )
   }
-
   return (
-      <img
-          src={src}
-          alt=""
-          style={{
-            width: size,
-            height: size,
-            borderRadius: '4px',
-            objectFit: 'cover',
-            border: '1px solid var(--color-border)',
-            flexShrink: 0,
-          }}
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
+      <img src={src} alt=""
+          style={{ width: size, height: size, borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--color-border)', flexShrink: 0 }}
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
       />
   )
 }
@@ -1071,9 +978,7 @@ function Thumb({ src, size = 36 }) {
 function ModalRow({ label, children }) {
   return (
       <div>
-        <div style={{ fontSize: '13px', color: 'var(--color-text-sub)', marginBottom: '4px' }}>
-          {label}
-        </div>
+        <div style={{ fontSize: '13px', color: 'var(--color-text-sub)', marginBottom: '4px' }}>{label}</div>
         {children}
       </div>
   )

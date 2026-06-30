@@ -1,16 +1,16 @@
+import { useState } from 'react'
 import PageHeader from '../../components/common/PageHeader'
 import { useHistoryFilter } from '../../hooks/useHistoryFilter'
-import HistoryHeader from '../../components/history/HistoryHeader'
 import HistoryFilter from '../../components/history/HistoryFilter'
 import HistoryTable from '../../components/history/HistoryTable'
 
 const HistoryPage = () => {
+  const [searchInput, setSearchInput] = useState('')
   const {
     history,
     filtered,
     loading,
     error,
-    search,
     setSearch,
     statusFilter,
     setStatusFilter,
@@ -18,25 +18,32 @@ const HistoryPage = () => {
     failCount,
   } = useHistoryFilter()
 
+  const onSearch = () => setSearch(searchInput.trim())
+  const onSearchKeyDown = (e) => { if (e.key === 'Enter') onSearch() }
+
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['견적 관리', '발송 이력']} />
-    <HistoryHeader
+    <div>
+      <PageHeader breadcrumbs={['견적 관리', '발송 이력']} title="발송 이력" />
+      <HistoryFilter
+        searchInput={searchInput}
+        onSearchInputChange={setSearchInput}
+        onSearch={onSearch}
+        onSearchKeyDown={onSearchKeyDown}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        resultCount={filtered.length}
         total={history.length}
         successCount={successCount}
         failCount={failCount}
       />
-      <HistoryFilter
-        search={search}
-        onSearch={setSearch}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        resultCount={filtered.length}
-      />
       {loading ? (
-        <p className="px-8 py-16 text-center text-sm text-gray-400">발송 이력을 불러오는 중...</p>
+        <p className="text-center text-sm py-16" style={{ color: 'var(--color-text-muted)' }}>
+          발송 이력을 불러오는 중...
+        </p>
       ) : error ? (
-        <p className="px-8 py-16 text-center text-sm text-red-400">발송 이력을 불러올 수 없습니다.</p>
+        <p className="text-center text-sm py-16" style={{ color: 'var(--color-danger)' }}>
+          발송 이력을 불러올 수 없습니다.
+        </p>
       ) : (
         <HistoryTable rows={filtered} />
       )}

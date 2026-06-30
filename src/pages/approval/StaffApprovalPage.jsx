@@ -41,6 +41,12 @@ const REASON_LABEL = {
   HIGH_AMOUNT: '고액 견적',
 }
 
+const REASON_BADGE_STYLE = {
+  DISCOUNT_EXCEEDED: { background: '#FFF7ED', color: '#C2410C', border: '1px solid #FDBA74' },
+  LOW_PROFIT:        { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' },
+  HIGH_AMOUNT:       { background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE' },
+}
+
 function formatDate(str) {
   if (!str) return '—'
   return new Date(str).toLocaleString('ko-KR')
@@ -293,14 +299,14 @@ function RequestTab() {
                           <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
                             <p className="text-xs text-gray-400 mb-2">승인 필요 사유</p>
                             <div className="flex flex-wrap gap-1.5">
-                              {detail.reasons.map((r) => (
-                                <span
-                                  key={r.id}
-                                  className="px-2.5 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700 border border-amber-200"
-                                >
-                                  {REASON_LABEL[r.reasonType] ?? r.reasonType}
-                                </span>
-                              ))}
+                              {detail.reasons.map((r) => {
+                                const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+                                return (
+                                  <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                                    {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                                  </span>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
@@ -538,256 +544,86 @@ function RejectReRequestTab() {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* 반려 배너 */}
-      <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-          <span className="text-red-500 font-bold text-sm">✗</span>
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-red-700">견적이 반려되었습니다</p>
-          <p className="text-xs text-red-400 mt-0.5">
-            반려 사유를 확인하고 견적을 수정한 후 재요청하세요.
-          </p>
-        </div>
-        <span className="px-3 py-1 rounded-full bg-red-200 text-red-700 text-xs font-semibold shrink-0">
-          반려됨
-        </span>
-      </div>
-
-      {/* 반려 상세 정보 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-800">반려 상세 정보</h3>
-        </div>
-        <div className="px-5 py-4 grid grid-cols-4 gap-6">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">처리자</p>
-            <p className="text-sm font-semibold text-gray-800">{rejectedEntry?.actorName ?? '—'}</p>
-            <p className="text-xs text-gray-400 mt-0.5">영업관리자</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">반려일시</p>
-            <p className="text-sm font-semibold text-gray-800">{formatDate(rejectedEntry?.actedAt)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">처리 소요시간</p>
-            <p className="text-sm font-semibold text-gray-800">
-              {elapsedTime(requestedEntry?.actedAt, rejectedEntry?.actedAt) ?? '—'}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">재요청 마감일</p>
-            <p className="text-sm font-semibold text-gray-800">
-              {selectedQuote.validUntil ? formatDateShort(selectedQuote.validUntil) : '—'}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* 반려 사유 */}
       {rejectedEntry?.memo && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
-          <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 mb-2">
-            <span>⚠</span> 반려 사유
-          </p>
-          <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
-            {rejectedEntry.memo}
-          </p>
+        <div className="bg-white rounded-xl border border-red-100 shadow-sm">
+          <div className="px-5 py-4 border-b border-red-50">
+            <h3 className="text-sm font-semibold text-red-600">반려 사유</h3>
+          </div>
+          <div className="px-5 py-4">
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {rejectedEntry.memo}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 리스크 항목 */}
+      {reasons.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800">리스크 항목</h3>
+          </div>
+          <div className="px-5 py-4 flex flex-wrap gap-2">
+            {reasons.map((r) => {
+              const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+              return (
+                <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                  {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                </span>
+              )
+            })}
+          </div>
         </div>
       )}
 
       {/* 수정 가이드 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
-            <span className="text-emerald-500 font-bold">✓</span> 수정 가이드
-          </h3>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-violet-50 text-violet-500 border border-violet-200">
-            AI 도우미
-          </span>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-800">수정 가이드</h3>
         </div>
-        <div className="px-5 py-4 flex flex-col gap-4">
-          {guideSteps.map(({ step, title, desc, required }) => (
-            <div key={step} className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                {step}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-sm font-medium text-gray-800">{title}</p>
-                  <span
-                    className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${
-                      required
-                        ? 'bg-red-50 text-red-500 border border-red-100'
-                        : 'bg-gray-100 text-gray-400'
-                    }`}
-                  >
-                    {required ? '필수' : '권장'}
-                  </span>
+        <div className="px-5 py-4">
+          <div className="flex flex-col gap-3">
+            {[
+              { step: 1, title: '반려 사유 확인', desc: '위의 반려 사유를 정확히 파악하세요.' },
+              { step: 2, title: '견적 수정', desc: '견적 목록에서 해당 견적을 열어 문제 항목을 수정하세요.' },
+              { step: 3, title: '재요청 사유 작성', desc: '수정 내용과 개선 근거를 아래에 작성하세요.' },
+              { step: 4, title: '재요청 제출', desc: '재요청 버튼을 눌러 관리자에게 다시 검토 요청하세요.' },
+            ].map(({ step, title, desc }) => (
+              <div key={step} className="flex gap-3 items-start">
+                <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center shrink-0">
+                  {step}
                 </div>
-                <p className="text-xs text-gray-400 leading-relaxed">{desc}</p>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">{title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* 견적 수정 바로가기 */}
-      <div className="bg-white rounded-xl border border-violet-200 shadow-sm px-5 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-gray-800">견적을 수정하셨나요?</p>
-          <p className="text-xs text-gray-400 mt-0.5">
-            반려 사유를 반영해 견적을 수정한 뒤 재요청 사유를 작성해주세요.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate(`/quotes/new?id=${selectedQuote.id}`)}
-          className="shrink-0 ml-4 px-4 py-2.5 text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors"
-        >
-          견적 수정하기 →
-        </button>
-      </div>
-
-      {/* 수정 견적 현황 */}
-      {analysis && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">수정 견적 현황</h3>
-          </div>
-          <div className="px-5 py-4">
-            <table className="w-full">
-              <thead>
-                <tr className="text-xs text-gray-400 border-b border-gray-100">
-                  <th className="text-left pb-3 font-medium">항목</th>
-                  <th className="text-right pb-3 font-medium">현재 수치</th>
-                  <th className="text-right pb-3 font-medium pr-1">상태</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {maxDiscountRate !== null && (
-                  <tr className="border-b border-gray-50">
-                    <td className="py-3 text-gray-600">최대 할인율</td>
-                    <td className="py-3 text-right font-semibold text-gray-800">{maxDiscountRate}%</td>
-                    <td className="py-3 text-right">
-                      {(analysis.approvalReasons ?? []).includes('DISCOUNT_EXCEEDED') ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
-                          기준 초과
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                          정상
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                )}
-                <tr className="border-b border-gray-50">
-                  <td className="py-3 text-gray-600">견적 금액</td>
-                  <td className="py-3 text-right font-semibold text-gray-800">
-                    {analysis.totalAmount
-                      ? Number(analysis.totalAmount).toLocaleString('ko-KR') + '원'
-                      : '—'}
-                  </td>
-                  <td className="py-3 text-right">
-                    {(analysis.approvalReasons ?? []).includes('HIGH_AMOUNT') ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
-                        기준 초과
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        정상
-                      </span>
-                    )}
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="py-3 text-gray-600">예상 이익률</td>
-                  <td className="py-3 text-right font-semibold text-gray-800">
-                    {analysis.profitRate != null
-                      ? `${Number(analysis.profitRate).toFixed(1)}%`
-                      : '—'}
-                  </td>
-                  <td className="py-3 text-right">
-                    {(analysis.approvalReasons ?? []).includes('LOW_PROFIT') ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">
-                        기준 미달
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        정상
-                      </span>
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 text-gray-600">승인 필요 여부</td>
-                  <td className="py-3 text-right font-semibold text-gray-800">
-                    {analysis.approvalRequired ? '필요' : '불필요'}
-                  </td>
-                  <td className="py-3 text-right">
-                    {analysis.approvalRequired ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
-                        승인 필요
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        자동 승인 가능
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="text-xs text-gray-400 mt-3 pt-3 border-t border-gray-50">
-              * 견적을 수정하면 시스템이 자동으로 이익률/할인율을 재계산합니다.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 재요청 사유 */}
+      {/* 재요청 사유 입력 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-1.5">
+        <div className="px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-semibold text-gray-800">재요청 사유</h3>
-          <span className="text-red-500 text-xs font-semibold">*</span>
-          <span className="text-xs text-gray-400 ml-1">(필수)</span>
         </div>
         <div className="px-5 py-4">
           <textarea
             value={reRequestMemo}
             onChange={(e) => setReRequestMemo(e.target.value)}
-            placeholder="예: 할인율을 12%로 조정하였으며, 고객과 변경 조건 협의 완료했습니다."
+            placeholder="수정한 내용과 재요청 사유를 입력하세요."
             rows={4}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-shadow"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
           {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-        </div>
-      </div>
-
-      {/* 하단 버튼 */}
-      <div className="flex items-center justify-between pt-2 pb-4">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          ← 목록
-        </button>
-        <div className="flex items-center gap-2">
-          {tempSaved && (
-            <span className="text-xs text-emerald-600 font-medium animate-pulse">저장됨</span>
-          )}
-          <button
-            onClick={handleTempSave}
-            className="px-4 py-2.5 text-sm font-medium border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            임시저장
-          </button>
           <button
             onClick={handleReRequest}
             disabled={submitting}
-            className="flex items-center gap-1.5 px-6 py-2.5 text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
-            {submitting ? '처리 중...' : '✓ 재요청'}
+            {submitting ? '처리 중...' : '재요청하기'}
           </button>
         </div>
       </div>
@@ -1030,32 +866,40 @@ export default function StaffApprovalPage() {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} />
-      <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-gray-800">승인 요청 관리</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          승인 요청 현황과 이력을 확인하세요.
-        </p>
-      </div>
+    <div>
+      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} title="승인 요청 현황" />
 
-      <div className="px-8 border-b border-gray-200 bg-white flex gap-0">
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '1px solid var(--color-border)',
+          background: '#fff',
+          marginBottom: '24px',
+        }}
+      >
         {TABS.map((tab, idx) => (
           <button
             key={tab}
             onClick={() => setActiveTab(idx)}
-            className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === idx
-                ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
+            style={{
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: activeTab === idx ? 600 : 400,
+              color: activeTab === idx ? 'var(--color-primary)' : 'var(--color-text-sub)',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === idx ? '2px solid var(--color-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      <div className="px-8 py-6">
+      <div>
         {activeTab === 0 && <RequestTab />}
         {activeTab === 1 && <RejectReRequestTab />}
         {activeTab === 2 && <HistoryTab />}

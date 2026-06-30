@@ -4,10 +4,32 @@ import {
   getQuoteStatusApi, getPopularProductsApi, getSalesStaffApi, getDepartmentStatsApi, getDepartmentsApi,
 } from '../../api/dashboardApi'
 import PageHeader from '../../components/common/PageHeader'
-import Button from '../../components/common/Button'
+import SegmentedControl from '../../components/common/SegmentedControl'
 import Pagination from '../../components/common/Pagination'
 
 const STAFF_PAGE_SIZE = 8
+
+function getDateRange(periodKey) {
+  const today = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const toStr = fmt(today)
+
+  // setMonth()는 월말(31일 등)에서 overflow가 발생하므로 직접 생성자 방식 사용
+  // new Date(y, m, d)에서 d > 해당 월 말일이면 overflow → 말일로 clamp
+  const subtractMonths = (months) => {
+    const y = today.getFullYear()
+    const m = today.getMonth() - months  // 음수여도 JS Date가 이월 처리
+    const d = today.getDate()
+    const lastDay = new Date(y, m + 1, 0).getDate()  // 목표 월의 말일
+    return fmt(new Date(y, m, Math.min(d, lastDay)))
+  }
+
+  if (periodKey === 'ONE_MONTH') return { from: subtractMonths(1), to: toStr }
+  if (periodKey === 'THREE_MONTHS') return { from: subtractMonths(3), to: toStr }
+  if (periodKey === 'SIX_MONTHS') return { from: subtractMonths(6), to: toStr }
+  return { from: '', to: '' }
+}
 
 const PERIODS = [
   { key: '', label: '전체' },
@@ -63,14 +85,13 @@ export default function DashboardPage() {
     }
   }
 
-  // 전체/1·3·6개월은 즉시 조회, CUSTOM은 from·to 둘 다 있고 from<=to일 때만
-  // (역순 범위는 백엔드가 400을 주므로 호출 전에 차단. from/to는 yyyy-MM-dd 문자열이라 사전식 비교=날짜순)
+  // CUSTOM: from·to 둘 다 있고 from<=to일 때만. 그 외: period 키 사용 (백엔드가 날짜 계산)
   useEffect(() => {
     if (period === 'CUSTOM') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (from && to && from <= to) load({ period, from, to, department })
     } else {
-      load({ period, department })
+      load({ period, ...(from && to ? { from, to } : {}), department })
     }
   }, [period, from, to, department])
 
@@ -84,10 +105,25 @@ export default function DashboardPage() {
   const maxTrend = useMemo(() => Math.max(1, ...trend.map(t => Number(t.totalAmount) || 0)), [trend])
   const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
 
-  // 영업사원별: 이름 검색 + 페이징 (클라이언트 처리)
+  const handlePeriodChange = (key) => {
+    setPeriod(key)
+    if (key !== 'CUSTOM') {
+      const { from: f, to: t } = getDateRange(key)
+      setFrom(f)
+      setTo(t)
+    }
+  }
+  const handleFromChange = (e) => { setFrom(e.target.value); setPeriod('CUSTOM') }
+  const handleToChange = (e) => { setTo(e.target.value); setPeriod('CUSTOM') }
+
+  // 영업사원별: 이름/사번 검색 + 페이징 (클라이언트 처리)
   const staffFiltered = useMemo(() => {
     const q = staffSearch.trim().toLowerCase()
-    return q ? staff.filter(s => s.userName?.toLowerCase().includes(q)) : staff
+    return q ? staff.filter(s =>
+      s.userName?.toLowerCase().includes(q) ||
+      String(s.employeeNumber ?? '').includes(q) ||
+      String(s.userId ?? '').includes(q)
+    ) : staff
   }, [staff, staffSearch])
   const staffTotalPages = Math.ceil(staffFiltered.length / STAFF_PAGE_SIZE)
   const staffSafePage = Math.min(staffPage, Math.max(0, staffTotalPages - 1))
@@ -99,22 +135,21 @@ export default function DashboardPage() {
         breadcrumbs={['통계', '대시보드']}
         title="통계 대시보드"
         actions={
-          <div className="flex items-center gap-1 flex-wrap">
-            {PERIODS.map(p => (
-              <Button key={p.key} size="sm" variant={period === p.key ? 'primary' : 'outline'}
-                onClick={() => setPeriod(p.key)}>
-                {p.label}
-              </Button>
-            ))}
-            {period === 'CUSTOM' && (
-              <span className="flex items-center gap-1.5 ml-1">
-                <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={from} onChange={(e) => setFrom(e.target.value)} />
-                <span className="text-[var(--color-text-muted)]">~</span>
-                <input type="date" className="form-input" style={{ width: '140px', height: '36px' }} value={to} onChange={(e) => setTo(e.target.value)} />
-              </span>
-            )}
-            <span style={{ width: '1px', height: '20px', background: 'var(--color-border)', margin: '0 4px' }} />
-            <select className="form-select" style={{ width: '150px', height: '36px' }}
+          <div className="flex items-center gap-2 flex-wrap">
+            <SegmentedControl
+              variant="pills"
+              name="period-filter"
+              options={PERIODS.map(p => ({ value: p.key, label: p.label }))}
+              value={period}
+              onChange={handlePeriodChange}
+            />
+            <span className="flex items-center gap-1.5">
+              <input type="date" className="form-input" style={{ width: '140px', height: '34px' }} value={from} onChange={handleFromChange} />
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>~</span>
+              <input type="date" className="form-input" style={{ width: '140px', height: '34px' }} value={to} onChange={handleToChange} />
+            </span>
+            <span style={{ width: '1px', height: '20px', background: 'var(--color-border)' }} />
+            <select className="form-select" style={{ width: '150px', height: '34px' }}
               aria-label="부서 필터" value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">부서 전체</option>
               {departments.map(d => <option key={d} value={d}>{d}</option>)}
@@ -130,21 +165,12 @@ export default function DashboardPage() {
           {error}
         </div>
       )}
-      {period === 'CUSTOM' && (!from || !to) && (
-        <div className="mb-3 text-sm" style={{ color: 'var(--color-warning)' }}>사용자 지정 기간은 시작일과 종료일을 모두 선택하세요.</div>
-      )}
       {period === 'CUSTOM' && from && to && from > to && (
         <div className="mb-3 text-sm" style={{ color: 'var(--color-warning)' }}>종료일이 시작일보다 빠릅니다. 기간을 다시 선택하세요.</div>
       )}
-      {loading && <div className="mb-3 text-sm text-[var(--color-text-muted)]">불러오는 중…</div>}
 
-      {department && (
-        <div className="mb-3 inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full"
-          style={{ background: '#EFF6FF', color: 'var(--color-primary)' }}>
-          <span><b>{department}</b> 부서 통계만 표시 중</span>
-          <button onClick={() => setDepartment('')} aria-label="부서 필터 해제" style={{ color: 'var(--color-primary)' }}>✕</button>
-        </div>
-      )}
+      {/* ── 본문 (로딩 중엔 반투명) ── */}
+      <div style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
 
       {/* ── 요약 카드 ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -241,7 +267,7 @@ export default function DashboardPage() {
         <Panel title="영업사원별 통계"
           action={staff.length > 0 && (
             <input className="form-input" style={{ width: '170px', height: '32px', fontSize: '13px' }}
-              aria-label="영업사원 이름 검색" placeholder="사원 이름 검색" value={staffSearch}
+              aria-label="영업사원 검색" placeholder="이름 또는 사번 검색" value={staffSearch}
               onChange={e => { setStaffSearch(e.target.value); setStaffPage(0) }} />
           )}>
           {staff.length === 0 ? <Empty /> : staffFiltered.length === 0 ? (
@@ -299,6 +325,8 @@ export default function DashboardPage() {
           )}
         </Panel>
       </div>
+
+      </div>{/* end opacity wrapper */}
     </div>
   )
 }
@@ -326,7 +354,6 @@ function Card({ label, value, accent, info }) {
   )
 }
 
-// ⓘ 호버 툴팁 — 지표 계산 방식 설명
 function InfoTip({ text }) {
   return (
     <span className="relative inline-flex group align-middle">
@@ -353,7 +380,6 @@ function Panel({ title, action, children }) {
   )
 }
 
-// 막대 — 트랙 + 채움. color/높이 옵션
 function Bar({ ratio, color = 'var(--color-primary)', h = 10 }) {
   const pctW = `${Math.max(0, Math.min(1, ratio || 0)) * 100}%`
   return (

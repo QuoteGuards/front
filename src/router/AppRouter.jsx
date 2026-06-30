@@ -62,9 +62,9 @@ export default function AppRouter() {
         <Route element={<AppLayoutRoute />}>
           <Route index element={<DefaultRedirect />} />
 
-          {/* 견적 - 영업사원·영업관리자 */}
+          {/* 견적 — 역할별 목록(/quotes), 작성(사원·관리자) */}
           <Route path="/quotes" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <QuoteListPage />
             </ProtectedRoute>
           } />
@@ -74,17 +74,17 @@ export default function AppRouter() {
             </ProtectedRoute>
           } />
           <Route path="/quotes/:quoteId/detail" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <QuoteDetailPage />
             </ProtectedRoute>
           } />
           <Route path="/quotes/analysis/:quoteId" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <QuoteInternalAnalysisPage />
             </ProtectedRoute>
           } />
           <Route path="/quotes/:id/preview" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <QuotePreviewPage />
             </ProtectedRoute>
           } />
@@ -94,7 +94,7 @@ export default function AppRouter() {
             </ProtectedRoute>
           } />
           <Route path="/history" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <HistoryPage />
             </ProtectedRoute>
           } />
@@ -110,6 +110,7 @@ export default function AppRouter() {
               <AdminApprovalDetailPage />
             </ProtectedRoute>
           } />
+          <Route path="/admin/quotes" element={<Navigate to="/quotes" replace />} />
           <Route path="/staff/approval" element={
             <ProtectedRoute roles={['SALES_STAFF']}>
               <StaffApprovalPage />

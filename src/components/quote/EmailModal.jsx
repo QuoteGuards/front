@@ -27,7 +27,7 @@ const EmailModal = ({
       onSent(form)
     } catch (e) {
       console.error('이메일 발송 실패:', e)
-      setError('이메일 발송 중 오류가 발생했습니다. 다시 시도해 주세요.')
+      setError(e?.response?.data?.message ?? '이메일 발송 중 오류가 발생했습니다. 다시 시도해 주세요.')
     } finally {
       setSending(false)
     }

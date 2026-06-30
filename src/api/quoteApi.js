@@ -89,7 +89,7 @@ export const getInternalAnalysis = async (quoteId) => {
 }
 
 /**
- * POST /api/quotes/{quoteId}/reuse - 최근 견적 재사용 (동일 내용, 새 견적번호)
+ * POST /api/quotes/{quoteId}/reuse - 과거 견적 품목 구성 복사 + 최신 단가로 새 견적(DRAFT)
  */
 export const reuseQuote = async (quoteId) => {
   const { data } = await apiClient.post(`/api/quotes/${quoteId}/reuse`)
@@ -168,6 +168,37 @@ const toQuoteSummary = (data) => ({
 export const getQuotes = async () => {
   const { data } = await apiClient.get('/api/quotes/me')
   return (data.data ?? []).map(toQuoteSummary)
+}
+
+const toAdminQuoteSummary = (data) => ({
+  id: data.quoteNumber,
+  dbId: data.id,
+  status: data.status,
+  createdAt: data.issuedDate ?? (data.createdAt ? String(data.createdAt).slice(0, 10) : ''),
+  validUntil: data.validUntil,
+  buyerName: data.customerName ?? '',
+  contactName: data.contactName ?? '',
+  totalAmount: data.totalAmount ?? 0,
+  writerName: data.writerName ?? '',
+  writerDepartment: data.writerDepartment ?? '',
+  profitRate: data.profitRate,
+  discountRate: data.discountRate,
+})
+
+/**
+ * GET /api/admin/quotes — SUPER_ADMIN 전체 견적 목록
+ */
+export const getAdminQuotes = async (params = {}) => {
+  const { data } = await apiClient.get('/api/admin/quotes', { params })
+  return (data.data ?? []).map(toAdminQuoteSummary)
+}
+
+/*
+ * GET /api/manager/quotes — SALES_MANAGER 담당 부서 영업사원 견적
+ */
+export const getManagerQuotes = async (params = {}) => {
+  const { data } = await apiClient.get('/api/manager/quotes', { params })
+  return (data.data ?? []).map(toAdminQuoteSummary)
 }
 
 const toPdfPayload = (quote) => {

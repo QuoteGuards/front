@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   getProductDetailApi, searchProductsApi, addFavoriteApi, removeFavoriteApi,
 } from '../../api/catalogApi'
@@ -38,9 +38,8 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false))
   }, [productId])
 
-  // 카테고리 전체 경로 (전자제품 > 가전제품 > 세탁기)
-  const catPath = useMemo(() => {
-    if (!product) return ''
+  // 카테고리 id → 전체 경로 맵 (현재 제품 + 연관 제품 공용)
+  const catPathMap = useMemo(() => {
     const map = new Map()
     const walk = (nodes, path) => {
       for (const n of nodes ?? []) {
@@ -50,8 +49,10 @@ export default function ProductDetailPage() {
       }
     }
     walk(tree, [])
-    return map.get(product.categoryId) ?? product.categoryName ?? ''
-  }, [tree, product])
+    return map
+  }, [tree])
+
+  const catPath = product ? (catPathMap.get(product.categoryId) ?? product.categoryName ?? '') : ''
 
   const toggleFavorite = async () => {
     const fav = favoriteOf(product)
@@ -85,10 +86,9 @@ export default function ProductDetailPage() {
       <PageHeader breadcrumbs={['제품', '제품 상세']} />
 
       {/* 돌아가기 */}
-      <button onClick={() => navigate('/catalog')} className="text-sm mb-4"
-        style={{ color: 'var(--color-text-sub)' }}>
-        ← 제품 탐색으로 돌아가기
-      </button>
+      <div style={{ marginBottom: '16px' }}>
+        <Button variant="outline" size="sm" onClick={() => navigate('/catalog')}>← 제품 탐색으로</Button>
+      </div>
 
       {error && (
         <div role="alert" className="mb-3 text-sm rounded-[var(--radius-sm)] px-4 py-2.5"
@@ -100,14 +100,22 @@ export default function ProductDetailPage() {
       <div className="flex gap-6">
         {/* ── 좌측: 이미지 + 액션 ── */}
         <div className="w-[420px] shrink-0">
-          <div className="rounded-[var(--radius-md)] aspect-square flex items-center justify-center overflow-hidden"
+          <div className="relative rounded-[var(--radius-md)] aspect-square flex items-center justify-center overflow-hidden"
             style={{ background: '#F3F4F6', border: '1px solid var(--color-border)' }}>
             <ProductImage src={product.imageUrl} label="제품 이미지" />
           </div>
 
-          <Button variant={fav ? 'secondary' : 'outline'} className="w-full mt-4" onClick={toggleFavorite}>
-            ★ {fav ? '즐겨찾기 해제' : '즐겨찾기에 추가'}
-          </Button>
+          <button className="w-full mt-4" onClick={toggleFavorite}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '9px 16px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 600,
+              cursor: 'pointer', border: `1px solid ${fav ? '#F59E0B' : 'var(--color-border)'}`,
+              background: fav ? '#FFFBEB' : 'transparent',
+              color: fav ? '#D97706' : 'var(--color-text-sub)',
+            }}>
+            <span style={{ fontSize: '18px', lineHeight: 1 }}>{fav ? '★' : '☆'}</span>
+            {fav ? '즐겨찾기 해제' : '즐겨찾기에 추가'}
+          </button>
 
           <Button variant="primary" className="w-full mt-2" onClick={addToQuote}>견적에 추가</Button>
 
@@ -127,14 +135,14 @@ export default function ProductDetailPage() {
             </div>
             <span>개</span>
           </div>
+
         </div>
 
         {/* ── 우측: 정보 ── */}
         <div className="flex-1">
           <div className="text-xs text-[var(--color-text-muted)]">{catPath}</div>
-          <div className="flex items-start justify-between mt-1">
+          <div className="mt-1">
             <h1 className="text-2xl font-bold">{product.name}</h1>
-            <Button variant={fav ? 'secondary' : 'ghost'} size="sm" onClick={toggleFavorite}>★ 즐겨찾기</Button>
           </div>
           <div className="text-sm text-[var(--color-text-sub)] mt-2">
             제품코드: <span className="font-mono ml-1" style={{ color: 'var(--color-primary)' }}>{product.code}</span>
@@ -177,29 +185,38 @@ export default function ProductDetailPage() {
             </table>
           </Section>
 
-          {/* 연관 제품 */}
-          {related.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-bold mb-2">연관 제품</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {related.map(r => (
-                  <button key={r.id} onClick={() => navigate(`/catalog/${r.id}`)}
-                    className="rounded-[var(--radius-md)] overflow-hidden text-left hover:shadow"
-                    style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
-                    <div className="aspect-[4/3] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
-                      <ProductImage src={r.imageUrl} />
-                    </div>
-                    <div className="p-2">
-                      <div className="text-xs truncate">{r.name}</div>
-                      <div className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>{Number(r.unitPrice).toLocaleString('ko-KR')}원</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* 연관 제품 — 전체 너비 */}
+      {related.length > 0 && (
+        <div className="mt-8">
+          <hr style={{ borderColor: 'var(--color-border)', marginBottom: '24px' }} />
+          <h3 className="font-bold mb-4">연관 제품</h3>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {related.map(r => (
+              <Link key={r.id}
+                to={`/catalog/${r.id}`}
+                className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
+                style={{ width: '180px', flexShrink: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', textDecoration: 'none', color: 'inherit', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                <div className="relative aspect-square flex items-center justify-center overflow-hidden" style={{ background: '#F3F4F6' }}>
+                  <ProductImage src={r.imageUrl} />
+                </div>
+                <div className="p-2 flex flex-col gap-0.5">
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{r.code}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 500 }} className="line-clamp-2">{r.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }} className="line-clamp-1">{catPathMap.get(r.categoryId) ?? r.categoryName}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)', marginTop: '2px' }}>
+                    {Number(r.unitPrice).toLocaleString('ko-KR')}원
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

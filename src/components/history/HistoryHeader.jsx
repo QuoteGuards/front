@@ -1,20 +1,22 @@
-const StatDot = ({ color, label, count }) => (
-  <div className="flex items-center gap-2 text-sm">
-    <span className={`w-2 h-2 rounded-full ${color} inline-block`} />
-    <span className="text-gray-500">{label}</span>
-    <span className="font-semibold text-gray-700">{count}건</span>
-  </div>
-)
+import Card from '../common/Card'
+
+function StatCard({ label, value, color }) {
+  return (
+    <Card style={{ padding: '16px 20px', flex: '0 0 auto' }}>
+      <p style={{ fontSize: '12px', color: 'var(--color-text-sub)', marginBottom: '6px' }}>{label}</p>
+      <p style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1, color: color ?? 'var(--color-text-main)' }}>
+        {value}
+        <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--color-text-sub)', marginLeft: '4px' }}>건</span>
+      </p>
+    </Card>
+  )
+}
 
 const HistoryHeader = ({ total, successCount, failCount }) => (
-  <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
-    <h1 className="text-xl font-bold text-gray-800">발송 이력</h1>
-    <p className="text-sm text-gray-400 mt-1">이메일 발송 내역을 조회합니다.</p>
-    <div className="flex gap-4 mt-4">
-      <StatDot color="bg-gray-400" label="전체" count={total} />
-      <StatDot color="bg-emerald-500" label="성공" count={successCount} />
-      <StatDot color="bg-red-400" label="실패" count={failCount} />
-    </div>
+  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+    <StatCard label="전체 발송" value={total} color="var(--color-text-main)" />
+    <StatCard label="성공" value={successCount} color="var(--color-success)" />
+    <StatCard label="실패" value={failCount} color="var(--color-danger)" />
   </div>
 )
 

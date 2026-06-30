@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
@@ -21,13 +21,9 @@ import {
     clearQuoteWriteDraft,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
+import { todayLocal } from '../../utils/quoteUtils'
 
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
-const today = () => {
-    const now = new Date()
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-    return local.toISOString().slice(0, 10)
-}
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 
@@ -49,7 +45,7 @@ const QuoteWritePage = () => {
     const [memoSummary, setMemoSummary] = useState('')
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryError, setSummaryError] = useState('')
-    const [issuedDate, setIssuedDate] = useState(today())
+    const [issuedDate, setIssuedDate] = useState(todayLocal())
     const [validUntil, setValidUntil] = useState('')
     const [deliveryTerm, setDeliveryTerm] = useState('')
     const [items, setItems] = useState([])
@@ -77,7 +73,7 @@ const QuoteWritePage = () => {
         if (!draft) return
         setCustomer(draft.customer ?? initialCustomer)
         setMemo(draft.memo ?? '')
-        setIssuedDate(draft.issuedDate ?? today())
+        setIssuedDate(draft.issuedDate ?? todayLocal())
         setValidUntil(draft.validUntil ?? '')
         setDeliveryTerm(draft.deliveryTerm ?? '')
         if (draft.savedQuote) setSavedQuote(draft.savedQuote)
@@ -160,7 +156,7 @@ const QuoteWritePage = () => {
                     address: data.address ?? '',
                 })
                 setMemo(data.internalMemo ?? '')
-                setIssuedDate(data.issuedDate ?? today())
+                setIssuedDate(data.issuedDate ?? todayLocal())
                 setValidUntil(data.validUntil ?? '')
                 setDeliveryTerm(data.deliveryTerm ?? '')
                 setItems(itemsFromQuoteResponse(data, {
@@ -218,6 +214,9 @@ const QuoteWritePage = () => {
         if (!customer.id) return '고객을 선택하거나 신규 등록해주세요.'
         if (items.length === 0) return '제품을 1개 이상 추가해주세요.'
         if (!issuedDate) return '발행일을 입력해주세요.'
+        if (!validUntil) return '견적 유효기간(만료일)을 입력해주세요.'
+        if (validUntil < todayLocal()) return '견적 유효기간은 오늘 또는 그 이후 날짜여야 합니다.'
+        if (validUntil < issuedDate) return '견적 유효기간은 발행일 또는 그 이후여야 합니다.'
         if (!deliveryTerm.trim()) return '납기 조건을 입력해주세요.'
 
         for (const item of items) {
@@ -230,6 +229,30 @@ const QuoteWritePage = () => {
         return null
     }
 
+    const buildQuoteForm = () => ({
+        customer,
+        discountPolicyId: items[0]?.discountPolicyId ?? null,
+        items: items.map((item) => {
+            const { needsReason, policyMissing } = getItemPolicyFlags(item)
+            return {
+                productId: item.productId,
+                productName: item.productName,
+                productCode: item.productCode,
+                spec: item.spec,
+                unitPrice: item.unitPrice,
+                costPrice: item.costPrice ?? 0,
+                quantity: item.quantity,
+                discountRate: Number(item.discountRate) || 0,
+                vatApplicable: item.vatApplicable,
+                discountReason: !policyMissing && needsReason ? item.discountReason : null,
+            }
+        }),
+        issuedDate,
+        validUntil,
+        deliveryTerm,
+        memo,
+    })
+
     const handleSaveDraft = async () => {
         const validationError = validate()
         if (validationError) {
@@ -239,29 +262,7 @@ const QuoteWritePage = () => {
         setSaving(true)
         setSaveError(null)
         try {
-            const form = {
-                customer,
-                discountPolicyId: items[0]?.discountPolicyId ?? null,
-                items: items.map((item) => {
-                    const { needsReason, policyMissing } = getItemPolicyFlags(item)
-                    return {
-                        productId: item.productId,
-                        productName: item.productName,
-                        productCode: item.productCode,
-                        spec: item.spec,
-                        unitPrice: item.unitPrice,
-                        costPrice: item.costPrice ?? 0,
-                        quantity: item.quantity,
-                        discountRate: Number(item.discountRate) || 0,
-                        vatApplicable: item.vatApplicable,
-                        discountReason: !policyMissing && needsReason ? item.discountReason : null,
-                    }
-                }),
-                issuedDate,
-                validUntil,
-                deliveryTerm,
-                memo,
-            }
+            const form = buildQuoteForm()
             const result = savedQuote
                 ? await updateQuote(savedQuote.id, form)
                 : await createQuote(form)
@@ -280,10 +281,20 @@ const QuoteWritePage = () => {
 
     const handleSubmitApproval = async () => {
         if (!savedQuote) return
+        const validationError = validate()
+        if (validationError) {
+            setSubmitError(validationError)
+            return
+        }
         setSubmitting(true)
         setSubmitError(null)
         try {
-            const result = await completeQuote(savedQuote.id)
+            const updated = await updateQuote(savedQuote.id, buildQuoteForm())
+            setSavedQuote(updated)
+            if (updated.items?.length) {
+                setItems((prev) => itemsFromQuoteResponse(updated, { previousItems: prev }))
+            }
+            const result = await completeQuote(updated.id)
             setSubmitResult(result)
             setSavedQuote(result)
         } catch (e) {
@@ -328,16 +339,40 @@ const QuoteWritePage = () => {
             <PageHeader
                 breadcrumbs={['견적 관리', '견적 작성']}
                 title="견적 작성"
-                actions={
-                    <button
-                        type="button"
-                        onClick={openGuide}
-                        className="text-sm text-violet-600 font-medium hover:underline"
-                    >
-                        {loadingGuide ? '...' : '견적 작성 가이드 확인'}
-                    </button>
-                }
             />
+
+            {/* 스크롤을 내려도 항상 보이는 가이드 FAB */}
+            <button
+                type="button"
+                onClick={openGuide}
+                disabled={loadingGuide}
+                aria-label="견적 작성 가이드 확인"
+                style={{
+                    position: 'fixed',
+                    bottom: '32px',
+                    right: '32px',
+                    zIndex: 100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: 'var(--color-primary)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '999px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 16px rgba(0,91,255,0.28)',
+                    cursor: loadingGuide ? 'default' : 'pointer',
+                    opacity: loadingGuide ? 0.7 : 1,
+                    transition: 'opacity 0.15s, box-shadow 0.15s',
+                }}
+            >
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                {loadingGuide ? '로딩 중...' : '견적 작성 가이드'}
+            </button>
 
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
                 {savedQuote && (

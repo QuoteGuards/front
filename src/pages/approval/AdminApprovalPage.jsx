@@ -21,8 +21,11 @@ const REASON_BADGE_STYLE = {
   HIGH_AMOUNT:       { background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE' },
 }
 
-const FILTER_TABS = ['전체', '이익률 미달', '할인율 초과', '고액 견적']
-const REASON_KEY = { '이익률 미달': 'LOW_PROFIT', '할인율 초과': 'DISCOUNT_EXCEEDED', '고액 견적': 'HIGH_AMOUNT' }
+const REASON_OPTIONS = [
+  { key: 'LOW_PROFIT', label: '이익률 미달' },
+  { key: 'DISCOUNT_EXCEEDED', label: '할인율 초과' },
+  { key: 'HIGH_AMOUNT', label: '고액 견적' },
+]
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -46,8 +49,9 @@ export default function AdminApprovalPage() {
   const [reasonsMap, setReasonsMap] = useState({})
   const [monthlyStats, setMonthlyStats] = useState({ monthlyApproved: 0, monthlyRejected: 0 })
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [reasonFilter, setReasonFilter] = useState('전체')
+  const [searchInput, setSearchInput] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [reasonFilter, setReasonFilter] = useState([]) // 빈 배열 = 전체
 
   const loadData = async () => {
     setLoading(true)
@@ -81,15 +85,25 @@ export default function AdminApprovalPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData() }, [])
 
+  const toggleReason = (key) => {
+    setReasonFilter(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  const onSearch = () => setAppliedSearch(searchInput.trim())
+  const onSearchKeyDown = (e) => { if (e.key === 'Enter') onSearch() }
+
   const filtered = pendingList
     .filter((item) => {
-      if (!search) return true
-      return String(item.quoteId).includes(search) || item.requesterName?.includes(search)
+      if (!appliedSearch) return true
+      return String(item.quoteId).includes(appliedSearch) || item.requesterName?.includes(appliedSearch)
     })
     .filter((item) => {
-      if (reasonFilter === '전체') return true
-      const key = REASON_KEY[reasonFilter]
-      return (reasonsMap[item.quoteId] ?? []).some((r) => r.reasonType === key)
+      if (reasonFilter.length === 0) return true
+      return reasonFilter.some((key) =>
+        (reasonsMap[item.quoteId] ?? []).some((r) => r.reasonType === key)
+      )
     })
 
   const todayCount = pendingList.filter(
@@ -174,30 +188,51 @@ export default function AdminApprovalPage() {
       </div>
 
       <SearchPanel>
-        <SearchRow label="사유 필터">
-          {FILTER_TABS.map((tab) => (
-            <label key={tab} className="form-checkbox">
-              <input
-                type="radio"
-                name="reasonFilter"
-                value={tab}
-                checked={reasonFilter === tab}
-                onChange={() => setReasonFilter(tab)}
-              />
-              {tab}
-            </label>
-          ))}
+        <SearchRow label="승인 사유">
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {REASON_OPTIONS.map(({ key, label }) => {
+              const checked = reasonFilter.includes(key)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleReason(key)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    padding: '5px 12px', borderRadius: '999px', cursor: 'pointer',
+                    fontSize: '13px', fontWeight: 500, transition: 'all 0.15s',
+                    border: checked ? '1.5px solid var(--color-primary)' : '1.5px solid var(--color-border)',
+                    background: checked ? 'var(--color-primary)' : 'var(--color-bg-white)',
+                    color: checked ? '#fff' : 'var(--color-text-sub)',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+            {reasonFilter.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setReasonFilter([])}
+                style={{ fontSize: '12px', color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+              >
+                초기화
+              </button>
+            )}
+          </div>
         </SearchRow>
         <SearchRow label="검색">
           <input
             type="text"
             className="form-input"
             placeholder="견적 ID, 영업사원명 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={onSearchKeyDown}
             style={{ width: '280px' }}
           />
-          <span className="text-[13px] text-[var(--color-text-muted)] ml-2">
+          <Button variant="secondary" onClick={onSearch}>검색</Button>
+          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
             {filtered.length}건 표시 중
           </span>
         </SearchRow>

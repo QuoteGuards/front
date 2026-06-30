@@ -66,3 +66,64 @@
   color: var(--color-text-sub);
   margin-bottom: 6px;
 }
+
+.form-label--required::after {
+  content: ' *';
+  color: var(--color-danger);
+}
+
+/* form-group: label + input 세트 */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* form-input 오류 상태 */
+.form-input--error,
+.form-select--error,
+.form-textarea--error {
+  border-color: var(--color-danger);
+  background: #FEF2F2;
+}
+
+.form-input--error:focus,
+.form-select--error:focus,
+.form-textarea--error:focus {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.form-error-msg {
+  font-size: 12px;
+  color: var(--color-danger);
+  margin-top: 2px;
+}
+
+/* form-help: 필드 설명 */
+.form-help {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+/* 검색 input (아이콘 포함) */
+.form-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.form-search-wrap .form-input {
+  padding-left: 36px;
+}
+
+.form-search-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+}
+
