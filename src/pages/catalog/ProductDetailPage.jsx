@@ -38,9 +38,8 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false))
   }, [productId])
 
-  // 카테고리 전체 경로 (전자제품 > 가전제품 > 세탁기)
-  const catPath = useMemo(() => {
-    if (!product) return ''
+  // 카테고리 id → 전체 경로 맵 (현재 제품 + 연관 제품 공용)
+  const catPathMap = useMemo(() => {
     const map = new Map()
     const walk = (nodes, path) => {
       for (const n of nodes ?? []) {
@@ -50,8 +49,10 @@ export default function ProductDetailPage() {
       }
     }
     walk(tree, [])
-    return map.get(product.categoryId) ?? product.categoryName ?? ''
-  }, [tree, product])
+    return map
+  }, [tree])
+
+  const catPath = product ? (catPathMap.get(product.categoryId) ?? product.categoryName ?? '') : ''
 
   const toggleFavorite = async () => {
     const fav = favoriteOf(product)
@@ -86,10 +87,7 @@ export default function ProductDetailPage() {
 
       {/* 돌아가기 */}
       <div style={{ marginBottom: '16px' }}>
-        <Button variant="outline" size="sm" onClick={() => {
-          if (window.history.state?.idx > 0) navigate(-1)
-          else navigate('/catalog')
-        }}>← 제품 탐색으로</Button>
+        <Button variant="outline" size="sm" onClick={() => navigate('/catalog')}>← 제품 탐색으로</Button>
       </div>
 
       {error && (
@@ -137,6 +135,7 @@ export default function ProductDetailPage() {
             </div>
             <span>개</span>
           </div>
+
         </div>
 
         {/* ── 우측: 정보 ── */}
@@ -186,29 +185,38 @@ export default function ProductDetailPage() {
             </table>
           </Section>
 
-          {/* 연관 제품 */}
-          {related.length > 0 && (
-            <div className="mt-6">
-              <h3 className="font-bold mb-2">연관 제품</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {related.map(r => (
-                  <button key={r.id} onClick={() => navigate(`/catalog/${r.id}`)}
-                    className="rounded-[var(--radius-md)] overflow-hidden text-left hover:shadow"
-                    style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
-                    <div className="aspect-[4/3] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
-                      <ProductImage src={r.imageUrl} />
-                    </div>
-                    <div className="p-2">
-                      <div className="text-xs truncate">{r.name}</div>
-                      <div className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>{Number(r.unitPrice).toLocaleString('ko-KR')}원</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* 연관 제품 — 전체 너비 */}
+      {related.length > 0 && (
+        <div className="mt-8">
+          <hr style={{ borderColor: 'var(--color-border)', marginBottom: '24px' }} />
+          <h3 className="font-bold mb-4">연관 제품</h3>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {related.map(r => (
+              <div key={r.id}
+                onClick={() => navigate(`/catalog/${r.id}`)}
+                className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
+                style={{ width: '180px', flexShrink: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                <div className="aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                  <ProductImage src={r.imageUrl} />
+                </div>
+                <div className="p-2 flex flex-col gap-0.5">
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{r.code}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 500 }} className="line-clamp-2">{r.name}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }} className="line-clamp-1">{catPathMap.get(r.categoryId) ?? r.categoryName}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary)', marginTop: '2px' }}>
+                    {Number(r.unitPrice).toLocaleString('ko-KR')}원
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

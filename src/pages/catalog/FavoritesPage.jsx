@@ -178,13 +178,14 @@ export default function FavoritesPage() {
             <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
               role="group"
               aria-label={p.name}
-              style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', transition: 'box-shadow 0.15s' }}
+              onClick={() => goDetail(p)}
+              style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
               onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-              {/* 이미지 + 즐겨찾기 해제 버튼 */}
+              {/* 이미지 + 즐겨찾기 별 */}
               <div className="relative aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
                 <ProductImage src={p.imageUrl} />
-                <button onClick={() => removeOne(p)}
+                <button onClick={(e) => { e.stopPropagation(); removeOne(p) }}
                   className="absolute top-2 right-2 text-xl"
                   title="즐겨찾기 해제"
                   aria-label="즐겨찾기 해제">
@@ -201,8 +202,14 @@ export default function FavoritesPage() {
                   <VatBadge applicable={p.vatApplicable} />
                 </div>
                 <div className="mt-3 flex flex-col gap-1.5">
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => goDetail(p)}>상세 보기</Button>
-                  <Button variant="primary" size="sm" className="w-full" onClick={() => addToQuote(p)}>견적에 추가</Button>
+                  <Button variant="outline" size="sm" className="w-full"
+                    onClick={(e) => { e.stopPropagation(); goDetail(p) }}>상세 보기</Button>
+                  <div className="flex gap-1.5">
+                    <Button variant="primary" size="sm" className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); addToQuote(p) }}>견적에 추가</Button>
+                    <Button variant="danger" size="sm" className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); removeOne(p) }}>해제</Button>
+                  </div>
                 </div>
               </div>
             </div>
