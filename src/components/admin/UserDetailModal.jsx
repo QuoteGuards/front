@@ -6,6 +6,7 @@ import {
   suspendUserApi,
   reactivateUserApi,
   deleteUserApi,
+  resendInitialPasswordApi,
 } from '../../api/userManagementApi'
 
 const ROLE_OPTIONS = [
@@ -159,6 +160,20 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
     }
   }
 
+  const handleResendSetupLink = async () => {
+    setSubmitting(true)
+    setGlobalError('')
+    setSuccessMsg('')
+    try {
+      await resendInitialPasswordApi(user.id)
+      setSuccessMsg('초기 비밀번호 설정 링크를 다시 발송했습니다.')
+    } catch (err) {
+      setGlobalError(err?.response?.data?.message ?? '링크 재발송에 실패했습니다.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const isDeleted = user.status === 'DELETED'
   const isSuperAdmin = user.role === 'SUPER_ADMIN'
 
@@ -235,6 +250,19 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
                 <ReadField label="사원번호" value={user.memberNumber} />
                 <ReadField label="이메일" value={user.email} />
               </div>
+              {!user.passwordInitialized && !isDeleted && (
+                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <span className="text-xs text-amber-700 font-medium">비밀번호 설정 대기 중</span>
+                  <button
+                    type="button"
+                    onClick={handleResendSetupLink}
+                    disabled={submitting}
+                    className="text-xs px-2.5 py-1 rounded-md font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {submitting ? '발송 중...' : '링크 재발송'}
+                  </button>
+                </div>
+              )}
               <Field
                 id={id('name')} label="이름" required
                 name="name" value={form.name}

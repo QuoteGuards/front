@@ -113,11 +113,12 @@ const Sidebar = ({ collapsed }) => {
       ],
     }] : []),
     // ── 제품 ─────────────────────────────────
+
     {
       group: '제품',
       items: [
         ...(isStaff || isManager ? [
-          { label: '제품 탐색', path: '/catalog', icon: <SearchIcon /> },
+          { label: '제품 탐색', path: '/catalog', icon: <SearchIcon />, end: true },
           { label: '즐겨찾기', path: '/catalog/favorites', icon: <StarIcon /> },
         ] : []),
         ...(isAdmin ? [

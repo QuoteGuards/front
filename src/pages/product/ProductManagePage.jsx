@@ -14,6 +14,7 @@ import {
 import { getCategoriesApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
+import SearchableSelect from '../../components/common/SearchableSelect'
 import DataTable from '../../components/common/DataTable'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
@@ -54,6 +55,7 @@ export default function ProductManagePage() {
 
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(20)
+  const [sort, setSort] = useState('createdAt,desc') // 정렬 (즉시 적용)
   const [pageData, setPageData] = useState({
     content: [],
     totalElements: 0,
@@ -99,6 +101,7 @@ export default function ProductManagePage() {
     if (applied.keyword) params.keyword = applied.keyword
     if (applied.active !== '') params.isActive = applied.active === 'true'
     if (applied.vat !== '') params.vatApplicable = applied.vat === 'true'
+    if (sort) params.sort = sort
 
     return params
   }
@@ -149,7 +152,7 @@ export default function ProductManagePage() {
     return () => {
       ignore = true
     }
-  }, [applied, page, size]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applied, page, size, sort]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSearch = () => {
     setApplied({
@@ -387,22 +390,24 @@ export default function ProductManagePage() {
         return
       }
 
-      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', 'VAT', '상태']
+      const header = ['제품코드', '제품명', '규격', '카테고리', '단가', '원가', '마진율', 'VAT', '상태']
 
-      const lines = list.map((product) =>
-          [
-            product.code,
-            product.name,
-            product.spec ?? '',
-            catLabel(product),
-            product.unitPrice,
-            product.costPrice,
-            product.vatApplicable ? '적용' : '미적용',
-            isActiveOf(product) ? '사용' : '미사용',
-          ]
-              .map(csvCell)
-              .join(','),
-      )
+      const lines = list.map((product) => {
+        const rate = marginRate(product)
+        return [
+          product.code,
+          product.name,
+          product.spec ?? '',
+          catLabel(product),
+          product.unitPrice,
+          product.costPrice,
+          rate == null ? '-' : `${rate.toFixed(1)}%`,
+          product.vatApplicable ? '적용' : '미적용',
+          isActiveOf(product) ? '사용' : '미사용',
+        ]
+            .map(csvCell)
+            .join(',')
+      })
 
       const csv = '\uFEFF' + [header.join(','), ...lines].join('\n')
       const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
@@ -471,6 +476,20 @@ export default function ProductManagePage() {
       title: '원가',
       align: 'right',
       render: (value) => <span style={{ color: 'var(--color-text-sub)' }}>{won(value)}</span>,
+    },
+    {
+      key: '_margin',
+      title: '마진율',
+      align: 'right',
+      render: (_, row) => {
+        const rate = marginRate(row)
+        if (rate == null) return <span style={{ color: 'var(--color-text-muted)' }}>-</span>
+        return (
+          <span style={{ color: rate < 0 ? 'var(--color-danger)' : 'var(--color-text-main)', fontWeight: 500 }}>
+            {rate.toFixed(1)}%
+          </span>
+        )
+      },
     },
     {
       key: 'vatApplicable',
@@ -574,19 +593,9 @@ export default function ProductManagePage() {
 
         <SearchPanel>
           <SearchRow label="카테고리">
-            <select
-                className="form-select"
-                value={filter.categoryId}
-                onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
-                style={{ width: '240px' }}
-            >
-              <option value="">전체</option>
-              {allCats.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.path}
-                  </option>
-              ))}
-            </select>
+            <SearchableSelect width="240px" value={filter.categoryId} placeholder="전체"
+              options={[{ value: '', label: '전체' }, ...allCats.map((c) => ({ value: c.id, label: c.path }))]}
+              onChange={(v) => setFilter({ ...filter, categoryId: v })} />
           </SearchRow>
 
           <SearchRow label="검색">
@@ -636,24 +645,42 @@ export default function ProductManagePage() {
           총 <strong style={{ color: 'var(--color-text-main)' }}>{pageData.totalElements ?? 0}</strong>개
         </span>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
-            페이지당
-            <select
-                className="form-select"
-                value={size}
-                onChange={(e) => {
-                  setSize(Number(e.target.value))
-                  setPage(0)
-                }}
-                style={{ width: '80px', height: '32px' }}
-            >
-              {PAGE_SIZES.map((pageSize) => (
-                  <option key={pageSize} value={pageSize}>
-                    {pageSize}개
-                  </option>
-              ))}
-            </select>
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+              정렬
+              <select
+                  className="form-select"
+                  value={sort}
+                  onChange={(e) => { setSort(e.target.value); setPage(0) }}
+                  style={{ width: '150px', height: '32px' }}
+              >
+                <option value="createdAt,desc">등록 최신순</option>
+                <option value="createdAt,asc">등록 오래된순</option>
+                <option value="name,asc">제품명 가나다순</option>
+                <option value="unitPrice,desc">단가 높은순</option>
+                <option value="unitPrice,asc">단가 낮은순</option>
+              </select>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+              페이지당
+              <select
+                  className="form-select"
+                  value={size}
+                  onChange={(e) => {
+                    setSize(Number(e.target.value))
+                    setPage(0)
+                  }}
+                  style={{ width: '80px', height: '32px' }}
+              >
+                {PAGE_SIZES.map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      {pageSize}개
+                    </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         {selectedIds.size > 0 && (
@@ -773,18 +800,9 @@ export default function ProductManagePage() {
                   </ModalRow>
 
                   <ModalRow label="카테고리 *">
-                    <select
-                        className="form-select"
-                        value={form.categoryId}
-                        onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                    >
-                      <option value="">선택</option>
-                      {leafCats.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.path}
-                          </option>
-                      ))}
-                    </select>
+                    <SearchableSelect value={form.categoryId} placeholder="카테고리 선택"
+                      options={leafCats.map((c) => ({ value: c.id, label: c.path }))}
+                      onChange={(v) => setForm({ ...form, categoryId: v })} />
                   </ModalRow>
 
                   <ModalRow label="규격">
@@ -849,6 +867,17 @@ export default function ProductManagePage() {
                     </div>
                   </ModalRow>
                 </div>
+
+                {(() => {
+                  const rate = (form.unitPrice !== '' && form.costPrice !== '') ? marginRate(form) : null
+                  if (rate == null) return null
+                  return (
+                    <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--color-text-sub)' }}>
+                      예상 마진율 <b style={{ color: rate < 0 ? 'var(--color-danger)' : 'var(--color-primary)' }}>{rate.toFixed(1)}%</b>
+                      {rate < 0 && <span style={{ color: 'var(--color-danger)', marginLeft: '6px' }}>※ 원가가 단가보다 높습니다</span>}
+                    </div>
+                  )
+                })()}
 
                 <div style={{ marginTop: '16px' }}>
                   <ModalRow label="설명">
@@ -980,6 +1009,16 @@ function won(value) {
   if (value == null || value === '') return '-'
 
   return `${Number(value).toLocaleString('ko-KR')}원`
+}
+
+// 마진율(%) = (단가 - 원가) / 단가 * 100
+// 단가는 0 이하/비유효, 원가는 비유효(NaN 등)/음수면 null (원가 0은 유효: 마진 100%)
+function marginRate(product) {
+  const u = Number(product?.unitPrice)
+  const c = Number(product?.costPrice)
+  if (!Number.isFinite(u) || u <= 0) return null
+  if (!Number.isFinite(c) || c < 0) return null
+  return ((u - c) / u) * 100
 }
 
 function csvCell(value) {
