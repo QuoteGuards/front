@@ -94,7 +94,12 @@ const Sidebar = ({ collapsed }) => {
     ...(isStaff || isManager || isAdmin ? [{
       group: '견적',
       items: [
-        ...((isStaff || isManager) ? [{ label: '견적 작성', path: '/quotes/new', icon: <PlusIcon />, locked: !loading && !canWriteQuote }] : []),
+        ...((isStaff || isManager) ? [{
+          label: '견적 작성',
+          path: '/quotes/new',
+          icon: <PlusIcon />,
+          locked: isStaff && !loading && !canWriteQuote,
+        }] : []),
         { label: quoteListLabel, path: '/quotes', icon: <ListIcon />, end: true },
         { label: '발송 이력', path: '/history', icon: <SendIcon /> },
       ],
@@ -139,6 +144,14 @@ const Sidebar = ({ collapsed }) => {
       group: '관리',
       items: [
         { label: '사용자 관리', path: '/admin/users', icon: <UsersIcon /> },
+        { label: '교육 관리', path: '/admin/trainings', icon: <TrainingIcon />, end: true },
+        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
+      ],
+    }] : []),
+    ...(isManager && !isAdmin ? [{
+      group: '관리',
+      items: [
+        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
       ],
     }] : []),
     // ── 내 계정 ──────────────────────────────
@@ -146,13 +159,12 @@ const Sidebar = ({ collapsed }) => {
       group: '계정',
       items: [
         { label: '마이페이지', path: '/my-page', icon: <UserIcon /> },
-        {
+        ...(isStaff ? [{
           label: '교육 이수',
           path: '/training',
           icon: <TrainingIcon />,
-          // 교육 미이수 시 모든 역할에 필수 배지 표시
           badge: !loading && !canWriteQuote ? '필수' : null,
-        },
+        }] : []),
       ],
     },
   ]
