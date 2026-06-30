@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   getProductDetailApi, searchProductsApi, addFavoriteApi, removeFavoriteApi,
 } from '../../api/catalogApi'
@@ -195,10 +195,10 @@ export default function ProductDetailPage() {
           <h3 className="font-bold mb-4">연관 제품</h3>
           <div style={{ display: 'flex', gap: '12px' }}>
             {related.map(r => (
-              <div key={r.id}
-                onClick={() => navigate(`/catalog/${r.id}`)}
+              <Link key={r.id}
+                to={`/catalog/${r.id}`}
                 className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
-                style={{ width: '180px', flexShrink: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                style={{ width: '180px', flexShrink: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', textDecoration: 'none', color: 'inherit', transition: 'box-shadow 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
                 <div className="aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
@@ -212,7 +212,7 @@ export default function ProductDetailPage() {
                     {Number(r.unitPrice).toLocaleString('ko-KR')}원
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
