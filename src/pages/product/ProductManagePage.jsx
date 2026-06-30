@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi,
@@ -10,6 +10,7 @@ import {
   bulkActivateProductsApi,
   bulkDeactivateProductsApi,
   bulkDeleteProductsApi,
+  uploadProductImageApi,
 } from '../../api/productApi'
 import { getCategoriesApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
@@ -72,6 +73,9 @@ export default function ProductManagePage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
+  const [uploading, setUploading] = useState(false) // 이미지 업로드 중
+  const uploadSession = useRef(0) // 모달 세션 토큰 — 늦게 도착한 업로드가 다른 세션에 쓰는 것 방지
+  const fileInputRef = useRef(null) // 파일 input (버튼으로 트리거)
 
   useEffect(() => {
     let ignore = false
@@ -193,6 +197,8 @@ export default function ProductManagePage() {
   }
 
   const openCreate = () => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(null)
     setForm(EMPTY_FORM)
     setModalError(null)
@@ -200,6 +206,8 @@ export default function ProductManagePage() {
   }
 
   const openEdit = (product) => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(product.id)
     setForm({
       code: product.code,
@@ -218,8 +226,43 @@ export default function ProductManagePage() {
     setModalOpen(true)
   }
 
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // 같은 파일 재선택 허용 (file은 위에서 캡처됨)
+    if (!file) return
+
+    // 업로드 전 클라이언트 검증 — 서버도 동일 검증하지만 즉시 피드백 + 불필요한 업로드 방지
+    if (!file.type.startsWith('image/')) {
+      setModalError('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError('파일 크기가 너무 큽니다. (최대 5MB)')
+      return
+    }
+
+    const session = uploadSession.current // 이 업로드가 속한 모달 세션
+    setModalError(null)
+    setUploading(true)
+    try {
+      const url = await uploadProductImageApi(file)
+      if (uploadSession.current !== session) return // 모달이 닫히거나 다른 제품으로 전환됨 → 폐기
+      setForm((f) => ({ ...f, imageUrl: url }))
+    } catch (err) {
+      if (uploadSession.current !== session) return
+      setModalError(err.response?.data?.message ?? '이미지 업로드 실패')
+    } finally {
+      if (uploadSession.current === session) setUploading(false)
+    }
+  }
+
   const onSubmit = async () => {
     setModalError(null)
+
+    if (uploading) {
+      setModalError('이미지 업로드 중입니다. 완료 후 저장하세요.')
+      return
+    }
 
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
       setModalError('제품코드, 제품명, 카테고리는 필수입니다.')
@@ -892,15 +935,30 @@ export default function ProductManagePage() {
                 </div>
 
                 <div style={{ marginTop: '16px' }}>
-                  <ModalRow label="이미지 URL">
+                  <ModalRow label="이미지">
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                      <input
-                          className="form-input"
-                          value={form.imageUrl}
-                          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                          placeholder="https://..."
-                          style={{ flex: 1 }}
-                      />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input
+                            className="form-input"
+                            value={form.imageUrl}
+                            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                            placeholder="파일 업로드 또는 https:// URL 직접 입력"
+                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <button type="button" className="btn btn--outline btn--sm" disabled={uploading}
+                              onClick={() => fileInputRef.current?.click()}>
+                            {uploading ? '업로드 중…' : '파일 선택'}
+                          </button>
+                          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={onPickImage} />
+                          {form.imageUrl && !uploading && (
+                            <button type="button" onClick={() => setForm({ ...form, imageUrl: '' })}
+                                style={{ fontSize: '12px', color: 'var(--color-text-sub)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              이미지 제거
+                            </button>
+                          )}
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>JPG·PNG 등, 최대 5MB</span>
+                        </div>
+                      </div>
                       <Thumb src={form.imageUrl} size={56} />
                     </div>
                   </ModalRow>
@@ -950,8 +1008,8 @@ export default function ProductManagePage() {
                   <Button variant="ghost" onClick={() => setModalOpen(false)}>
                     취소
                   </Button>
-                  <Button variant="primary" onClick={onSubmit}>
-                    저장
+                  <Button variant="primary" onClick={onSubmit} disabled={uploading}>
+                    {uploading ? '업로드 중…' : '저장'}
                   </Button>
                 </div>
               </div>
