@@ -56,6 +56,12 @@ export async function getPopularProductsApi(opts, limit = 10) {
   return res.data.data
 }
 
+// 조회수 기반 인기 제품 순위 [{ productId, productName, viewCount }] — 누적(기간/부서 무관)
+export async function getPopularByViewsApi(limit = 10) {
+  const res = await apiClient.get('/api/admin/dashboard/popular-products-by-views', { params: { limit } })
+  return res.data.data
+}
+
 // 영업사원별 통계 [{ userId, userName, totalQuotes, approvedQuotes, rejectedQuotes, approvalRate, rejectionRate }]
 export async function getSalesStaffApi(opts) {
   const res = await apiClient.get('/api/admin/dashboard/sales-staff', { params: periodParams(opts) })
