@@ -183,8 +183,11 @@ const QuoteDetailPage = () => {
                 {actionError && (
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{actionError}</div>
                 )}
-                {!canSendEmail && !isEditable && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                {!canSendEmail && (
+                    <div
+                        id="quote-send-blocked-reason"
+                        className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800"
+                    >
                         {quoteSendBlockedMessage(quote)}
                     </div>
                 )}
@@ -317,7 +320,7 @@ const QuoteDetailPage = () => {
                         <button
                             type="button"
                             disabled
-                            title={quoteSendBlockedMessage(quote)}
+                            aria-describedby="quote-send-blocked-reason"
                             className="px-6 py-2.5 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed"
                         >
                             이메일 발송 불가

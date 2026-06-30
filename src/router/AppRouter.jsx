@@ -84,7 +84,7 @@ export default function AppRouter() {
             </ProtectedRoute>
           } />
           <Route path="/quotes/:id/preview" element={
-            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER', 'SUPER_ADMIN']}>
               <QuotePreviewPage />
             </ProtectedRoute>
           } />

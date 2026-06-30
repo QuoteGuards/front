@@ -6,7 +6,7 @@ const QuoteActionBar = ({
   canSendEmail = true,
   sendBlockedMessage = '발송할 수 없는 견적입니다.',
 }) => (
-  <div className="no-print flex gap-3 px-8 mb-6">
+  <div className="no-print flex flex-wrap items-start gap-3 px-8 mb-6">
     <button
       onClick={onPdfDownload}
       disabled={pdfLoading}
@@ -28,14 +28,19 @@ const QuoteActionBar = ({
         이메일 발송
       </button>
     ) : (
-      <button
-        type="button"
-        disabled
-        title={sendBlockedMessage}
-        className="px-5 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed"
-      >
-        이메일 발송 불가
-      </button>
+      <div className="flex flex-col items-start gap-1">
+        <button
+          type="button"
+          disabled
+          aria-describedby="quote-action-email-blocked"
+          className="px-5 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed"
+        >
+          이메일 발송 불가
+        </button>
+        <p id="quote-action-email-blocked" className="text-xs text-amber-700 max-w-md">
+          {sendBlockedMessage}
+        </p>
+      </div>
     )}
   </div>
 )

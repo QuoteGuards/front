@@ -21,13 +21,9 @@ import {
     clearQuoteWriteDraft,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
+import { todayLocal } from '../../utils/quoteUtils'
 
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
-const today = () => {
-    const now = new Date()
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-    return local.toISOString().slice(0, 10)
-}
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 
@@ -49,7 +45,7 @@ const QuoteWritePage = () => {
     const [memoSummary, setMemoSummary] = useState('')
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryError, setSummaryError] = useState('')
-    const [issuedDate, setIssuedDate] = useState(today())
+    const [issuedDate, setIssuedDate] = useState(todayLocal())
     const [validUntil, setValidUntil] = useState('')
     const [deliveryTerm, setDeliveryTerm] = useState('')
     const [items, setItems] = useState([])
@@ -77,7 +73,7 @@ const QuoteWritePage = () => {
         if (!draft) return
         setCustomer(draft.customer ?? initialCustomer)
         setMemo(draft.memo ?? '')
-        setIssuedDate(draft.issuedDate ?? today())
+        setIssuedDate(draft.issuedDate ?? todayLocal())
         setValidUntil(draft.validUntil ?? '')
         setDeliveryTerm(draft.deliveryTerm ?? '')
         if (draft.savedQuote) setSavedQuote(draft.savedQuote)
@@ -160,7 +156,7 @@ const QuoteWritePage = () => {
                     address: data.address ?? '',
                 })
                 setMemo(data.internalMemo ?? '')
-                setIssuedDate(data.issuedDate ?? today())
+                setIssuedDate(data.issuedDate ?? todayLocal())
                 setValidUntil(data.validUntil ?? '')
                 setDeliveryTerm(data.deliveryTerm ?? '')
                 setItems(itemsFromQuoteResponse(data, {
@@ -219,8 +215,8 @@ const QuoteWritePage = () => {
         if (items.length === 0) return '제품을 1개 이상 추가해주세요.'
         if (!issuedDate) return '발행일을 입력해주세요.'
         if (!validUntil) return '견적 유효기간(만료일)을 입력해주세요.'
-        if (validUntil < today()) return '견적 유효기간은 오늘 이후 날짜여야 합니다.'
-        if (validUntil < issuedDate) return '견적 유효기간은 발행일 이후여야 합니다.'
+        if (validUntil < todayLocal()) return '견적 유효기간은 오늘 또는 그 이후 날짜여야 합니다.'
+        if (validUntil < issuedDate) return '견적 유효기간은 발행일 또는 그 이후여야 합니다.'
         if (!deliveryTerm.trim()) return '납기 조건을 입력해주세요.'
 
         for (const item of items) {
