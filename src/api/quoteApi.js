@@ -170,6 +170,37 @@ export const getQuotes = async () => {
   return (data.data ?? []).map(toQuoteSummary)
 }
 
+const toAdminQuoteSummary = (data) => ({
+  id: data.quoteNumber,
+  dbId: data.id,
+  status: data.status,
+  createdAt: data.issuedDate ?? (data.createdAt ? String(data.createdAt).slice(0, 10) : ''),
+  validUntil: data.validUntil,
+  buyerName: data.customerName ?? '',
+  contactName: data.contactName ?? '',
+  totalAmount: data.totalAmount ?? 0,
+  writerName: data.writerName ?? '',
+  writerDepartment: data.writerDepartment ?? '',
+  profitRate: data.profitRate,
+  discountRate: data.discountRate,
+})
+
+/**
+ * GET /api/admin/quotes — SUPER_ADMIN 전체 견적 목록
+ */
+export const getAdminQuotes = async (params = {}) => {
+  const { data } = await apiClient.get('/api/admin/quotes', { params })
+  return (data.data ?? []).map(toAdminQuoteSummary)
+}
+
+/*
+ * GET /api/manager/quotes — SALES_MANAGER 담당 부서 영업사원 견적
+ */
+export const getManagerQuotes = async (params = {}) => {
+  const { data } = await apiClient.get('/api/manager/quotes', { params })
+  return (data.data ?? []).map(toAdminQuoteSummary)
+}
+
 const toPdfPayload = (quote) => {
   const { subtotal, tax } = calcQuoteSummary(quote.items)
   const discountAmount = quote.discountAmount ?? 0
