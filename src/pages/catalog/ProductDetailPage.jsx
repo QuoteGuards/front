@@ -100,7 +100,7 @@ export default function ProductDetailPage() {
       <div className="flex gap-6">
         {/* ── 좌측: 이미지 + 액션 ── */}
         <div className="w-[420px] shrink-0">
-          <div className="rounded-[var(--radius-md)] aspect-square flex items-center justify-center overflow-hidden"
+          <div className="relative rounded-[var(--radius-md)] aspect-square flex items-center justify-center overflow-hidden"
             style={{ background: '#F3F4F6', border: '1px solid var(--color-border)' }}>
             <ProductImage src={product.imageUrl} label="제품 이미지" />
           </div>
@@ -201,7 +201,7 @@ export default function ProductDetailPage() {
                 style={{ width: '180px', flexShrink: 0, border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', textDecoration: 'none', color: 'inherit', transition: 'box-shadow 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                <div className="aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                <div className="relative aspect-square flex items-center justify-center overflow-hidden" style={{ background: '#F3F4F6' }}>
                   <ProductImage src={r.imageUrl} />
                 </div>
                 <div className="p-2 flex flex-col gap-0.5">
