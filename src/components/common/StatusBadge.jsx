@@ -3,13 +3,13 @@ import './StatusBadge.css'
 // 견적 상태
 const QUOTE_STATUS = {
   DRAFT:                 { label: '임시저장',   color: 'gray'   },
-  REVISING:              { label: '수정중',     color: 'purple' },
+  REVISING:              { label: '수정 중',    color: 'purple' },
   SUBMITTED:             { label: '제출됨',     color: 'blue'   },
   APPROVAL_NOT_REQUIRED: { label: '승인불필요', color: 'green'  },
-  APPROVAL_PENDING:      { label: '승인대기',   color: 'orange' },
-  APPROVED:              { label: '승인완료',   color: 'green'  },
+  APPROVAL_PENDING:      { label: '승인 대기',  color: 'orange' },
+  APPROVED:              { label: '승인 완료',  color: 'green'  },
   REJECTED:              { label: '반려',       color: 'red'    },
-  SENT:                  { label: '발송완료',   color: 'blue'   },
+  SENT:                  { label: '발송 완료',  color: 'blue'   },
   EXPIRED:               { label: '만료',       color: 'gray'   },
   CANCELLED:             { label: '취소',       color: 'gray'   },
 }

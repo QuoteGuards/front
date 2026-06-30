@@ -40,14 +40,27 @@
 
 .data-table__row--clickable {
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.12s;
 }
 .data-table__row--clickable:hover {
-  background: #F0F4FF;
+  background: #F0F5FF;
 }
-.data-table__row--clickable:focus {
+.data-table__row--clickable:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: -2px;
+}
+
+/* 비활성/취소 행 — muted */
+.data-table__row--muted .data-table__td {
+  color: var(--color-text-muted);
+}
+
+/* 선택된 행 */
+.data-table__row--selected {
+  background: #EFF6FF;
+}
+.data-table__row--selected:hover {
+  background: #E0EDFF;
 }
 
 .data-table__td {

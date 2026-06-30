@@ -221,11 +221,16 @@ export default function ProductSearchPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {rows.map(p => (
                 <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
-                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
+                  role="group"
+                  aria-label={p.name}
+                  onClick={() => goDetail(p)}
+                  style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
                   {/* 이미지 + 즐겨찾기 */}
                   <div className="relative aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
                     <ProductImage src={p.imageUrl} />
-                    <button onClick={() => toggleFavorite(p)}
+                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(p) }}
                       className="absolute top-2 right-2 text-xl"
                       title={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}
                       aria-label={favoriteOf(p) ? '즐겨찾기 해제' : '즐겨찾기 등록'}>
@@ -237,15 +242,17 @@ export default function ProductSearchPage() {
                   <div className="p-3 flex flex-col flex-1">
                     <div className="text-xs text-[var(--color-text-muted)] font-mono">{p.code}</div>
                     <div className="font-medium text-sm mt-0.5 line-clamp-2">{p.name}</div>
-                    <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{p.categoryName}</div>
+                    <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{catPathMap.get(p.categoryId) ?? p.categoryName}</div>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{won(p.unitPrice)}</span>
                       <VatBadge applicable={p.vatApplicable} />
                     </div>
 
                     <div className="mt-3 flex flex-col gap-1.5">
-                      <Button variant="outline" size="sm" className="w-full" onClick={() => goDetail(p)}>상세 보기</Button>
-                      <Button variant="primary" size="sm" className="w-full" onClick={() => addToQuote(p)}>견적에 추가</Button>
+                      <Button variant="outline" size="sm" className="w-full"
+                        onClick={() => goDetail(p)}>상세 보기</Button>
+                      <Button variant="primary" size="sm" className="w-full"
+                        onClick={() => addToQuote(p)}>견적에 추가</Button>
                     </div>
                   </div>
                 </div>

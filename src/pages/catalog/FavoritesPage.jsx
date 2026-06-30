@@ -117,13 +117,15 @@ export default function FavoritesPage() {
       <PageHeader
         breadcrumbs={['제품', '즐겨찾기']}
         title="즐겨찾기"
-        actions={
-          <Button variant="outline" onClick={removeAll} disabled={items.length === 0}>전체 해제</Button>
-        }
       />
 
       {/* ── 검색 패널 ── */}
       <SearchPanel>
+        <SearchRow label="정렬">
+          <select className="form-select" style={{ width: '160px' }} value={sort} onChange={e => setSort(e.target.value)}>
+            {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </SearchRow>
         <SearchRow label="검색">
           <input
             type="text"
@@ -132,21 +134,21 @@ export default function FavoritesPage() {
             placeholder="즐겨찾기 내 검색 (제품명/코드)"
             value={search}
             onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') setSearch(search) }}
           />
-        </SearchRow>
-        <SearchRow label="정렬">
-          <select className="form-select" style={{ width: '160px' }} value={sort} onChange={e => setSort(e.target.value)}>
-            {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
+          <Button variant="secondary" onClick={() => setSearch(search)}>검색</Button>
         </SearchRow>
       </SearchPanel>
 
-      <div className="mb-3 text-sm text-[var(--color-text-sub)]">
-        총 <b className="text-[var(--color-text-main)]">{items.length}</b>개
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm text-[var(--color-text-sub)]">
+          총 <b className="text-[var(--color-text-main)]">{items.length}</b>개
+        </span>
+        <Button variant="outline" size="sm" onClick={removeAll} disabled={items.length === 0}>전체 해제</Button>
       </div>
 
       {/* ── 탭 ── */}
-      <div className="flex mb-4 text-sm overflow-x-auto" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      <div className="flex mb-4 text-sm" style={{ borderBottom: '1px solid var(--color-border)', overflowX: 'auto', scrollbarWidth: 'none' }}>
         <TabBtn active={tab === ''} onClick={() => setTab('')}>전체 ({items.length})</TabBtn>
         {tabs.map(t => (
           <TabBtn key={t.name} active={tab === t.name} onClick={() => setTab(t.name)}>{t.name} ({t.count})</TabBtn>
@@ -171,27 +173,44 @@ export default function FavoritesPage() {
       ) : view.length === 0 ? (
         <div className="text-center py-20 text-[var(--color-text-muted)] rounded-[var(--radius-md)]" style={{ border: '1px solid var(--color-border)' }}>검색 결과가 없습니다</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {view.map(p => (
             <div key={p.id} className="rounded-[var(--radius-md)] overflow-hidden flex flex-col"
-              style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
-              <div className="relative aspect-[16/9] flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+              role="group"
+              aria-label={p.name}
+              onClick={() => goDetail(p)}
+              style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+              {/* 이미지 + 즐겨찾기 별 */}
+              <div className="relative aspect-square flex items-center justify-center" style={{ background: '#F3F4F6' }}>
                 <ProductImage src={p.imageUrl} />
-                <span className="absolute top-2 right-2 text-xl" style={{ color: 'var(--color-warning)' }}>★</span>
+                <button onClick={(e) => { e.stopPropagation(); removeOne(p) }}
+                  className="absolute top-2 right-2 text-xl"
+                  title="즐겨찾기 해제"
+                  aria-label="즐겨찾기 해제">
+                  <span style={{ color: 'var(--color-warning)' }}>★</span>
+                </button>
               </div>
+              {/* 본문 */}
               <div className="p-3 flex flex-col flex-1">
                 <div className="text-xs text-[var(--color-text-muted)] font-mono">{p.code}</div>
-                <div className="font-medium mt-0.5">{p.name}</div>
+                <div className="font-medium text-sm mt-0.5 line-clamp-2">{p.name}</div>
                 <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{pathOf(p)}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="font-bold" style={{ color: 'var(--color-primary)' }}>{won(p.unitPrice)}</span>
                   <VatBadge applicable={p.vatApplicable} />
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <Button variant="primary" size="sm" className="flex-1" onClick={() => addToQuote(p)}>견적에 추가</Button>
-                  <Button variant="danger" size="sm" className="flex-1" onClick={() => removeOne(p)}>해제</Button>
+                <div className="mt-3 flex flex-col gap-1.5">
+                  <Button variant="outline" size="sm" className="w-full"
+                    onClick={(e) => { e.stopPropagation(); goDetail(p) }}>상세 보기</Button>
+                  <div className="flex gap-1.5">
+                    <Button variant="primary" size="sm" className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); addToQuote(p) }}>견적에 추가</Button>
+                    <Button variant="danger" size="sm" className="flex-1"
+                      onClick={(e) => { e.stopPropagation(); removeOne(p) }}>해제</Button>
+                  </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => goDetail(p)}>상세 보기</Button>
               </div>
             </div>
           ))}
@@ -220,8 +239,9 @@ function TabBtn({ children, active, onClick }) {
       style={{
         borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
         color: active ? 'var(--color-primary)' : 'var(--color-text-sub)',
-        fontWeight: active ? 600 : 400,
-      }}>
+        background: 'none', border: 'none', cursor: 'pointer', fontWeight: active ? 600 : 400,
+      }}
+    >
       {children}
     </button>
   )

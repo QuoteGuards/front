@@ -215,6 +215,7 @@ export default function CategoryManagePage() {
     const isSelected = selected?.id === node.id
     const canHaveChild = node.depth < 3
     const hasChildren = node.children?.length > 0
+    const inactive = !isActiveOf(node)
 
     return (
         <div key={node.id}>
@@ -229,9 +230,10 @@ export default function CategoryManagePage() {
                 cursor: 'pointer',
                 borderRadius: 'var(--radius-sm)',
                 background: isSelected ? '#EFF6FF' : 'transparent',
-                color: isSelected ? 'var(--color-primary)' : 'var(--color-text-main)',
+                color: isSelected ? 'var(--color-primary)' : inactive ? 'var(--color-text-muted)' : 'var(--color-text-main)',
                 fontWeight: isSelected ? 600 : 400,
                 fontSize: '13px',
+                opacity: inactive ? 0.7 : 1,
               }}
           >
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -257,6 +259,12 @@ export default function CategoryManagePage() {
             </button>
 
             <span>{highlight(node.name, search.trim().toLowerCase())}</span>
+            {inactive && (
+              <span style={{ fontSize: '10px', fontWeight: 600, color: '#9CA3AF', background: '#F3F4F6',
+                border: '1px solid #E5E7EB', borderRadius: '999px', padding: '1px 6px', lineHeight: 1.4 }}>
+                미사용
+              </span>
+            )}
           </span>
 
             <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
@@ -342,7 +350,7 @@ export default function CategoryManagePage() {
             />
 
             {/* 카테고리 많아져도 페이지가 길어지지 않게 패널 내부 스크롤 */}
-            <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
               {viewTree.map(renderNode)}
 
               {tree.length === 0 && (

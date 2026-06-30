@@ -39,6 +39,12 @@ const REASON_LABEL = {
   HIGH_AMOUNT: '고액 견적',
 }
 
+const REASON_BADGE_STYLE = {
+  DISCOUNT_EXCEEDED: { background: '#FFF7ED', color: '#C2410C', border: '1px solid #FDBA74' },
+  LOW_PROFIT:        { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' },
+  HIGH_AMOUNT:       { background: '#F5F3FF', color: '#7C3AED', border: '1px solid #DDD6FE' },
+}
+
 function formatDate(str) {
   if (!str) return '—'
   return new Date(str).toLocaleString('ko-KR')
@@ -244,14 +250,14 @@ function RequestTab() {
                           <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
                             <p className="text-xs text-gray-400 mb-2">승인 필요 사유</p>
                             <div className="flex flex-wrap gap-1.5">
-                              {detail.reasons.map((r) => (
-                                <span
-                                  key={r.id}
-                                  className="px-2.5 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700 border border-amber-200"
-                                >
-                                  {REASON_LABEL[r.reasonType] ?? r.reasonType}
-                                </span>
-                              ))}
+                              {detail.reasons.map((r) => {
+                                const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+                                return (
+                                  <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                                    {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                                  </span>
+                                )
+                              })}
                             </div>
                           </div>
                         )}
@@ -531,14 +537,14 @@ function RejectReRequestTab() {
                   <h3 className="text-sm font-semibold text-gray-800">리스크 항목</h3>
                 </div>
                 <div className="px-5 py-4 flex flex-wrap gap-2">
-                  {reasons.map((r) => (
-                    <span
-                      key={r.id}
-                      className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600"
-                    >
-                      {REASON_LABEL[r.reasonType] ?? r.reasonType}
-                    </span>
-                  ))}
+                  {reasons.map((r) => {
+                    const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+                    return (
+                      <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                        {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -805,32 +811,40 @@ export default function StaffApprovalPage() {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} />
-      <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-gray-800">승인 요청 관리</h1>
-        <p className="text-sm text-gray-400 mt-1">
-          승인 요청 현황과 이력을 확인하세요.
-        </p>
-      </div>
+    <div>
+      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} title="승인 요청 현황" />
 
-      <div className="px-8 border-b border-gray-200 bg-white flex gap-0">
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          borderBottom: '1px solid var(--color-border)',
+          background: '#fff',
+          marginBottom: '24px',
+        }}
+      >
         {TABS.map((tab, idx) => (
           <button
             key={tab}
             onClick={() => setActiveTab(idx)}
-            className={`px-5 py-3.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === idx
-                ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-400 hover:text-gray-600'
-            }`}
+            style={{
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: activeTab === idx ? 600 : 400,
+              color: activeTab === idx ? 'var(--color-primary)' : 'var(--color-text-sub)',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === idx ? '2px solid var(--color-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      <div className="px-8 py-6">
+      <div>
         {activeTab === 0 && <RequestTab />}
         {activeTab === 1 && <RejectReRequestTab />}
         {activeTab === 2 && <HistoryTab />}
