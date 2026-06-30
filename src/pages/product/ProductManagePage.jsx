@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   getProductsApi,
@@ -74,6 +74,7 @@ export default function ProductManagePage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [modalError, setModalError] = useState(null)
   const [uploading, setUploading] = useState(false) // 이미지 업로드 중
+  const uploadSession = useRef(0) // 모달 세션 토큰 — 늦게 도착한 업로드가 다른 세션에 쓰는 것 방지
 
   useEffect(() => {
     let ignore = false
@@ -195,6 +196,8 @@ export default function ProductManagePage() {
   }
 
   const openCreate = () => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(null)
     setForm(EMPTY_FORM)
     setModalError(null)
@@ -202,6 +205,8 @@ export default function ProductManagePage() {
   }
 
   const openEdit = (product) => {
+    uploadSession.current += 1 // 새 모달 세션 → 이전 업로드 무효화
+    setUploading(false)
     setEditId(product.id)
     setForm({
       code: product.code,
@@ -223,21 +228,29 @@ export default function ProductManagePage() {
   const onPickImage = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    const session = uploadSession.current // 이 업로드가 속한 모달 세션
     setModalError(null)
     setUploading(true)
     try {
       const url = await uploadProductImageApi(file)
+      if (uploadSession.current !== session) return // 모달이 닫히거나 다른 제품으로 전환됨 → 폐기
       setForm((f) => ({ ...f, imageUrl: url }))
     } catch (err) {
+      if (uploadSession.current !== session) return
       setModalError(err.response?.data?.message ?? '이미지 업로드 실패')
     } finally {
-      setUploading(false)
+      if (uploadSession.current === session) setUploading(false)
       e.target.value = '' // 같은 파일 재선택 허용
     }
   }
 
   const onSubmit = async () => {
     setModalError(null)
+
+    if (uploading) {
+      setModalError('이미지 업로드 중입니다. 완료 후 저장하세요.')
+      return
+    }
 
     if (!form.code.trim() || !form.name.trim() || !form.categoryId) {
       setModalError('제품코드, 제품명, 카테고리는 필수입니다.')
@@ -982,8 +995,8 @@ export default function ProductManagePage() {
                   <Button variant="ghost" onClick={() => setModalOpen(false)}>
                     취소
                   </Button>
-                  <Button variant="primary" onClick={onSubmit}>
-                    저장
+                  <Button variant="primary" onClick={onSubmit} disabled={uploading}>
+                    {uploading ? '업로드 중…' : '저장'}
                   </Button>
                 </div>
               </div>
