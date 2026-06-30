@@ -9,6 +9,13 @@ import {
   resendInitialPasswordApi,
 } from '../../api/userManagementApi'
 
+const fmtDate = (iso) => {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+}
+
 const ROLE_OPTIONS = [
   { value: 'SALES_STAFF', label: '영업 사원' },
   { value: 'SALES_MANAGER', label: '영업 관리자' },
@@ -250,6 +257,23 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
                 <ReadField label="사원번호" value={user.memberNumber} />
                 <ReadField label="이메일" value={user.email} />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="계정 생성자" value={user.createdByName ?? '-'} />
+                <ReadField label="가입일시" value={fmtDate(user.createdAt)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="비밀번호 변경일" value={fmtDate(user.passwordChangedAt)} />
+                <ReadField label="마지막 로그인" value={fmtDate(user.lastLoginAt)} />
+              </div>
+              {user.suspendedAt && (
+                <div className="grid grid-cols-2 gap-3">
+                  <ReadField label="정지 일시" value={fmtDate(user.suspendedAt)} />
+                  <ReadField label="정지 처리자 ID" value={user.suspendedBy != null ? String(user.suspendedBy) : '-'} />
+                </div>
+              )}
+              {user.deletedAt && (
+                <ReadField label="삭제 일시" value={fmtDate(user.deletedAt)} />
+              )}
               {!user.passwordInitialized && !isDeleted && (
                 <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   <span className="text-xs text-amber-700 font-medium">비밀번호 설정 대기 중</span>
