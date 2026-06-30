@@ -65,7 +65,14 @@ export default function AdminTrainingManagePage() {
       setContent((prev) => (prev ? { ...prev, videoUrl: url } : prev))
       setSuccessMessage('교육 영상이 업로드되었습니다. 영업사원 교육 화면에 바로 반영됩니다.')
     } catch (err) {
-      setUploadError(err.response?.data?.message ?? '영상 업로드에 실패했습니다.')
+      const message =
+        err.response?.data?.message
+        ?? (err.code === 'ECONNABORTED'
+          ? '업로드 시간이 초과되었습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'
+          : err.message?.includes('Network Error')
+            ? '서버에 연결할 수 없습니다. 백엔드(8080) 실행 여부를 확인해 주세요.'
+            : '영상 업로드에 실패했습니다.')
+      setUploadError(message)
     } finally {
       setUploading(false)
     }

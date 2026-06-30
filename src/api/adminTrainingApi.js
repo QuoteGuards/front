@@ -21,6 +21,8 @@ export async function uploadTrainingVideoApi(file) {
   fd.append('file', file)
   const response = await apiClient.post('/api/admin/trainings/quote-writing/video', fd, {
     headers: { 'Content-Type': undefined },
+    // 기본 10초 타임아웃으로는 대용량 MP4 업로드가 중간에 끊김
+    timeout: 10 * 60 * 1000,
   })
   return unwrap(response)?.url ?? ''
 }
