@@ -25,6 +25,7 @@ export default function SearchableSelect({
 
   // disabled 전환 시 열린 메뉴 강제 닫기 + 검색어 초기화
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (disabled) { setOpen(false); setQuery('') }
   }, [disabled])
 
@@ -33,7 +34,10 @@ export default function SearchableSelect({
   const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
 
   // 검색어/열림 변경 시 활성 항목 초기화
-  useEffect(() => { setActiveIndex(0) }, [query, open])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveIndex(0)
+  }, [query, open])
 
   // 키보드로 이동한 활성 항목을 화면에 보이게 스크롤
   useEffect(() => {

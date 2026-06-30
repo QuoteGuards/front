@@ -16,6 +16,18 @@ export async function getProductApi(id) {
   return res.data.data
 }
 
+// POST 제품 이미지 업로드 (multipart) → 저장된 공개 URL 반환
+export async function uploadProductImageApi(file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  // Content-Type 을 undefined 로 둬서 apiClient 기본값(application/json)을 제거 →
+  // axios 가 FormData 를 감지해 boundary 포함 multipart 헤더를 자동 설정
+  const res = await apiClient.post('/api/admin/products/image', fd, {
+    headers: { 'Content-Type': undefined },
+  })
+  return res.data.data.url
+}
+
 // POST 등록
 // payload: { categoryId, name, code, description, spec, imageUrl, unitPrice, costPrice, unit, vatApplicable }
 export async function createProductApi(payload) {
