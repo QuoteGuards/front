@@ -6,7 +6,7 @@ import { getEmailHistory } from '../../api/emailApi'
 import EmailModal from '../../components/quote/EmailModal'
 import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE } from '../../constants/quoteStatus'
 import PageHeader from '../../components/common/PageHeader'
-import { formatKRW } from '../../utils/quoteUtils'
+import { formatKRW, canSendQuoteEmail, quoteSendBlockedMessage } from '../../utils/quoteUtils'
 
 // APPROVAL_PENDING 상태는 "승인이 필요하다고 판정됨"만 의미하고
 // 실제 승인 요청(ApprovalRequest)을 보냈는지는 별도로 이력을 봐야 알 수 있음
@@ -136,6 +136,7 @@ const QuoteDetailPage = () => {
     const isEditable = EDITABLE_STATUSES.includes(quote.status)
     const isReusable = REUSABLE_STATUSES.includes(quote.status)
     const isExpired = quote.status === 'EXPIRED'
+    const canSendEmail = canSendQuoteEmail(quote)
 
     const discountAmount = (quote.subtotal ?? 0) - (quote.supplyAmount ?? 0)
 
@@ -181,6 +182,11 @@ const QuoteDetailPage = () => {
                 )}
                 {actionError && (
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{actionError}</div>
+                )}
+                {!canSendEmail && !isEditable && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                        {quoteSendBlockedMessage(quote)}
+                    </div>
                 )}
 
                 <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
@@ -303,9 +309,20 @@ const QuoteDetailPage = () => {
                     <button onClick={handleDownloadPdf} disabled={pdfLoading} className="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                         {pdfLoading ? 'PDF 생성 중...' : 'PDF 다운로드'}
                     </button>
-                    <button onClick={() => setEmailOpen(true)} className="px-6 py-2.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
-                        이메일 발송
-                    </button>
+                    {canSendEmail ? (
+                        <button onClick={() => setEmailOpen(true)} className="px-6 py-2.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+                            이메일 발송
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            disabled
+                            title={quoteSendBlockedMessage(quote)}
+                            className="px-6 py-2.5 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed"
+                        >
+                            이메일 발송 불가
+                        </button>
+                    )}
                     {isReusable && (
                         <button onClick={handleReuse} disabled={actionLoading} className="px-6 py-2.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
                             {actionLoading ? '처리 중...' : '복사 후 재작성'}

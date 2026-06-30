@@ -218,6 +218,9 @@ const QuoteWritePage = () => {
         if (!customer.id) return '고객을 선택하거나 신규 등록해주세요.'
         if (items.length === 0) return '제품을 1개 이상 추가해주세요.'
         if (!issuedDate) return '발행일을 입력해주세요.'
+        if (!validUntil) return '견적 유효기간(만료일)을 입력해주세요.'
+        if (validUntil < today()) return '견적 유효기간은 오늘 이후 날짜여야 합니다.'
+        if (validUntil < issuedDate) return '견적 유효기간은 발행일 이후여야 합니다.'
         if (!deliveryTerm.trim()) return '납기 조건을 입력해주세요.'
 
         for (const item of items) {
@@ -230,6 +233,30 @@ const QuoteWritePage = () => {
         return null
     }
 
+    const buildQuoteForm = () => ({
+        customer,
+        discountPolicyId: items[0]?.discountPolicyId ?? null,
+        items: items.map((item) => {
+            const { needsReason, policyMissing } = getItemPolicyFlags(item)
+            return {
+                productId: item.productId,
+                productName: item.productName,
+                productCode: item.productCode,
+                spec: item.spec,
+                unitPrice: item.unitPrice,
+                costPrice: item.costPrice ?? 0,
+                quantity: item.quantity,
+                discountRate: Number(item.discountRate) || 0,
+                vatApplicable: item.vatApplicable,
+                discountReason: !policyMissing && needsReason ? item.discountReason : null,
+            }
+        }),
+        issuedDate,
+        validUntil,
+        deliveryTerm,
+        memo,
+    })
+
     const handleSaveDraft = async () => {
         const validationError = validate()
         if (validationError) {
@@ -239,29 +266,7 @@ const QuoteWritePage = () => {
         setSaving(true)
         setSaveError(null)
         try {
-            const form = {
-                customer,
-                discountPolicyId: items[0]?.discountPolicyId ?? null,
-                items: items.map((item) => {
-                    const { needsReason, policyMissing } = getItemPolicyFlags(item)
-                    return {
-                        productId: item.productId,
-                        productName: item.productName,
-                        productCode: item.productCode,
-                        spec: item.spec,
-                        unitPrice: item.unitPrice,
-                        costPrice: item.costPrice ?? 0,
-                        quantity: item.quantity,
-                        discountRate: Number(item.discountRate) || 0,
-                        vatApplicable: item.vatApplicable,
-                        discountReason: !policyMissing && needsReason ? item.discountReason : null,
-                    }
-                }),
-                issuedDate,
-                validUntil,
-                deliveryTerm,
-                memo,
-            }
+            const form = buildQuoteForm()
             const result = savedQuote
                 ? await updateQuote(savedQuote.id, form)
                 : await createQuote(form)
@@ -280,10 +285,20 @@ const QuoteWritePage = () => {
 
     const handleSubmitApproval = async () => {
         if (!savedQuote) return
+        const validationError = validate()
+        if (validationError) {
+            setSubmitError(validationError)
+            return
+        }
         setSubmitting(true)
         setSubmitError(null)
         try {
-            const result = await completeQuote(savedQuote.id)
+            const updated = await updateQuote(savedQuote.id, buildQuoteForm())
+            setSavedQuote(updated)
+            if (updated.items?.length) {
+                setItems((prev) => itemsFromQuoteResponse(updated, { previousItems: prev }))
+            }
+            const result = await completeQuote(updated.id)
             setSubmitResult(result)
             setSavedQuote(result)
         } catch (e) {

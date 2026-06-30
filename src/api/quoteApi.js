@@ -89,7 +89,7 @@ export const getInternalAnalysis = async (quoteId) => {
 }
 
 /**
- * POST /api/quotes/{quoteId}/reuse - 최근 견적 재사용 (동일 내용, 새 견적번호)
+ * POST /api/quotes/{quoteId}/reuse - 과거 견적 품목 구성 복사 + 최신 단가로 새 견적(DRAFT)
  */
 export const reuseQuote = async (quoteId) => {
   const { data } = await apiClient.post(`/api/quotes/${quoteId}/reuse`)
