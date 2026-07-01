@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyProfile } from '../../hooks/useMyProfile'
 import { logoutApi } from '../../api/authApi'
+import NotificationBell from '../notification/NotificationBell'
 import './GlobalNav.css'
 
 const ROLE_LABEL = {
@@ -78,6 +79,10 @@ const GlobalNav = ({ collapsed, onToggle }) => {
             <span className="gnb__user-role">{roleDisplay}</span>
           </div>
         </div>
+
+        <div className="gnb__divider" aria-hidden="true" />
+
+        <NotificationBell />
 
         <div className="gnb__divider" aria-hidden="true" />
 
