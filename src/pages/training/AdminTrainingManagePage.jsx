@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
-import { getAdminQuoteWritingTrainingApi, uploadTrainingVideoApi } from '../../api/adminTrainingApi'
+import { getAdminQuoteWritingTrainingApi, uploadTrainingVideoApi, updateGuideContentApi } from '../../api/adminTrainingApi'
+import AdminGuideEditor from '../../components/training/AdminGuideEditor'
 
 const MAX_VIDEO_BYTES = 300 * 1024 * 1024
 
@@ -12,6 +13,9 @@ export default function AdminTrainingManagePage() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [guideSaving, setGuideSaving] = useState(false)
+  const [guideError, setGuideError] = useState('')
+  const [guideSuccess, setGuideSuccess] = useState('')
   const fileInputRef = useRef(null)
   const requestIdRef = useRef(0)
 
@@ -75,6 +79,21 @@ export default function AdminTrainingManagePage() {
       setUploadError(message)
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleSaveGuide = async (guideContentJson) => {
+    setGuideSaving(true)
+    setGuideError('')
+    setGuideSuccess('')
+    try {
+      const updated = await updateGuideContentApi(guideContentJson)
+      setContent((prev) => (prev ? { ...prev, guideContent: updated.guideContent ?? guideContentJson } : prev))
+      setGuideSuccess('가이드 내용이 저장되었습니다. 영업사원 가이드 모달에 바로 반영됩니다.')
+    } catch (err) {
+      setGuideError(err.response?.data?.message ?? err.message ?? '가이드 저장에 실패했습니다.')
+    } finally {
+      setGuideSaving(false)
     }
   }
 
@@ -159,6 +178,24 @@ export default function AdminTrainingManagePage() {
                 <p className="mt-3 text-sm text-[var(--color-danger)]">{uploadError}</p>
               )}
             </section>
+
+            {guideError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {guideError}
+              </div>
+            )}
+            {guideSuccess && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {guideSuccess}
+              </div>
+            )}
+
+            <AdminGuideEditor
+              key={content.guideContent ?? 'empty'}
+              guideContent={content.guideContent}
+              onSave={handleSaveGuide}
+              saving={guideSaving}
+            />
           </div>
         )}
       </div>

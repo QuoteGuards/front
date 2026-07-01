@@ -41,6 +41,7 @@ const QuoteWritePage = () => {
     const [guideOpen, setGuideOpen] = useState(false)
     const [loadingGuide, setLoadingGuide] = useState(false)
     const [guideConfirming, setGuideConfirming] = useState(false)
+    const [guideContent, setGuideContent] = useState('')
 
     const [customer, setCustomer] = useState(initialCustomer)
     const [memo, setMemo] = useState('')
@@ -189,7 +190,8 @@ const QuoteWritePage = () => {
     const openGuide = async () => {
         setLoadingGuide(true)
         try {
-            await getQuoteWritingGuide()
+            const data = await getQuoteWritingGuide()
+            setGuideContent(data.guideContent ?? '')
             setGuideOpen(true)
         } catch {
             alert('가이드 로드 실패')
@@ -663,6 +665,7 @@ const QuoteWritePage = () => {
 
             {guideOpen && (
                 <TrainingGuideModal
+                    guideContent={guideContent}
                     alreadyConfirmed={!!trainingStatus?.guideConfirmed}
                     confirming={guideConfirming}
                     onClose={() => setGuideOpen(false)}
