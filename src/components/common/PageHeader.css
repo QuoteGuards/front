@@ -2,6 +2,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -9,6 +10,8 @@
 .page-header__left {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -36,11 +39,14 @@
   font-weight: 700;
   color: var(--color-text-main);
   line-height: 1.2;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .page-header__actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
 }
