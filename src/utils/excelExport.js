@@ -3,6 +3,19 @@ import { calcQuoteSummary } from './quoteUtils'
 
 const sanitizeFilePart = (v = '') => String(v).replace(/[\\/:*?"<>|]/g, '-').trim()
 
+//표 데이터를 .xlsx 파일로 다운로드 (견적 엑셀과 동일한 xlsx 라이브러리 사용)
+
+export const downloadTableExcel = ({ headers, rows, sheetName = 'Sheet1', fileName }) => {
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  ws['!cols'] = headers.map((header) => ({
+    wch: Math.min(Math.max(String(header).length + 2, 10), 40),
+  }))
+  XLSX.utils.book_append_sheet(wb, ws, sheetName)
+  const safeName = sanitizeFilePart(fileName.replace(/\.xlsx$/i, ''))
+  XLSX.writeFile(wb, `${safeName}.xlsx`)
+}
+
 export const downloadQuoteExcel = (quote) => {
   const { subtotal, tax, total } = calcQuoteSummary(quote.items)
 

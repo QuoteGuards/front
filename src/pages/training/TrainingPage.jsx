@@ -16,7 +16,6 @@ const TrainingPage = () => {
         trainingStatus,
         trainingContent,
         loading,
-        actionLoading,
         saveProgress,
         confirmGuide,
         canWriteQuote,
@@ -148,7 +147,7 @@ const TrainingPage = () => {
                 <div className="training-actions">
                     <button
                         type="button"
-                        disabled={!canClickComplete || actionLoading}
+                        disabled={!canClickComplete}
                         onClick={handleGoToQuoteWrite}
                         className="training-complete-btn"
                     >

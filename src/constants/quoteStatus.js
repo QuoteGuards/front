@@ -30,8 +30,11 @@ export const QUOTE_STATUS_STYLE = {
 export const QUOTE_STATUS_FILTERS = {
     '전체': null,
     '작성중': ['DRAFT', 'REVISING'],
-    '발행': ['SUBMITTED', 'APPROVAL_NOT_REQUIRED', 'APPROVAL_PENDING', 'SENT'],
-    '승인': ['APPROVED'],
+    '제출완료': ['SUBMITTED'],
+    '승인불필요': ['APPROVAL_NOT_REQUIRED'],
+    '승인대기': ['APPROVAL_PENDING'],
+    '발송완료': ['SENT'],
+    '승인완료': ['APPROVED'],
     '반려': ['REJECTED'],
     '만료': ['EXPIRED'],
 }

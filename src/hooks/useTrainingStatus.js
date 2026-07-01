@@ -48,11 +48,16 @@ function trainingReducer(state, action) {
  */
 export function useTrainingStatus(options = {}) {
   const { loadContent = false } = options
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [state, dispatch] = useReducer(trainingReducer, initialState)
+  const trainingRequired = user?.role === 'SALES_STAFF'
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) return null
+    if (!trainingRequired) {
+      dispatch({ type: 'FETCH_SUCCESS', status: null, content: null })
+      return null
+    }
 
     dispatch({ type: 'FETCH_START' })
 
@@ -67,7 +72,7 @@ export function useTrainingStatus(options = {}) {
       dispatch({ type: 'FETCH_ERROR', error })
       return null
     }
-  }, [isAuthenticated, loadContent])
+  }, [isAuthenticated, loadContent, trainingRequired])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -79,7 +84,6 @@ export function useTrainingStatus(options = {}) {
 
   const saveProgress = useCallback(
     async (payload) => {
-      dispatch({ type: 'ACTION_START' })
       try {
         await updateTrainingProgress(payload)
         const status = await getMyTrainingStatus()
@@ -88,8 +92,6 @@ export function useTrainingStatus(options = {}) {
       } catch (error) {
         dispatch({ type: 'FETCH_ERROR', error })
         throw error
-      } finally {
-        dispatch({ type: 'ACTION_END' })
       }
     },
     []
@@ -111,12 +113,22 @@ export function useTrainingStatus(options = {}) {
   }, [])
 
   const derived = useMemo(() => {
+    if (!trainingRequired) {
+      return {
+        canWriteQuote: true,
+        canClickComplete: true,
+        isVideoRequirementMet: true,
+        trainingRequired: false,
+      }
+    }
+
     const status = state.status
     if (!status) {
       return {
         canWriteQuote: false,
         canClickComplete: false,
         isVideoRequirementMet: false,
+        trainingRequired: true,
       }
     }
 
@@ -127,8 +139,9 @@ export function useTrainingStatus(options = {}) {
       canWriteQuote: status.completed,
       canClickComplete,
       isVideoRequirementMet,
+      trainingRequired: true,
     }
-  }, [state.status])
+  }, [state.status, trainingRequired])
 
   return {
     /** @type {import('../api/trainingApi').TrainingStatus | null} */

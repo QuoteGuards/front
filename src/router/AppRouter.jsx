@@ -12,6 +12,8 @@ import AdminApprovalPage from '../pages/approval/AdminApprovalPage'
 import AdminApprovalDetailPage from '../pages/approval/AdminApprovalDetailPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
+import AdminTrainingManagePage from '../pages/training/AdminTrainingManagePage'
+import AdminTrainingStatusPage from '../pages/training/AdminTrainingStatusPage'
 import LoginPage from '../pages/login/LoginPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
@@ -162,9 +164,23 @@ export default function AppRouter() {
               <UserManagementPage />
             </ProtectedRoute>
           } />
+          <Route path="/admin/trainings" element={
+            <ProtectedRoute roles={['SUPER_ADMIN']}>
+              <AdminTrainingManagePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/trainings/status" element={
+            <ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}>
+              <AdminTrainingStatusPage />
+            </ProtectedRoute>
+          } />
 
           {/* 계정 - 전체 */}
-          <Route path="/training" element={<TrainingPage />} />
+          <Route path="/training" element={
+            <ProtectedRoute roles={['SALES_STAFF']}>
+              <TrainingPage />
+            </ProtectedRoute>
+          } />
           <Route path="/my-page" element={<MyPage />} />
         </Route>
 

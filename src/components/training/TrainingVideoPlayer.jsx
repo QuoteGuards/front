@@ -14,12 +14,22 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
     const videoRef = useRef(null)
     const maxWatchedRef = useRef(initialStatus?.watchedSeconds ?? 0)
     const lastSavedRef = useRef(0)
+    const lastPayloadRef = useRef('')
     const resumedRef = useRef(false)
+    const onSaveProgressRef = useRef(onSaveProgress)
+    const initialProgressRateRef = useRef(Number(initialStatus?.progressRate ?? 0))
     const onDurationChangeRef = useRef(onDurationChange)
 
     useEffect(() => {
-        onDurationChangeRef.current = onDurationChange
-    }, [onDurationChange])
+        onSaveProgressRef.current = onSaveProgress
+    }, [onSaveProgress])
+
+    useEffect(() => {
+        initialProgressRateRef.current = Number(initialStatus?.progressRate ?? 0)
+        if (initialStatus?.watchedSeconds != null) {
+            maxWatchedRef.current = Math.max(maxWatchedRef.current, initialStatus.watchedSeconds)
+        }
+    }, [initialStatus?.progressRate, initialStatus?.watchedSeconds])
 
     const [duration, setDuration] = useState(0)
     const [currentTime, setCurrentTime] = useState(initialStatus?.lastWatchedSeconds ?? 0)
@@ -28,30 +38,40 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
     const lastWatchedSeconds = initialStatus?.lastWatchedSeconds ?? 0
     const canResume = lastWatchedSeconds > 0 && progressRate < TRAINING_COMPLETE_THRESHOLD
 
-    const persist = useCallback(
-        (force = false) => {
-            const video = videoRef.current
-            if (!video || !duration) return
+    useEffect(() => {
+        onDurationChangeRef.current = onDurationChange
+    }, [onDurationChange])
 
-            const cur = Math.floor(video.currentTime)
-            maxWatchedRef.current = Math.max(maxWatchedRef.current, cur)
-            const rate = Math.min(100, Math.round((maxWatchedRef.current / duration) * 1000) / 10)
+    const persist = useCallback((force = false, ended = false) => {
+        const video = videoRef.current
+        const videoDuration = video?.duration
+        if (!video || !Number.isFinite(videoDuration) || videoDuration <= 0) return
 
-            setCurrentTime(cur)
-            setProgressRate((prev) => Math.max(prev, rate))
+        const cur = ended ? Math.ceil(videoDuration) : Math.floor(video.currentTime)
+        maxWatchedRef.current = Math.max(maxWatchedRef.current, cur)
 
-            const now = Date.now()
-            if (!force && now - lastSavedRef.current < SAVE_INTERVAL_MS) return
-            lastSavedRef.current = now
+        const rate = ended
+            ? 100
+            : Math.min(100, Math.round((maxWatchedRef.current / videoDuration) * 1000) / 10)
 
-            onSaveProgress?.({
-                progressRate: Math.max(rate, Number(initialStatus?.progressRate ?? 0)),
-                watchedSeconds: maxWatchedRef.current,
-                lastWatchedSeconds: cur,
-            })
-        },
-        [duration, onSaveProgress, initialStatus]
-    )
+        setCurrentTime(Math.min(cur, Math.floor(videoDuration)))
+        setProgressRate((prev) => Math.max(prev, rate))
+
+        const payload = {
+            progressRate: Math.max(rate, initialProgressRateRef.current),
+            watchedSeconds: maxWatchedRef.current,
+            lastWatchedSeconds: Math.min(cur, Math.floor(videoDuration)),
+        }
+        const payloadKey = `${payload.progressRate}|${payload.watchedSeconds}|${payload.lastWatchedSeconds}`
+        if (!force && payloadKey === lastPayloadRef.current) return
+
+        const now = Date.now()
+        if (!force && now - lastSavedRef.current < SAVE_INTERVAL_MS) return
+
+        lastSavedRef.current = now
+        lastPayloadRef.current = payloadKey
+        onSaveProgressRef.current?.(payload)
+    }, [])
 
     useEffect(() => {
         const video = videoRef.current
@@ -67,7 +87,7 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
         }
         const handleTimeUpdate = () => persist(false)
         const handlePause = () => persist(true)
-        const handleEnded = () => persist(true)
+        const handleEnded = () => persist(true, true)
 
         video.addEventListener('loadedmetadata', handleLoadedMeta)
         video.addEventListener('timeupdate', handleTimeUpdate)
@@ -81,8 +101,7 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
             video.removeEventListener('ended', handleEnded)
             persist(true)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [videoUrl])
+    }, [videoUrl, persist])
 
     const handleResumeClick = () => {
         const video = videoRef.current

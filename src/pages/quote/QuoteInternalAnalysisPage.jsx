@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getInternalAnalysis } from '../../api/quoteApi'
 import { requestApproval, reRequestApproval, getApprovalHistories } from '../../api/approvalApi'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
 import { formatKRW } from '../../utils/quoteUtils'
+import './QuotePage.css'
 
 const REASON_LABEL = {
     DISCOUNT_EXCEEDED: '할인율 정책 초과',
@@ -11,21 +13,20 @@ const REASON_LABEL = {
     HIGH_AMOUNT: '고액 견적 기준 초과',
 }
 
-// 승인 이력의 마지막 액션 기준으로 현재 승인 상태를 판단
 const APPROVAL_STATUS_LABEL = {
     NONE: '요청 전',
     PENDING: '승인 대기중',
     APPROVED: '승인 완료',
     REJECTED: '반려됨',
 }
-const APPROVAL_STATUS_STYLE = {
-    NONE: 'bg-gray-100 text-gray-500',
-    PENDING: 'bg-amber-100 text-amber-700',
-    APPROVED: 'bg-emerald-100 text-emerald-700',
-    REJECTED: 'bg-red-100 text-red-600',
+
+const APPROVAL_BADGE_CLASS = {
+    NONE: 'quote-page-badge--none',
+    PENDING: 'quote-page-badge--pending',
+    APPROVED: 'quote-page-badge--approved',
+    REJECTED: 'quote-page-badge--rejected',
 }
 
-// approvalRequestId까지 같이 반환 (재요청 시 필요)
 const deriveApprovalStatus = (histories) => {
     if (!histories || histories.length === 0) return { status: 'NONE', lastMemo: null, approvalRequestId: null }
     const sorted = [...histories].sort((a, b) => new Date(a.actedAt) - new Date(b.actedAt))
@@ -36,7 +37,6 @@ const deriveApprovalStatus = (histories) => {
     if (last.action === 'REQUESTED' || last.action === 'RE_REQUESTED') return { status: 'PENDING', lastMemo: last.memo, approvalRequestId }
     return { status: 'NONE', lastMemo: null, approvalRequestId: null }
 }
-
 
 const QuoteInternalAnalysisPage = () => {
     const { quoteId } = useParams()
@@ -90,14 +90,13 @@ const QuoteInternalAnalysisPage = () => {
             }
             setApprovalStatus('PENDING')
         } catch (e) {
-            const status = e.response?.status;
-            const message = e.response?.data?.message;
+            const status = e.response?.status
+            const message = e.response?.data?.message
 
-            // 예: 409 Conflict 상태 코드라면 승인 대기 중으로 판단
             if (status === 409) {
-                setApprovalStatus('PENDING');
+                setApprovalStatus('PENDING')
             } else {
-                setError(message || '승인 요청 중 오류가 발생했습니다.');
+                setError(message || '승인 요청 중 오류가 발생했습니다.')
             }
         } finally {
             setSubmitting(false)
@@ -106,16 +105,18 @@ const QuoteInternalAnalysisPage = () => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
-                <p className="text-gray-400 text-sm">내부 분석 데이터를 불러오는 중...</p>
+            <div className="quote-page">
+                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <div className="quote-page-loading">내부 분석 데이터를 불러오는 중...</div>
             </div>
         )
     }
 
-    if (error || !analysis) {
+    if (error && !analysis) {
         return (
-            <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
-                <p className="text-red-400 text-sm">{error ?? '데이터를 불러올 수 없습니다.'}</p>
+            <div className="quote-page">
+                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <div className="quote-page-alert quote-page-alert--error">{error}</div>
             </div>
         )
     }
@@ -123,74 +124,92 @@ const QuoteInternalAnalysisPage = () => {
     const profitRate = Number(analysis.profitRate ?? 0)
 
     return (
-        <div className="flex-1 bg-gray-50 min-h-screen pb-10">
-        <PageHeader breadcrumbs={['견적 관리', '내부 분석']} />
-            <div className="bg-white border-b border-gray-200 px-8 py-5">
-                <button
-                    onClick={() => navigate(`/quotes/new?id=${quoteId}`)}
-                    className="text-xs text-gray-400 hover:text-gray-600 mb-2 flex items-center gap-1"
-                >
-                    ← 견적 작성으로 돌아가기
-                </button>
-                <h1 className="text-xl font-bold text-gray-800">내부 견적 분석</h1>
-                <div className="flex items-center gap-2 mt-1">
-                    <p className="text-sm text-gray-400">견적번호: {analysis.quoteNumber}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${APPROVAL_STATUS_STYLE[approvalStatus]}`}>
-                        {APPROVAL_STATUS_LABEL[approvalStatus]}
-                    </span>
-                </div>
+        <div className="quote-page">
+            <PageHeader
+                breadcrumbs={['견적 관리', '내부 분석']}
+                title="내부 견적 분석"
+                actions={
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/quotes/new?id=${quoteId}`)}>
+                        ← 견적 작성으로
+                    </Button>
+                }
+            />
+
+            <div className="quote-page__meta">
+                <p className="quote-page__meta-label">견적번호: {analysis.quoteNumber}</p>
+                <span className={`quote-page-badge ${APPROVAL_BADGE_CLASS[approvalStatus]}`}>
+                    {APPROVAL_STATUS_LABEL[approvalStatus]}
+                </span>
             </div>
 
-            <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-                <div className="grid grid-cols-4 gap-4">
+            <div className="quote-page__stack">
+                <div className="quote-page-stat-grid">
                     {[
                         { title: '공급가액', val: formatKRW(analysis.supplyAmount) },
                         { title: '총 원가', val: formatKRW(analysis.totalCostAmount) },
                         { title: '예상 이익금', val: formatKRW(analysis.expectedProfitAmount) },
-                        { title: '전체 이익률', val: `${profitRate.toFixed(1)}%`, highlight: profitRate < 20 },
+                        {
+                            title: '전체 이익률',
+                            val: `${profitRate.toFixed(1)}%`,
+                            tone: profitRate < 20 ? 'danger' : 'success',
+                        },
                     ].map((item) => (
-                        <div key={item.title} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <p className="text-xs text-gray-500 mb-1">{item.title}</p>
-                            <p className={`text-xl font-bold ${item.highlight ? 'text-red-500' : 'text-gray-800'}`}>{item.val}</p>
+                        <div key={item.title} className="quote-page-stat">
+                            <p className="quote-page-stat__label">{item.title}</p>
+                            <p className={`quote-page-stat__value${item.tone ? ` quote-page-stat__value--${item.tone}` : ''}`}>
+                                {item.val}
+                            </p>
                         </div>
                     ))}
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">제품별 내부 분석</h2>
-                    <table className="w-full text-sm text-center">
-                        <thead className="bg-gray-50 text-gray-500">
-                            <tr>{['제품명', '판매가', '원가', '수량', '할인율', '공급가', '이익금/이익률'].map((h) => <th key={h} className="py-3 font-medium">{h}</th>)}</tr>
-                        </thead>
-                        <tbody>
-                            {(analysis.items ?? []).map((item) => {
-                                const lineCost = item.costPrice * item.quantity
-                                const lineProfit = item.lineSupplyAmount - lineCost
-                                const lineProfitRate = item.lineSupplyAmount === 0 ? 0 : (lineProfit / item.lineSupplyAmount) * 100
-                                return (
-                                    <tr key={item.id} className="border-t">
-                                        <td className="py-3 text-left">{item.productName}</td>
-                                        <td>{formatKRW(item.unitPrice)}</td>
-                                        <td>{formatKRW(item.costPrice)}</td>
-                                        <td>{item.quantity}</td>
-                                        <td>{Number(item.discountRate ?? 0)}%</td>
-                                        <td>{formatKRW(item.lineSupplyAmount)}</td>
-                                        <td className={lineProfitRate < 20 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'}>
-                                            {formatKRW(lineProfit)} ({lineProfitRate.toFixed(1)}%)
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                <div className="quote-page-card">
+                    <div className="quote-page-card__header">
+                        <h2 className="quote-page-card__title">제품별 내부 분석</h2>
+                    </div>
+                    <div className="quote-page-table-wrap">
+                        <table className="quote-page-table">
+                            <thead>
+                                <tr>
+                                    {['제품명', '판매가', '원가', '수량', '할인율', '공급가', '이익금/이익률'].map((h) => (
+                                        <th key={h}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(analysis.items ?? []).map((item) => {
+                                    const lineCost = item.costPrice * item.quantity
+                                    const lineProfit = item.lineSupplyAmount - lineCost
+                                    const lineProfitRate = item.lineSupplyAmount === 0 ? 0 : (lineProfit / item.lineSupplyAmount) * 100
+                                    return (
+                                        <tr key={item.id}>
+                                            <td>{item.productName}</td>
+                                            <td>{formatKRW(item.unitPrice)}</td>
+                                            <td>{formatKRW(item.costPrice)}</td>
+                                            <td>{item.quantity}</td>
+                                            <td>{Number(item.discountRate ?? 0)}%</td>
+                                            <td>{formatKRW(item.lineSupplyAmount)}</td>
+                                            <td
+                                                className={`quote-page-profit-cell ${lineProfitRate < 20 ? 'quote-page-profit-cell--danger' : 'quote-page-profit-cell--success'}`}
+                                            >
+                                                {formatKRW(lineProfit)} ({lineProfitRate.toFixed(1)}%)
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-3">
-                    <h2 className="text-sm font-bold text-gray-800">승인 필요 여부 판단</h2>
+                <div className="quote-page-card">
+                    <div className="quote-page-card__header">
+                        <h2 className="quote-page-card__title">승인 필요 여부 판단</h2>
+                    </div>
                     {analysis.approvalRequired ? (
-                        <div className="bg-red-50 p-4 rounded-lg text-sm text-red-600 border border-red-100">
-                            <p className="font-semibold mb-1">⚠ 승인 요청 필요</p>
-                            <ul className="list-disc pl-5">
+                        <div className="quote-page-alert quote-page-alert--warning">
+                            <p className="font-semibold">승인 요청 필요</p>
+                            <ul className="quote-page-reason-list">
                                 {(analysis.approvalReasons ?? []).map((r) => (
                                     <li key={r}>{REASON_LABEL[r] ?? r}</li>
                                 ))}
@@ -203,33 +222,37 @@ const QuoteInternalAnalysisPage = () => {
                                         onChange={(e) => setRequestMemo(e.target.value)}
                                         placeholder="승인 요청 사유를 입력하세요 (선택)"
                                         rows={2}
-                                        className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm bg-white resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                                        className="form-textarea"
                                     />
-                                    {error && <p className="text-red-600 text-xs">{error}</p>}
-                                    <button
+                                    {error && <p className="quote-page-meta quote-page-meta--danger">{error}</p>}
+                                    <Button
+                                        variant="primary"
                                         onClick={handleSubmitApproval}
                                         disabled={submitting}
-                                        className="px-6 py-2.5 rounded-lg bg-violet-600 text-white font-bold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {submitting ? '요청 중...' : approvalStatus === 'REJECTED' ? '재요청 제출' : '승인 요청 제출'}
-                                    </button>
+                                    </Button>
                                 </div>
                             ) : approvalStatus === 'APPROVED' ? (
-                                <p className="mt-3 text-emerald-700 font-semibold">✓ 이미 승인 완료된 견적입니다.</p>
+                                <p className="mt-3 font-semibold" style={{ color: '#15803D' }}>이미 승인 완료된 견적입니다.</p>
                             ) : (
-                                <p className="mt-3 text-emerald-700 font-semibold">✓ 승인 요청이 관리자에게 전달되었습니다. (대기중)</p>
+                                <p className="mt-3 font-semibold" style={{ color: '#15803D' }}>승인 요청이 관리자에게 전달되었습니다. (대기중)</p>
                             )}
                         </div>
                     ) : (
-                        <div className="bg-emerald-50 p-4 rounded-lg text-sm text-emerald-700 border border-emerald-100">
-                            ✓ 정책 기준 이내, 승인 없이 즉시 발행 가능합니다.
+                        <div className="quote-page-alert quote-page-alert--success">
+                            정책 기준 이내, 승인 없이 즉시 발행 가능합니다.
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-center gap-3 pt-2">
-                    <button onClick={() => navigate(`/quotes/new?id=${quoteId}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">견적 수정</button>
-                    <button onClick={() => navigate(`/quotes/${analysis.quoteNumber}/preview`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">견적 미리보기</button>
+                <div className="quote-page-actions quote-page-actions--center">
+                    <Button variant="outline" onClick={() => navigate(`/quotes/new?id=${quoteId}`)}>
+                        견적 수정
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(`/quotes/${analysis.quoteNumber}/preview`)}>
+                        견적 미리보기
+                    </Button>
                 </div>
             </div>
         </div>
