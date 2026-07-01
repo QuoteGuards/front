@@ -91,7 +91,7 @@ export default function AdminTrainingManagePage() {
       setContent((prev) => (prev ? { ...prev, guideContent: updated.guideContent ?? guideContentJson } : prev))
       setGuideSuccess('가이드 내용이 저장되었습니다. 영업사원 가이드 모달에 바로 반영됩니다.')
     } catch (err) {
-      setGuideError(err.response?.data?.message ?? '가이드 저장에 실패했습니다.')
+      setGuideError(err.response?.data?.message ?? err.message ?? '가이드 저장에 실패했습니다.')
     } finally {
       setGuideSaving(false)
     }

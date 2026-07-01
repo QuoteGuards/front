@@ -3,10 +3,13 @@ import Button from '../common/Button'
 import { GUIDE_SECTIONS, parseGuideContent } from '../../utils/guideContent'
 import './TrainingGuideModal.css'
 
+const FOCUSABLE_SELECTOR = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
 const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed, confirming }) => {
     const content = useMemo(() => parseGuideContent(guideContent), [guideContent])
     const [activeId, setActiveId] = useState(GUIDE_SECTIONS[0].id)
     const bodyRef = useRef(null)
+    const dialogRef = useRef(null)
 
     useEffect(() => {
         const root = bodyRef.current
@@ -32,6 +35,36 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
         return () => observer.disconnect()
     }, [content])
 
+    useEffect(() => {
+        const dialog = dialogRef.current
+        if (!dialog) return undefined
+
+        const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE_SELECTOR))
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        first?.focus()
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape' && !confirming) {
+                e.preventDefault()
+                onClose?.()
+                return
+            }
+            if (e.key !== 'Tab' || focusable.length === 0) return
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault()
+                last?.focus()
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault()
+                first?.focus()
+            }
+        }
+
+        document.addEventListener('keydown', onKeyDown)
+        return () => document.removeEventListener('keydown', onKeyDown)
+    }, [confirming, onClose])
+
     const scrollToSection = (id) => {
         const el = bodyRef.current?.querySelector(`#guide-section-${id}`)
         el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -44,6 +77,7 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
             onClick={(e) => e.target === e.currentTarget && !confirming && onClose?.()}
         >
             <div
+                ref={dialogRef}
                 className="training-guide-modal__dialog"
                 role="dialog"
                 aria-modal="true"
@@ -93,7 +127,7 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
                             <p className="training-guide-modal__intro">{content.procedure.intro}</p>
                             <div className="training-guide-modal__steps">
                                 {content.procedure.steps.map((step, idx) => (
-                                    <div key={step.title} className="training-guide-modal__step">
+                                    <div key={`procedure-step-${idx}`} className="training-guide-modal__step">
                                         <span className="training-guide-modal__step-num">{idx + 1}</span>
                                         <div>
                                             <p className="training-guide-modal__step-title">{step.title}</p>
@@ -117,8 +151,8 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {content.discount.rows.map((row) => (
-                                            <tr key={row.label}>
+                                        {content.discount.rows.map((row, idx) => (
+                                            <tr key={`discount-row-${idx}`}>
                                                 <td>{row.label}</td>
                                                 <td>{row.maxDiscount}</td>
                                                 <td>{row.minProfit}</td>
@@ -140,16 +174,16 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
                                 <div className="training-guide-modal__card training-guide-modal__card--required">
                                     <p className="training-guide-modal__card-title">{content.approval.requiredTitle}</p>
                                     <ul>
-                                        {content.approval.requiredItems.map((item) => (
-                                            <li key={item}>{item}</li>
+                                        {content.approval.requiredItems.map((item, idx) => (
+                                            <li key={`approval-required-${idx}`}>{item}</li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div className="training-guide-modal__card training-guide-modal__card--ok">
                                     <p className="training-guide-modal__card-title">{content.approval.immediateTitle}</p>
                                     <ul>
-                                        {content.approval.immediateItems.map((item) => (
-                                            <li key={item}>{item}</li>
+                                        {content.approval.immediateItems.map((item, idx) => (
+                                            <li key={`approval-immediate-${idx}`}>{item}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -161,8 +195,8 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
                             <div className="training-guide-modal__example">
                                 <p className="training-guide-modal__example-request">{content.example.request}</p>
                                 <ul className="training-guide-modal__example-lines">
-                                    {content.example.lines.map((line) => (
-                                        <li key={line}>{line}</li>
+                                    {content.example.lines.map((line, idx) => (
+                                        <li key={`example-line-${idx}`}>{line}</li>
                                     ))}
                                 </ul>
                                 <p className="training-guide-modal__example-outcome">{content.example.outcome}</p>

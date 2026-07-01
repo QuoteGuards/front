@@ -87,8 +87,8 @@ export default function AdminGuideEditor({ guideContent, onSave, saving }) {
       setError('작성 절차는 「제목|설명」 형식으로 한 줄에 하나씩 입력해주세요.')
       return
     }
-    if (rows.some((r) => !r.label)) {
-      setError('할인율 표는 「구분|최대할인|최소이익|초과시」 형식으로 입력해주세요.')
+    if (rows.some((r) => !r.label || !r.maxDiscount || !r.minProfit || !r.action)) {
+      setError('할인율 표는 「구분|최대할인|최소이익|초과시」 형식으로 모든 항목을 입력해주세요.')
       return
     }
 
@@ -181,9 +181,9 @@ export default function AdminGuideEditor({ guideContent, onSave, saving }) {
 
 function GuideField({ label, children }) {
   return (
-    <div>
-      <label className="block text-xs font-semibold text-[var(--color-text-sub)] mb-1.5">{label}</label>
+    <label className="block">
+      <span className="block text-xs font-semibold text-[var(--color-text-sub)] mb-1.5">{label}</span>
       {children}
-    </div>
+    </label>
   )
 }
