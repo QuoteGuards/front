@@ -2,12 +2,14 @@
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   box-shadow: var(--shadow-sm);
 }
 
 .data-table {
   width: 100%;
+  min-width: max-content;
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -69,6 +71,7 @@
   text-align: left;
   vertical-align: middle;
   height: 52px;
+  white-space: nowrap;
 }
 
 .data-table__td--right { text-align: right; }

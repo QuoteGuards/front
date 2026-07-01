@@ -109,7 +109,7 @@ export default function AdminTrainingManagePage() {
         }
       />
 
-      <div className="max-w-3xl">
+      <div className="max-w-3xl mx-auto">
         {loading && <p className="text-sm text-[var(--color-text-muted)]">불러오는 중...</p>}
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
