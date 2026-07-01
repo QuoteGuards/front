@@ -105,7 +105,7 @@ function buildGuideSteps(reasons) {
     required: false,
   })
   steps.push({
-    step: n++,
+    step: n,
     title: '메모 업데이트',
     desc: '변경 사항과 고객 반응을 상담 메모에 기록해두세요.',
     required: false,
@@ -558,6 +558,41 @@ function RejectReRequestTab() {
         </div>
       )}
 
+      {/* 원 요청 정보 */}
+      {(requestedEntry || maxDiscountRate !== null) && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-800">원 요청 정보</h3>
+          </div>
+          <div className="px-5 py-4 grid grid-cols-2 gap-3">
+            {requestedEntry && (
+              <div>
+                <p className="text-xs text-gray-400">최초 요청일시</p>
+                <p className="text-sm font-medium text-gray-800 mt-0.5">
+                  {formatDate(requestedEntry.actedAt)}
+                </p>
+              </div>
+            )}
+            {maxDiscountRate !== null && (
+              <div>
+                <p className="text-xs text-gray-400">최대 할인율</p>
+                <p className="text-sm font-medium text-gray-800 mt-0.5">
+                  {maxDiscountRate.toFixed(1)}%
+                </p>
+              </div>
+            )}
+          </div>
+          {requestedEntry?.memo && (
+            <div className="px-5 pb-4">
+              <p className="text-xs text-gray-400 mb-1">최초 요청 메모</p>
+              <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 whitespace-pre-wrap">
+                {requestedEntry.memo}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 리스크 항목 */}
       {reasons.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -579,23 +614,31 @@ function RejectReRequestTab() {
 
       {/* 수정 가이드 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">수정 가이드</h3>
+          <button
+            onClick={() => navigate(`/quotes/new?id=${selectedQuote.id}`)}
+            className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+          >
+            견적 수정하러 가기 →
+          </button>
         </div>
         <div className="px-5 py-4">
           <div className="flex flex-col gap-3">
-            {[
-              { step: 1, title: '반려 사유 확인', desc: '위의 반려 사유를 정확히 파악하세요.' },
-              { step: 2, title: '견적 수정', desc: '견적 목록에서 해당 견적을 열어 문제 항목을 수정하세요.' },
-              { step: 3, title: '재요청 사유 작성', desc: '수정 내용과 개선 근거를 아래에 작성하세요.' },
-              { step: 4, title: '재요청 제출', desc: '재요청 버튼을 눌러 관리자에게 다시 검토 요청하세요.' },
-            ].map(({ step, title, desc }) => (
+            {guideSteps.map(({ step, title, desc, required }) => (
               <div key={step} className="flex gap-3 items-start">
                 <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center shrink-0">
                   {step}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-gray-800">{title}</p>
+                    {required && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 border border-red-100">
+                        필수
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
                 </div>
               </div>
@@ -618,13 +661,23 @@ function RejectReRequestTab() {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
           {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-          <button
-            onClick={handleReRequest}
-            disabled={submitting}
-            className="mt-3 w-full py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-          >
-            {submitting ? '처리 중...' : '재요청하기'}
-          </button>
+          {tempSaved && <p className="text-xs text-emerald-600 mt-2">임시 저장되었습니다.</p>}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={handleTempSave}
+              disabled={submitting}
+              className="px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
+            >
+              임시저장
+            </button>
+            <button
+              onClick={handleReRequest}
+              disabled={submitting}
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              {submitting ? '처리 중...' : '재요청하기'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
