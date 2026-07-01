@@ -101,7 +101,7 @@ export default function AdminApprovalPage() {
     })
     .filter((item) => {
       if (reasonFilter.length === 0) return true
-      return reasonFilter.some((key) =>
+      return reasonFilter.every((key) =>
         (reasonsMap[item.quoteId] ?? []).some((r) => r.reasonType === key)
       )
     })
