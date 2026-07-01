@@ -3,6 +3,7 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  issueSseToken,
   buildSubscribeUrl,
 } from '../api/notificationApi'
 
@@ -31,24 +32,51 @@ export const useNotifications = () => {
   useEffect(() => {
     load()
 
-    const es = new EventSource(buildSubscribeUrl())
-    eventSourceRef.current = es
+    let cancelled = false
+    let reconnectTimer = null
 
-    es.addEventListener('notification', (e) => {
+    // 단기 SSE 토큰은 1회성이라 네이티브 자동 재연결이 불가하므로,
+    // 오류 시 새 토큰을 발급받아 수동으로 재연결한다.
+    const connect = async () => {
+      if (cancelled) return
+      let token
       try {
-        const incoming = JSON.parse(e.data)
-        setNotifications((prev) => [incoming, ...prev])
+        token = await issueSseToken()
       } catch {
-        // 파싱 실패 무시
+        token = null
       }
-    })
+      if (cancelled || !token) {
+        if (!cancelled) reconnectTimer = setTimeout(connect, 5000)
+        return
+      }
 
-    // 연결 오류 시 EventSource가 자동 재연결한다. 별도 처리 없음.
-    es.onerror = () => {}
+      const es = new EventSource(buildSubscribeUrl(token))
+      eventSourceRef.current = es
+
+      es.addEventListener('notification', (e) => {
+        try {
+          setNotifications((prev) => [JSON.parse(e.data), ...prev])
+        } catch {
+          // 파싱 실패 무시
+        }
+      })
+
+      es.onerror = () => {
+        es.close()
+        eventSourceRef.current = null
+        if (!cancelled) reconnectTimer = setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
 
     return () => {
-      es.close()
-      eventSourceRef.current = null
+      cancelled = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
     }
   }, [load])
 
