@@ -39,10 +39,13 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
         const dialog = dialogRef.current
         if (!dialog) return undefined
 
-        const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE_SELECTOR))
-        const first = focusable[0]
-        const last = focusable[focusable.length - 1]
+        const first = dialog.querySelector(FOCUSABLE_SELECTOR)
         first?.focus()
+    }, [])
+
+    useEffect(() => {
+        const dialog = dialogRef.current
+        if (!dialog) return undefined
 
         const onKeyDown = (e) => {
             if (e.key === 'Escape' && !confirming) {
@@ -50,6 +53,10 @@ const TrainingGuideModal = ({ guideContent, onClose, onConfirm, alreadyConfirmed
                 onClose?.()
                 return
             }
+
+            const focusable = Array.from(dialog.querySelectorAll(FOCUSABLE_SELECTOR))
+            const first = focusable[0]
+            const last = focusable[focusable.length - 1]
             if (e.key !== 'Tab' || focusable.length === 0) return
 
             if (e.shiftKey && document.activeElement === first) {
