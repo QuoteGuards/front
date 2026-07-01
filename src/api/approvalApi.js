@@ -60,3 +60,11 @@ export const getApprovalHistories = (quoteId) =>
 export const getApprovalReasons = (quoteId) =>
   apiClient.get(`/api/quotes/${quoteId}/approval-reasons`)
 
+// AI 리스크 요약 조회 (SUPER_ADMIN - 전체)
+export const getAiRiskSummary = (approvalRequestId) =>
+  apiClient.get(`/api/admin/approval-requests/${approvalRequestId}/ai-summary`)
+
+// AI 리스크 요약 조회 (SALES_MANAGER - 동일 부서 영업사원만)
+export const getManagerAiRiskSummary = (approvalRequestId) =>
+  apiClient.get(`/api/manager/approval-requests/${approvalRequestId}/ai-summary`)
+

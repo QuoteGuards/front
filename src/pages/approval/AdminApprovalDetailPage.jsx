@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getApprovalDetail, getManagerApprovalDetail, approveQuote, rejectQuote } from '../../api/approvalApi'
+import {
+  getApprovalDetail,
+  getManagerApprovalDetail,
+  approveQuote,
+  rejectQuote,
+  getAiRiskSummary,
+  getManagerAiRiskSummary,
+} from '../../api/approvalApi'
 import { useAuth } from '../../hooks/useAuth'
 import PageHeader from '../../components/common/PageHeader'
 
@@ -60,6 +67,9 @@ export default function AdminApprovalDetailPage() {
   const [memo, setMemo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [aiSummary, setAiSummary] = useState(null)
+  const [aiLoading, setAiLoading] = useState(true)
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -70,6 +80,30 @@ export default function AdminApprovalDetailPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [approvalRequestId, user?.role])
+
+  const fetchAiSummary = () => {
+    const getSummary = user?.role === 'SALES_MANAGER' ? getManagerAiRiskSummary : getAiRiskSummary
+    return getSummary(approvalRequestId)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    fetchAiSummary()
+      .then((res) => { if (!cancelled) setAiSummary(res.data) })
+      .catch((e) => { if (!cancelled) setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.') })
+      .finally(() => { if (!cancelled) setAiLoading(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approvalRequestId, user?.role])
+
+  const retryAiSummary = () => {
+    setAiLoading(true)
+    setAiError('')
+    fetchAiSummary()
+      .then((res) => setAiSummary(res.data))
+      .catch((e) => setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.'))
+      .finally(() => setAiLoading(false))
+  }
 
   const handleSubmit = async () => {
     if (!decision) { setError('승인 또는 반려를 선택해주세요.'); return }
@@ -292,20 +326,44 @@ export default function AdminApprovalDetailPage() {
               </div>
               <h3 className="text-sm font-semibold text-gray-800">AI 리스크 요약</h3>
               <span className="ml-auto text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full border border-violet-200">
-                Claude AI
+                Gemini AI
               </span>
             </div>
-            <div className="px-5 py-8 flex flex-col items-center text-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center">
-                <span className="text-lg text-gray-300">✦</span>
+
+            {aiLoading && (
+              <div className="px-5 py-8 flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center animate-pulse">
+                  <span className="text-lg text-gray-300">✦</span>
+                </div>
+                <p className="text-sm text-gray-400">AI가 견적을 분석하고 있습니다...</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-400 mb-1">AI 분석 준비 중</p>
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  AI 리스크 분석 기능은 준비 중입니다. 곧 이 견적에 대한 자동 리스크 평가가 제공됩니다.
+            )}
+
+            {!aiLoading && aiError && (
+              <div className="px-5 py-8 flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
+                  <span className="text-lg text-red-300">!</span>
+                </div>
+                <p className="text-xs text-red-400 leading-relaxed">{aiError}</p>
+                <button
+                  onClick={retryAiSummary}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+
+            {!aiLoading && !aiError && aiSummary && (
+              <div className="px-5 py-4">
+                {aiSummary.cached && (
+                  <p className="text-[11px] text-gray-300 mb-2">이전에 생성된 요약입니다</p>
+                )}
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {aiSummary.aiRiskSummary}
                 </p>
               </div>
-            </div>
+            )}
 
             {/* 리스크 항목 집계 */}
             {detail.reasons?.length > 0 && (
