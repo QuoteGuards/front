@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import QuoteListPage from '../pages/quote/QuoteListPage'
 import QuoteWritePage from '../pages/quote/QuoteWritePage'
@@ -28,7 +28,6 @@ import DashboardPage from '../pages/dashboard/DashboardPage'
 import MyPage from '../pages/mypage/MyPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 import { getDefaultPath } from './routeUtils'
-import ChangePasswordModal from '../components/common/ChangePasswordModal'
 import { useAuth } from '../hooks/useAuth'
 
 // AppLayout은 단일 인스턴스로 유지 - 라우트 전환 시 GNB/Sidebar 재마운트 방지
@@ -47,12 +46,7 @@ function DefaultRedirect() {
 }
 
 export default function AppRouter() {
-  const { isAuthenticated, mustChangePassword } = useAuth()
-  const location = useLocation()
-
   return (
-    <>
-      {isAuthenticated && mustChangePassword && location.pathname !== '/login' && <ChangePasswordModal />}
       <Routes>
         {/* 공개 라우트 */}
         <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
@@ -187,7 +181,5 @@ export default function AppRouter() {
         {/* 매칭되지 않는 경로 → 루트로 리다이렉트 (보호 라우트 밖에 위치해야 무한 리다이렉트 방지) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-    </>
   )
 }
