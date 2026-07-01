@@ -159,6 +159,7 @@ const TrainingPage = () => {
             {/* 가이드 모달 */}
             {guideOpen && (
                 <TrainingGuideModal
+                    guideContent={trainingContent?.guideContent}
                     alreadyConfirmed={!!trainingStatus?.guideConfirmed}
                     confirming={confirming}
                     onConfirm={handleConfirmGuide}

@@ -27,6 +27,11 @@ export async function uploadTrainingVideoApi(file) {
   return unwrap(response)?.url ?? ''
 }
 
+export async function updateGuideContentApi(guideContent) {
+  const response = await apiClient.patch('/api/admin/trainings/quote-writing/guide', { guideContent })
+  return toTrainingContent(unwrap(response) ?? {})
+}
+
 /** @param {Record<string, unknown>} row */
 const toAdminTrainingStatusRow = (row) => ({
   userId: row.userId,
