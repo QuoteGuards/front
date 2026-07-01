@@ -1,6 +1,7 @@
-import { useState, useId } from 'react'
+import { useState, useEffect, useId } from 'react'
 import Button from '../common/Button'
 import {
+  getUserDetailApi,
   updateUserInfoApi,
   changeUserRoleApi,
   suspendUserApi,
@@ -8,6 +9,13 @@ import {
   deleteUserApi,
   resendInitialPasswordApi,
 } from '../../api/userManagementApi'
+
+const fmtDate = (iso) => {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+}
 
 const ROLE_OPTIONS = [
   { value: 'SALES_STAFF', label: '영업 사원' },
@@ -37,6 +45,7 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
   const id = (name) => baseId + '-' + name
 
   const [user, setUser] = useState(initialUser)
+  const [detailLoading, setDetailLoading] = useState(true)
   const [tab, setTab] = useState('info')
   const [form, setForm] = useState({
     name: initialUser.name ?? '',
@@ -50,6 +59,32 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [globalError, setGlobalError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  // 모달 열릴 때 상세 API 호출 — createdByName, passwordChangedAt, lastLoginAt 등
+  // 목록 API(UserSummaryResponse)에 없는 필드를 채운다
+  useEffect(() => {
+    let cancelled = false
+    getUserDetailApi(initialUser.id)
+      .then((res) => {
+        if (cancelled) return
+        const detail = res.data
+        setUser(detail)
+        setForm({
+          name: detail.name ?? '',
+          department: detail.department ?? '',
+          position: detail.position ?? '',
+          phone: detail.phone ?? '',
+        })
+        setSelectedRole(detail.role)
+      })
+      .catch(() => {
+        // 상세 조회 실패 시 목록 데이터로 유지
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [initialUser.id])
 
   const formatPhone = (raw) => {
     let digits = raw.replace(/\D/g, '')
@@ -233,6 +268,9 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
         </div>
 
         <div className="px-6 py-4">
+          {detailLoading && (
+            <div className="text-xs text-gray-400 py-2 text-center">불러오는 중...</div>
+          )}
           {globalError && (
             <div role="alert" className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {globalError}
@@ -250,6 +288,28 @@ export default function UserDetailModal({ user: initialUser, onClose, onUpdated 
                 <ReadField label="사원번호" value={user.memberNumber} />
                 <ReadField label="이메일" value={user.email} />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField
+                  label="계정 생성자"
+                  value={user.createdByName
+                    ? `${user.createdByName} / ${user.createdByMemberNumber ?? '-'}`
+                    : '-'}
+                />
+                <ReadField label="가입일시" value={fmtDate(user.createdAt)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="비밀번호 변경일" value={fmtDate(user.passwordChangedAt)} />
+                <ReadField label="마지막 로그인" value={fmtDate(user.lastLoginAt)} />
+              </div>
+              {user.suspendedAt && (
+                <div className="grid grid-cols-2 gap-3">
+                  <ReadField label="정지 일시" value={fmtDate(user.suspendedAt)} />
+                  <ReadField label="정지 처리자 ID" value={user.suspendedBy != null ? String(user.suspendedBy) : '-'} />
+                </div>
+              )}
+              {user.deletedAt && (
+                <ReadField label="삭제 일시" value={fmtDate(user.deletedAt)} />
+              )}
               {!user.passwordInitialized && !isDeleted && (
                 <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   <span className="text-xs text-amber-700 font-medium">비밀번호 설정 대기 중</span>
