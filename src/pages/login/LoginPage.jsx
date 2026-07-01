@@ -57,11 +57,7 @@ export default function LoginPage() {
         const resData = await loginApi(email, password);
 
         if (resData?.data?.accessToken) {
-          login(
-            resData.data.accessToken,
-            resData.data.refreshToken ?? null,
-            resData.data.mustChangePassword ?? false
-          );
+          login(resData.data.accessToken, resData.data.refreshToken ?? null);
 
           const prev = location.state?.from;
           const from = prev

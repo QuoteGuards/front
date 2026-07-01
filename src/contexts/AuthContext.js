@@ -5,7 +5,6 @@ export const AuthContext = createContext(null);
 
 export const TOKEN_KEY = 'qg_access_token';
 export const REFRESH_TOKEN_KEY = 'qg_refresh_token';
-export const MUST_CHANGE_PASSWORD_KEY = 'qg_must_change_password';
 
 export function getStoredToken() {
   const token = localStorage.getItem(TOKEN_KEY);
