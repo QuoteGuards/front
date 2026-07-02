@@ -14,6 +14,18 @@ const REASONS = {
     primaryLabel: '교육 이수 화면으로 이동',
     primaryTo: '/training',
   },
+  TRAINING_APPROVAL_NOT_COMPLETED: {
+    icon: '🔒',
+    title: '승인 검토 기능 이용 제한',
+    description: ['승인·반려 처리를 하려면 필수 교육을 먼저 이수해야 합니다.'],
+    steps: [
+      '교육 이수 화면으로 이동',
+      '필수 교육 영상 시청 및 가이드 확인',
+      '이수 완료 후 승인 검토 메뉴 이용',
+    ],
+    primaryLabel: '교육 이수 화면으로 이동',
+    primaryTo: '/training',
+  },
   ACCESS_DENIED: {
     icon: '⛔',
     title: '접근 권한이 없습니다',

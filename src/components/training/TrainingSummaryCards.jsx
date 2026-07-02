@@ -6,14 +6,13 @@ const formatDuration = (sec) => {
     return `약 ${m}분`
 }
 
-const TrainingSummaryCards = ({ status, durationSeconds }) => {
+const TrainingSummaryCards = ({ status, durationSeconds, activeVideoCount = 0, completedVideoCount = 0 }) => {
     const current = status?.status ?? TRAINING_STATUS.NOT_STARTED
-    const isCompleted = current === TRAINING_STATUS.COMPLETED
+    const isCompleted = current === TRAINING_STATUS.COMPLETED && Boolean(status?.completed)
     const progressRate = Number(status?.progressRate ?? 0)
 
     return (
         <div className="grid grid-cols-3 gap-4">
-            {/* 이수 현황 */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                 <p className="text-xs text-gray-400 mb-2">이수 현황</p>
                 <p className={`text-lg font-bold mb-2 ${isCompleted ? 'text-emerald-600' : 'text-rose-500'}`}>
@@ -25,17 +24,17 @@ const TrainingSummaryCards = ({ status, durationSeconds }) => {
                         style={{ width: `${Math.min(100, progressRate)}%` }}
                     />
                 </div>
-                <p className="text-xs text-gray-400">{progressRate.toFixed(0)} / 100 완료</p>
+                <p className="text-xs text-gray-400">
+                    영상 {completedVideoCount}/{activeVideoCount} 완료 · 최저 시청률 {progressRate.toFixed(0)}%
+                </p>
             </div>
 
-            {/* 예상 소요 시간 */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                 <p className="text-xs text-gray-400 mb-2">예상 소요 시간</p>
                 <p className="text-lg font-bold text-gray-800 mb-2">{formatDuration(durationSeconds)}</p>
-                <p className="text-xs text-gray-400">영상 시청률 {TRAINING_COMPLETE_THRESHOLD}% 이상이면 이수 가능</p>
+                <p className="text-xs text-gray-400">활성 영상 각 {TRAINING_COMPLETE_THRESHOLD}% 이상 시청 필요</p>
             </div>
 
-            {/* 이수 완료 혜택 */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                 <p className="text-xs text-gray-400 mb-2">이수 완료 혜택</p>
                 <ul className="space-y-1.5 mt-1">

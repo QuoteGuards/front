@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getPendingList, getManagerPendingList, getApprovalReasons, getApprovalMonthlyStats } from '../../api/approvalApi'
 import { useAuth } from '../../hooks/useAuth'
+import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
+import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import DataTable from '../../components/common/DataTable'
@@ -45,6 +47,8 @@ function StatCard({ label, value, sub, color }) {
 export default function AdminApprovalPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { loading: trainingLoading, canReviewApproval } = useTrainingStatusContext()
+  const isManager = user?.role === 'SALES_MANAGER'
   const [pendingList, setPendingList] = useState([])
   const [reasonsMap, setReasonsMap] = useState({})
   const [monthlyStats, setMonthlyStats] = useState({ monthlyApproved: 0, monthlyRejected: 0 })
@@ -172,6 +176,10 @@ export default function AdminApprovalPage() {
       ),
     },
   ]
+
+  if (isManager && !trainingLoading && !canReviewApproval) {
+    return <QuoteAccessRestricted reason="TRAINING_APPROVAL_NOT_COMPLETED" />
+  }
 
   return (
     <div>
