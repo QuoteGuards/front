@@ -6,6 +6,7 @@ import Button from '../common/Button'
 import TrainingStatusBadge from './TrainingStatusBadge'
 import { getAdminTrainingStatusListApi } from '../../api/adminTrainingApi'
 import { TRAINING_STATUS_LABEL } from '../../constants/training'
+import { TRAINING_COURSE_OPTIONS } from '../../constants/trainingCourses'
 import { downloadTableExcel } from '../../utils/excelExport'
 
 const STATUS_FILTER_OPTIONS = [
@@ -62,6 +63,7 @@ function AdminTrainingStatusDetailModal({ row, onClose }) {
 }
 
 export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
+  const [courseType, setCourseType] = useState('QUOTE_WRITE')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -74,7 +76,7 @@ export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
   const requestIdRef = useRef(0)
 
   const fetchRows = useCallback((requestId) => {
-    return getAdminTrainingStatusListApi()
+    return getAdminTrainingStatusListApi(courseType)
       .then((data) => {
         if (requestIdRef.current === requestId) setRows(Array.isArray(data) ? data : [])
       })
@@ -86,7 +88,7 @@ export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
       .finally(() => {
         if (requestIdRef.current === requestId) setLoading(false)
       })
-  }, [])
+  }, [courseType])
 
   const loadRows = useCallback(() => {
     const requestId = ++requestIdRef.current
@@ -98,7 +100,7 @@ export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
   useEffect(() => {
     const requestId = ++requestIdRef.current
     fetchRows(requestId)
-  }, [fetchRows, refreshKey])
+  }, [fetchRows, refreshKey, courseType])
 
   const departmentOptions = useMemo(() => {
     const set = new Set(rows.map((row) => row.department).filter(Boolean))
@@ -198,6 +200,25 @@ export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
       </div>
 
       <SearchPanel>
+        <SearchRow label="교육 유형">
+          <div className="flex flex-wrap gap-2">
+            {TRAINING_COURSE_OPTIONS.map((course) => (
+              <button
+                key={course.type}
+                type="button"
+                className={[
+                  'px-3 py-1.5 rounded-full border text-sm',
+                  courseType === course.type
+                    ? 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)] font-semibold'
+                    : 'border-gray-200 text-gray-600',
+                ].join(' ')}
+                onClick={() => setCourseType(course.type)}
+              >
+                {course.label}
+              </button>
+            ))}
+          </div>
+        </SearchRow>
         <SearchRow label="교육 상태">
           <SegmentedControl
             variant="pills"

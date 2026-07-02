@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Button from '../../components/common/Button'
 import {
-  getAdminQuoteWritingTrainingApi,
+  getAdminTrainingContentApi,
   uploadTrainingVideoApi,
   updateGuideContentApi,
   updateTrainingVideoActiveApi,
@@ -17,7 +17,8 @@ import './AdminTrainingManagePage.css'
 const MAX_VIDEO_BYTES = 300 * 1024 * 1024
 
 const COURSE_FETCHERS = {
-  QUOTE_WRITE: getAdminQuoteWritingTrainingApi,
+  QUOTE_WRITE: () => getAdminTrainingContentApi('QUOTE_WRITE'),
+  MANAGER_OPERATIONS: () => getAdminTrainingContentApi('MANAGER_OPERATIONS'),
 }
 
 export default function AdminTrainingManagePage() {
@@ -127,7 +128,7 @@ export default function AdminTrainingManagePage() {
 
     setUploading(true)
     try {
-      const video = await uploadTrainingVideoApi(file, uploadTitle)
+      const video = await uploadTrainingVideoApi(selectedCourseType, file, uploadTitle)
       setContent((prev) => (prev ? { ...prev, videos: [...(prev.videos ?? []), video] } : prev))
       setUploadTitle('')
       setSuccessMessage('교육 영상이 추가되었습니다. 활성화하면 사원 교육에 반영됩니다.')
@@ -149,7 +150,7 @@ export default function AdminTrainingManagePage() {
     setTogglingVideoId(video.id)
     setUploadError('')
     try {
-      const updated = await updateTrainingVideoActiveApi(video.id, !video.active)
+      const updated = await updateTrainingVideoActiveApi(selectedCourseType, video.id, !video.active)
       setContent((prev) => {
         if (!prev) return prev
         return {
@@ -171,7 +172,7 @@ export default function AdminTrainingManagePage() {
     const nextTitle = window.prompt('영상 제목', video.title)
     if (nextTitle == null || !nextTitle.trim()) return
     try {
-      const updated = await updateTrainingVideoTitleApi(video.id, nextTitle.trim())
+      const updated = await updateTrainingVideoTitleApi(selectedCourseType, video.id, nextTitle.trim())
       setContent((prev) => {
         if (!prev) return prev
         return {
@@ -190,7 +191,7 @@ export default function AdminTrainingManagePage() {
     setGuideError('')
     setGuideSuccess('')
     try {
-      const updated = await updateGuideContentApi(guideContentJson)
+      const updated = await updateGuideContentApi(selectedCourseType, guideContentJson)
       setContent((prev) => (prev ? { ...prev, guideContent: updated.guideContent ?? guideContentJson, videos: updated.videos ?? prev.videos } : prev))
       setGuideSuccess('가이드 내용이 저장되었습니다.')
     } catch (err) {

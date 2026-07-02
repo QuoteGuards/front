@@ -1,51 +1,7 @@
 import apiClient from './apiClient'
+import { getTrainingCoursePath } from '../constants/trainingCourses'
 
 const unwrap = (response) => response.data?.data
-
-/**
- * @typedef {Object} TrainingVideo
- * @property {number} id
- * @property {string} title
- * @property {string} videoUrl
- * @property {number} sortOrder
- * @property {boolean} [active]
- * @property {import('../constants/training').TrainingStatus} [status]
- * @property {number} [progressRate]
- * @property {number} [watchedSeconds]
- * @property {number} [lastWatchedSeconds]
- */
-
-/**
- * @typedef {Object} TrainingContent
- * @property {number} id
- * @property {string} title
- * @property {string} [description]
- * @property {string} [videoUrl]
- * @property {string} [guideContent]
- * @property {boolean} required
- * @property {TrainingVideo[]} videos
- */
-
-/**
- * @typedef {Object} TrainingStatus
- * @property {import('../constants/training').TrainingStatus} status
- * @property {number} progressRate
- * @property {number} watchedSeconds
- * @property {number} lastWatchedSeconds
- * @property {boolean} guideConfirmed
- * @property {boolean} completed
- * @property {number} activeVideoCount
- * @property {number} completedVideoCount
- * @property {boolean} additionalTrainingRequired
- * @property {TrainingVideo[]} videos
- */
-
-/**
- * @typedef {Object} TrainingProgressPayload
- * @property {number} progressRate 0~100
- * @property {number} watchedSeconds
- * @property {number} lastWatchedSeconds
- */
 
 /** @param {Record<string, unknown>} data */
 const toTrainingVideo = (data) => ({
@@ -73,7 +29,8 @@ const toTrainingContent = (data) => ({
 })
 
 /** @param {Record<string, unknown>} data */
-const toTrainingStatus = (data) => ({
+const toCourseTrainingStatus = (data) => ({
+  trainingType: data.trainingType ?? 'QUOTE_WRITE',
   status: data.status ?? 'NOT_STARTED',
   progressRate: Number(data.progressRate ?? 0),
   watchedSeconds: Number(data.watchedSeconds ?? 0),
@@ -86,31 +43,50 @@ const toTrainingStatus = (data) => ({
   videos: Array.isArray(data.videos) ? data.videos.map(toTrainingVideo) : [],
 })
 
+/** @param {Record<string, unknown>} data */
+const toTrainingStatus = (data) => ({
+  status: data.status ?? 'NOT_STARTED',
+  progressRate: Number(data.progressRate ?? 0),
+  watchedSeconds: Number(data.watchedSeconds ?? 0),
+  lastWatchedSeconds: Number(data.lastWatchedSeconds ?? 0),
+  guideConfirmed: Boolean(data.guideConfirmed),
+  completed: Boolean(data.completed),
+  activeVideoCount: Number(data.activeVideoCount ?? 0),
+  completedVideoCount: Number(data.completedVideoCount ?? 0),
+  additionalTrainingRequired: Boolean(data.additionalTrainingRequired),
+  videos: Array.isArray(data.videos) ? data.videos.map(toTrainingVideo) : [],
+  canWriteQuote: Boolean(data.canWriteQuote ?? data.completed),
+  canReviewApproval: Boolean(data.canReviewApproval ?? true),
+  courses: Array.isArray(data.courses) ? data.courses.map(toCourseTrainingStatus) : [],
+})
+
 /**
- * GET /api/trainings/quote-writing
- * @returns {Promise<TrainingContent>}
+ * @param {import('../constants/trainingCourses').TrainingCourseType} [courseType]
  */
-export async function getQuoteWritingContent() {
-  const response = await apiClient.get('/api/trainings/quote-writing')
+export async function getTrainingContent(courseType = 'QUOTE_WRITE') {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.get(`/api/trainings/${courseKey}`)
   return toTrainingContent(unwrap(response) ?? {})
 }
 
-/**
- * GET /api/trainings/me/status
- * @returns {Promise<TrainingStatus>}
- */
+/** @deprecated quote-writing alias */
+export async function getQuoteWritingContent() {
+  return getTrainingContent('QUOTE_WRITE')
+}
+
 export async function getMyTrainingStatus() {
   const response = await apiClient.get('/api/trainings/me/status')
   return toTrainingStatus(unwrap(response) ?? {})
 }
 
 /**
- * PATCH /api/trainings/quote-writing/videos/{videoId}/progress
  * @param {number} videoId
- * @param {TrainingProgressPayload} payload
+ * @param {{ progressRate: number, watchedSeconds: number, lastWatchedSeconds: number }} payload
+ * @param {import('../constants/trainingCourses').TrainingCourseType} [courseType]
  */
-export async function updateTrainingVideoProgress(videoId, payload) {
-  await apiClient.patch(`/api/trainings/quote-writing/videos/${videoId}/progress`, {
+export async function updateTrainingVideoProgress(videoId, payload, courseType = 'QUOTE_WRITE') {
+  const courseKey = getTrainingCoursePath(courseType)
+  await apiClient.patch(`/api/trainings/${courseKey}/videos/${videoId}/progress`, {
     progressRate: payload.progressRate,
     watchedSeconds: payload.watchedSeconds,
     lastWatchedSeconds: payload.lastWatchedSeconds,

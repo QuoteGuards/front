@@ -77,7 +77,7 @@ const LockIcon = () => (
 
 const Sidebar = ({ collapsed }) => {
   const { user } = useAuth()
-  const { canWriteQuote, loading, additionalTrainingRequired } = useTrainingStatusContext()
+  const { canWriteQuote, canReviewApproval, loading, additionalTrainingRequired } = useTrainingStatusContext()
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
   const isManager = user?.role === 'SALES_MANAGER'
@@ -114,7 +114,12 @@ const Sidebar = ({ collapsed }) => {
     ...(isAdmin || isManager ? [{
       group: '승인',
       items: [
-        { label: '승인 검토', path: '/admin/approval', icon: <CheckIcon /> },
+        {
+          label: '승인 검토',
+          path: '/admin/approval',
+          icon: <CheckIcon />,
+          locked: isManager && !loading && !canReviewApproval,
+        },
       ],
     }] : []),
     // ── 제품 ─────────────────────────────────
@@ -158,13 +163,13 @@ const Sidebar = ({ collapsed }) => {
       group: '계정',
       items: [
         { label: '마이페이지', path: '/my-page', icon: <UserIcon /> },
-        ...(isStaff ? [{
+        ...(isStaff || isManager ? [{
           label: '교육 이수',
           path: '/training',
           icon: <TrainingIcon />,
           badge: !loading && additionalTrainingRequired
             ? '추가'
-            : !loading && !canWriteQuote
+            : !loading && ((isStaff && !canWriteQuote) || (isManager && !canReviewApproval))
               ? '필수'
               : null,
         }] : []),

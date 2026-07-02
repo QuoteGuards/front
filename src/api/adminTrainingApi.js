@@ -1,4 +1,5 @@
 import apiClient from './apiClient'
+import { getTrainingCoursePath } from '../constants/trainingCourses'
 
 const unwrap = (response) => response.data?.data
 
@@ -21,16 +22,29 @@ const toTrainingContent = (data) => ({
   videos: Array.isArray(data.videos) ? data.videos.map(toTrainingVideo) : [],
 })
 
-export async function getAdminQuoteWritingTrainingApi() {
-  const response = await apiClient.get('/api/admin/trainings/quote-writing')
+/**
+ * @param {import('../constants/trainingCourses').TrainingCourseType} courseType
+ */
+export async function getAdminTrainingContentApi(courseType) {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.get(`/api/admin/trainings/${courseKey}`)
   return toTrainingContent(unwrap(response) ?? {})
 }
 
-export async function uploadTrainingVideoApi(file, title = '') {
+/** @deprecated */
+export async function getAdminQuoteWritingTrainingApi() {
+  return getAdminTrainingContentApi('QUOTE_WRITE')
+}
+
+/**
+ * @param {import('../constants/trainingCourses').TrainingCourseType} courseType
+ */
+export async function uploadTrainingVideoApi(courseType, file, title = '') {
+  const courseKey = getTrainingCoursePath(courseType)
   const fd = new FormData()
   fd.append('file', file)
   if (title.trim()) fd.append('title', title.trim())
-  const response = await apiClient.post('/api/admin/trainings/quote-writing/videos', fd, {
+  const response = await apiClient.post(`/api/admin/trainings/${courseKey}/videos`, fd, {
     headers: { 'Content-Type': undefined },
     timeout: 10 * 60 * 1000,
   })
@@ -38,18 +52,21 @@ export async function uploadTrainingVideoApi(file, title = '') {
   return toTrainingVideo(data ?? {})
 }
 
-export async function updateTrainingVideoActiveApi(videoId, active) {
-  const response = await apiClient.patch(`/api/admin/trainings/quote-writing/videos/${videoId}/active`, { active })
+export async function updateTrainingVideoActiveApi(courseType, videoId, active) {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.patch(`/api/admin/trainings/${courseKey}/videos/${videoId}/active`, { active })
   return toTrainingVideo(unwrap(response) ?? {})
 }
 
-export async function updateTrainingVideoTitleApi(videoId, title) {
-  const response = await apiClient.patch(`/api/admin/trainings/quote-writing/videos/${videoId}/title`, { title })
+export async function updateTrainingVideoTitleApi(courseType, videoId, title) {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.patch(`/api/admin/trainings/${courseKey}/videos/${videoId}/title`, { title })
   return toTrainingVideo(unwrap(response) ?? {})
 }
 
-export async function updateGuideContentApi(guideContent) {
-  const response = await apiClient.patch('/api/admin/trainings/quote-writing/guide', { guideContent })
+export async function updateGuideContentApi(courseType, guideContent) {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.patch(`/api/admin/trainings/${courseKey}/guide`, { guideContent })
   const data = unwrap(response)
   if (!data) throw new Error('가이드 저장 응답이 올바르지 않습니다.')
   return toTrainingContent(data)
@@ -74,8 +91,12 @@ const toAdminTrainingStatusRow = (row) => ({
   completedAt: row.completedAt ?? null,
 })
 
-export async function getAdminTrainingStatusListApi() {
-  const response = await apiClient.get('/api/admin/trainings/status')
+/**
+ * @param {import('../constants/trainingCourses').TrainingCourseType} [courseType]
+ */
+export async function getAdminTrainingStatusListApi(courseType = 'QUOTE_WRITE') {
+  const courseKey = getTrainingCoursePath(courseType)
+  const response = await apiClient.get('/api/admin/trainings/status', { params: { type: courseKey } })
   const rows = unwrap(response) ?? []
   return Array.isArray(rows) ? rows.map(toAdminTrainingStatusRow) : []
 }

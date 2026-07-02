@@ -171,7 +171,7 @@ export default function AppRouter() {
 
           {/* 계정 - 전체 */}
           <Route path="/training" element={
-            <ProtectedRoute roles={['SALES_STAFF']}>
+            <ProtectedRoute roles={['SALES_STAFF', 'SALES_MANAGER']}>
               <TrainingPage />
             </ProtectedRoute>
           } />
