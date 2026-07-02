@@ -98,7 +98,7 @@ const Sidebar = ({ collapsed }) => {
           label: '견적 작성',
           path: '/quotes/new',
           icon: <PlusIcon />,
-          locked: isStaff && !loading && !canWriteQuote,
+          locked: (isStaff || isManager) && !loading && !canWriteQuote,
         }] : []),
         { label: quoteListLabel, path: '/quotes', icon: <ListIcon />, end: true },
         { label: '발송 이력', path: '/history', icon: <SendIcon /> },
@@ -169,7 +169,7 @@ const Sidebar = ({ collapsed }) => {
           icon: <TrainingIcon />,
           badge: !loading && additionalTrainingRequired
             ? '추가'
-            : !loading && ((isStaff && !canWriteQuote) || (isManager && !canReviewApproval))
+            : !loading && ((isStaff && !canWriteQuote) || (isManager && (!canWriteQuote || !canReviewApproval)))
               ? '필수'
               : null,
         }] : []),
