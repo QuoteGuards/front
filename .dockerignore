@@ -1,0 +1,16 @@
+.git
+.gitignore
+.github
+.idea
+.vscode
+.claude
+.coderabbit.yml
+
+node_modules
+dist
+dist-ssr
+
+*.md
+*.log
+.env
+.env.*
