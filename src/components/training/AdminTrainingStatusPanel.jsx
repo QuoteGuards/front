@@ -61,7 +61,7 @@ function AdminTrainingStatusDetailModal({ row, onClose }) {
   )
 }
 
-export default function AdminTrainingStatusPanel() {
+export default function AdminTrainingStatusPanel({ refreshKey = 0 }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -98,7 +98,7 @@ export default function AdminTrainingStatusPanel() {
   useEffect(() => {
     const requestId = ++requestIdRef.current
     fetchRows(requestId)
-  }, [fetchRows])
+  }, [fetchRows, refreshKey])
 
   const departmentOptions = useMemo(() => {
     const set = new Set(rows.map((row) => row.department).filter(Boolean))

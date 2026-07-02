@@ -77,7 +77,7 @@ const LockIcon = () => (
 
 const Sidebar = ({ collapsed }) => {
   const { user } = useAuth()
-  const { canWriteQuote, loading } = useTrainingStatusContext()
+  const { canWriteQuote, loading, additionalTrainingRequired } = useTrainingStatusContext()
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
   const isManager = user?.role === 'SALES_MANAGER'
@@ -144,14 +144,13 @@ const Sidebar = ({ collapsed }) => {
       group: '관리',
       items: [
         { label: '사용자 관리', path: '/admin/users', icon: <UsersIcon /> },
-        { label: '교육 관리', path: '/admin/trainings', icon: <TrainingIcon />, end: true },
-        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
+        { label: '교육 관리', path: '/admin/trainings', icon: <TrainingIcon /> },
       ],
     }] : []),
     ...(isManager && !isAdmin ? [{
       group: '관리',
       items: [
-        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
+        { label: '교육 관리', path: '/admin/trainings?tab=status', icon: <TrainingIcon /> },
       ],
     }] : []),
     // ── 내 계정 ──────────────────────────────
@@ -163,7 +162,11 @@ const Sidebar = ({ collapsed }) => {
           label: '교육 이수',
           path: '/training',
           icon: <TrainingIcon />,
-          badge: !loading && !canWriteQuote ? '필수' : null,
+          badge: !loading && additionalTrainingRequired
+            ? '추가'
+            : !loading && !canWriteQuote
+              ? '필수'
+              : null,
         }] : []),
       ],
     },

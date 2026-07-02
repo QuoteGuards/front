@@ -16,22 +16,37 @@ const TrainingPage = () => {
         trainingStatus,
         trainingContent,
         loading,
-        saveProgress,
+        saveVideoProgress,
         confirmGuide,
         canWriteQuote,
         canClickComplete,
+        additionalTrainingRequired,
     } = useTrainingStatusContext()
 
     const [guideOpen, setGuideOpen] = useState(false)
     const [confirming, setConfirming] = useState(false)
     const [durationSeconds, setDurationSeconds] = useState(0)
+    const [pickedVideoId, setPickedVideoId] = useState(null)
+
+    const statusVideos = trainingStatus?.videos
+    const contentVideos = trainingContent?.videos
+    const sourceVideos = statusVideos?.length ? statusVideos : (contentVideos ?? [])
+    const videos = [...sourceVideos].sort((a, b) => a.sortOrder - b.sortOrder)
+
+    const selectedVideoId = pickedVideoId != null && videos.some((video) => video.id === pickedVideoId)
+        ? pickedVideoId
+        : (videos[0]?.id ?? null)
+
+    const selectedVideo = videos.find((video) => video.id === selectedVideoId) ?? null
 
     const handleSaveProgress = (payload) => {
-        saveProgress(payload).catch(() => { })
+        if (!selectedVideoId) return
+        saveVideoProgress(selectedVideoId, payload).catch(() => { })
     }
 
     const handleManualVideoComplete = () => {
-        saveProgress({
+        if (!selectedVideoId) return
+        saveVideoProgress(selectedVideoId, {
             progressRate: 100,
             watchedSeconds: 300,
             lastWatchedSeconds: 300,
@@ -63,6 +78,9 @@ const TrainingPage = () => {
         )
     }
 
+    const activeVideoCount = trainingStatus?.activeVideoCount ?? videos.length
+    const completedVideoCount = trainingStatus?.completedVideoCount ?? 0
+
     return (
         <div>
             <PageHeader
@@ -73,57 +91,114 @@ const TrainingPage = () => {
                         {trainingContent?.required && (
                             <span className="training-header__required">필수</span>
                         )}
+                        {additionalTrainingRequired && (
+                            <span className="training-header__required training-header__required--alert">추가 교육</span>
+                        )}
                         <TrainingStatusBadge status={trainingStatus?.status} />
                     </div>
                 }
             />
 
-            {/* 상세 정보 섹션 */}
             <div className="training-header" style={{ borderTop: 'none' }}>
                 <p className="training-header__desc">
-                    {trainingContent?.description || '견적 작성 기능을 사용하려면 아래 교육 영상을 시청하고 이수 완료 처리를 해주세요.'}
+                    {trainingContent?.description || '견적 작성 기능을 사용하려면 활성화된 교육 영상을 모두 시청하고 가이드 확인을 완료해 주세요.'}
                 </p>
 
-                {!canWriteQuote && (
+                {additionalTrainingRequired && (
+                    <div className="training-notice training-notice--alert">
+                        <p className="training-notice__title">추가 교육이 필요합니다</p>
+                        <p className="training-notice__body">
+                            새로운 필수 교육 영상이 추가되었습니다. ({completedVideoCount}/{activeVideoCount} 완료)
+                            추가 영상을 이수하기 전까지 견적 작성이 제한됩니다.
+                        </p>
+                    </div>
+                )}
+
+                {!canWriteQuote && !additionalTrainingRequired && (
                     <div className="training-notice">
                         <p className="training-notice__title">교육 이수 필요</p>
                         <p className="training-notice__body">
-                            견적 작성 기능을 사용하려면 영상 시청률 {TRAINING_COMPLETE_THRESHOLD}% 이상과 가이드 확인을 모두 완료해야 합니다.
+                            활성 교육 영상 {activeVideoCount}개를 모두 {TRAINING_COMPLETE_THRESHOLD}% 이상 시청하고 가이드 확인을 완료해야 합니다.
                         </p>
                     </div>
                 )}
 
                 <div className="training-summary">
-                    <TrainingSummaryCards status={trainingStatus} durationSeconds={durationSeconds} />
+                    <TrainingSummaryCards
+                        status={trainingStatus}
+                        durationSeconds={durationSeconds}
+                        activeVideoCount={activeVideoCount}
+                        completedVideoCount={completedVideoCount}
+                    />
                 </div>
             </div>
 
-            {/* 메인 컨텐츠 */}
             <div className="training-content">
-                {/* 영상 카드 */}
                 <div className="training-card">
                     <div className="training-video-card__header">
-                        <span className="training-video-card__label">견적 작성 가이드 영상</span>
-                        <button
-                            type="button"
-                            onClick={handleManualVideoComplete}
-                            className={[
-                                'training-video-complete-btn',
-                                trainingStatus?.progressRate >= 100 ? 'training-video-complete-btn--done' : '',
-                            ].filter(Boolean).join(' ')}
-                        >
-                            {trainingStatus?.progressRate >= 100 ? '✓ 영상 시청 완료' : '영상 시청 완료 처리'}
-                        </button>
+                        <span className="training-video-card__label">
+                            교육 영상 ({completedVideoCount}/{activeVideoCount} 완료)
+                        </span>
                     </div>
-                    <TrainingVideoPlayer
-                        videoUrl={trainingContent?.videoUrl}
-                        initialStatus={trainingStatus}
-                        onSaveProgress={handleSaveProgress}
-                        onDurationChange={setDurationSeconds}
-                    />
+
+                    {videos.length === 0 ? (
+                        <div className="training-video-empty">
+                            등록된 활성 교육 영상이 없습니다. 관리자에게 문의해 주세요.
+                        </div>
+                    ) : (
+                        <>
+                            {videos.length > 1 && (
+                                <div className="training-video-tabs" role="tablist" aria-label="교육 영상 목록">
+                                    {videos.map((video, index) => {
+                                        const done = Number(video.progressRate ?? 0) >= TRAINING_COMPLETE_THRESHOLD
+                                        return (
+                                            <button
+                                                key={video.id}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={selectedVideoId === video.id}
+                                                className={[
+                                                    'training-video-tab',
+                                                    selectedVideoId === video.id ? 'training-video-tab--active' : '',
+                                                    done ? 'training-video-tab--done' : '',
+                                                ].filter(Boolean).join(' ')}
+                                                onClick={() => setPickedVideoId(video.id)}
+                                            >
+                                                <span>{video.title || `영상 ${index + 1}`}</span>
+                                                {done && <span className="training-video-tab__badge">완료</span>}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            <div className="training-video-card__header" style={{ marginTop: '12px' }}>
+                                <span className="training-video-card__subtitle">
+                                    {selectedVideo?.title || '교육 영상'}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleManualVideoComplete}
+                                    className={[
+                                        'training-video-complete-btn',
+                                        Number(selectedVideo?.progressRate ?? 0) >= 100 ? 'training-video-complete-btn--done' : '',
+                                    ].filter(Boolean).join(' ')}
+                                >
+                                    {Number(selectedVideo?.progressRate ?? 0) >= 100 ? '✓ 영상 시청 완료' : '영상 시청 완료 처리'}
+                                </button>
+                            </div>
+
+                            <TrainingVideoPlayer
+                                key={selectedVideo?.id ?? 'empty'}
+                                videoUrl={selectedVideo?.videoUrl}
+                                initialStatus={selectedVideo}
+                                onSaveProgress={handleSaveProgress}
+                                onDurationChange={setDurationSeconds}
+                            />
+                        </>
+                    )}
                 </div>
 
-                {/* 가이드 확인 카드 */}
                 <div className="training-card">
                     <div className="training-guide-card">
                         <div>
@@ -143,7 +218,6 @@ const TrainingPage = () => {
                     </div>
                 </div>
 
-                {/* 이수 완료 버튼 */}
                 <div className="training-actions">
                     <button
                         type="button"
@@ -156,7 +230,6 @@ const TrainingPage = () => {
                 </div>
             </div>
 
-            {/* 가이드 모달 */}
             {guideOpen && (
                 <TrainingGuideModal
                     guideContent={trainingContent?.guideContent}

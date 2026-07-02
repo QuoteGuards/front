@@ -159,7 +159,7 @@ export default function AppRouter() {
             </ProtectedRoute>
           } />
           <Route path="/admin/trainings" element={
-            <ProtectedRoute roles={['SUPER_ADMIN']}>
+            <ProtectedRoute roles={['SUPER_ADMIN', 'SALES_MANAGER']}>
               <AdminTrainingManagePage />
             </ProtectedRoute>
           } />

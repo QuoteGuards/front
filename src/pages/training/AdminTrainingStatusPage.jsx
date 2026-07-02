@@ -1,14 +1,6 @@
-import PageHeader from '../../components/common/PageHeader'
-import AdminTrainingStatusPanel from '../../components/training/AdminTrainingStatusPanel'
+import { Navigate } from 'react-router-dom'
 
+/** @deprecated `/admin/trainings?tab=status` 로 통합 */
 export default function AdminTrainingStatusPage() {
-  return (
-    <div>
-      <PageHeader
-        breadcrumbs={['관리', '교육 이수 현황']}
-        title="교육 이수 현황"
-      />
-      <AdminTrainingStatusPanel />
-    </div>
-  )
+  return <Navigate to="/admin/trainings?tab=status" replace />
 }

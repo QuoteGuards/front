@@ -2,10 +2,9 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react'
 import {
   getMyTrainingStatus,
   getQuoteWritingContent,
-  updateTrainingProgress,
+  updateTrainingVideoProgress,
 } from '../api/trainingApi'
 import { confirmQuoteWritingGuide } from '../api/guideApi'
-import { TRAINING_COMPLETE_THRESHOLD } from '../constants/training'
 import { useAuth } from './useAuth'
 
 const initialState = {
@@ -42,8 +41,6 @@ function trainingReducer(state, action) {
 }
 
 /**
- * 견적 작성 교육 이수 상태 조회 및 진도/가이드 확인 API 연동
- *
  * @param {{ loadContent?: boolean }} [options]
  */
 export function useTrainingStatus(options = {}) {
@@ -82,20 +79,17 @@ export function useTrainingStatus(options = {}) {
     refresh()
   }, [isAuthenticated, refresh])
 
-  const saveProgress = useCallback(
-    async (payload) => {
-      try {
-        await updateTrainingProgress(payload)
-        const status = await getMyTrainingStatus()
-        dispatch({ type: 'SET_STATUS', status })
-        return status
-      } catch (error) {
-        dispatch({ type: 'FETCH_ERROR', error })
-        throw error
-      }
-    },
-    []
-  )
+  const saveVideoProgress = useCallback(async (videoId, payload) => {
+    try {
+      await updateTrainingVideoProgress(videoId, payload)
+      const status = await getMyTrainingStatus()
+      dispatch({ type: 'SET_STATUS', status })
+      return status
+    } catch (error) {
+      dispatch({ type: 'FETCH_ERROR', error })
+      throw error
+    }
+  }, [])
 
   const confirmGuide = useCallback(async () => {
     dispatch({ type: 'ACTION_START' })
@@ -119,6 +113,7 @@ export function useTrainingStatus(options = {}) {
         canClickComplete: true,
         isVideoRequirementMet: true,
         trainingRequired: false,
+        additionalTrainingRequired: false,
       }
     }
 
@@ -129,10 +124,13 @@ export function useTrainingStatus(options = {}) {
         canClickComplete: false,
         isVideoRequirementMet: false,
         trainingRequired: true,
+        additionalTrainingRequired: false,
       }
     }
 
-    const isVideoRequirementMet = status.progressRate >= TRAINING_COMPLETE_THRESHOLD
+    const activeVideoCount = status.activeVideoCount ?? 0
+    const completedVideoCount = status.completedVideoCount ?? 0
+    const isVideoRequirementMet = activeVideoCount > 0 && completedVideoCount === activeVideoCount
     const canClickComplete = isVideoRequirementMet && status.guideConfirmed
 
     return {
@@ -140,19 +138,18 @@ export function useTrainingStatus(options = {}) {
       canClickComplete,
       isVideoRequirementMet,
       trainingRequired: true,
+      additionalTrainingRequired: Boolean(status.additionalTrainingRequired),
     }
   }, [state.status, trainingRequired])
 
   return {
-    /** @type {import('../api/trainingApi').TrainingStatus | null} */
     trainingStatus: state.status,
-    /** @type {import('../api/trainingApi').TrainingContent | null} */
     trainingContent: state.content,
     loading: state.loading,
     actionLoading: state.actionLoading,
     error: state.error,
     refresh,
-    saveProgress,
+    saveVideoProgress,
     confirmGuide,
     ...derived,
   }
