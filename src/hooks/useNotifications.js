@@ -30,10 +30,23 @@ export const useNotifications = () => {
   }, [])
 
   useEffect(() => {
-    load()
-
     let cancelled = false
     let reconnectTimer = null
+
+    // load()를 effect에서 직접 호출하면 useCallback 경계 너머의 setState 호출을
+    // ESLint(react-hooks/set-state-in-effect)가 "동기 호출"로 오인해 오류가 나므로,
+    // 최초 조회는 effect 내부 함수로 인라인해 cancelled 가드를 건다.
+    const loadInitial = async () => {
+      try {
+        const data = await getNotifications()
+        if (!cancelled) setNotifications(data)
+      } catch {
+        // 조회 실패 시 조용히 무시 (종 아이콘은 유지)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    loadInitial()
 
     // 단기 SSE 토큰은 1회성이라 네이티브 자동 재연결이 불가하므로,
     // 오류 시 새 토큰을 발급받아 수동으로 재연결한다.
@@ -78,7 +91,7 @@ export const useNotifications = () => {
         eventSourceRef.current = null
       }
     }
-  }, [load])
+  }, [])
 
   const readOne = useCallback(async (id) => {
     setNotifications((prev) =>
