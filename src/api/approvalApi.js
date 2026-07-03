@@ -24,13 +24,14 @@ export const getApprovalDetail = (approvalRequestId) =>
 export const getManagerApprovalDetail = (approvalRequestId) =>
   apiClient.get(`/api/manager/approval-requests/${approvalRequestId}`)
 
-// 승인 대기 목록 (SUPER_ADMIN - 전체)
-export const getPendingList = () =>
-  apiClient.get('/api/admin/approval-requests')
+// 승인 목록 조회 (SUPER_ADMIN - 전체)
+// params 없이 호출하면 기존과 동일하게 승인 대기(PENDING) 목록만 반환한다
+export const getPendingList = (params = {}) =>
+  apiClient.get('/api/admin/approval-requests', { params })
 
-// 승인 대기 목록 (SALES_MANAGER - 동일 부서 영업사원만)
-export const getManagerPendingList = () =>
-  apiClient.get('/api/manager/approval-requests')
+// 승인 목록 조회 (SALES_MANAGER - 동일 부서 영업사원만)
+export const getManagerPendingList = (params = {}) =>
+  apiClient.get('/api/manager/approval-requests', { params })
 
 // 이달 승인/반려 통계 (관리자)
 export const getApprovalMonthlyStats = () =>

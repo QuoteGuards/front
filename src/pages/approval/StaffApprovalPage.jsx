@@ -651,6 +651,9 @@ function RejectReRequestTab() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-semibold text-gray-800">재요청 사유</h3>
+          <p className="text-xs text-gray-400 mt-1">
+            재요청하면 위 리스크 항목은 최신 견적 내용을 기준으로 다시 계산되어 갱신됩니다.
+          </p>
         </div>
         <div className="px-5 py-4">
           <textarea

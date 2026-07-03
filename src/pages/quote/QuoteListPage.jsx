@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuotes } from '../../hooks/useQuotes'
 import { formatKRW } from '../../utils/quoteUtils'
-import { QUOTE_STATUS_FILTERS } from '../../constants/quoteStatus'
+import { cancelQuote } from '../../api/quoteApi'
+import { QUOTE_STATUS_FILTERS, QUOTE_CANCELLABLE_STATUSES } from '../../constants/quoteStatus'
 import PageHeader from '../../components/common/PageHeader'
 import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import SegmentedControl from '../../components/common/SegmentedControl'
@@ -68,6 +69,16 @@ const QuoteListPage = () => {
 
   const onSearch = () => setSearch(searchInput.trim())
   const onSearchKeyDown = (e) => { if (e.key === 'Enter') onSearch() }
+
+  const handleCancel = async (row) => {
+    if (!window.confirm('이 견적을 취소하시겠습니까? 연결된 승인 요청도 함께 취소됩니다.')) return
+    try {
+      await cancelQuote(row.dbId)
+      fetchQuotes()
+    } catch (e) {
+      alert(e?.response?.data?.message ?? '견적 취소 중 오류가 발생했습니다.')
+    }
+  }
 
   const filtered = quotes
       .filter((q) => {
@@ -169,6 +180,24 @@ const QuoteListPage = () => {
       title: '상태',
       align: 'center',
       render: (val) => <StatusBadge status={val} type="quote" />,
+    },
+    {
+      key: 'dbId',
+      title: '액션',
+      align: 'center',
+      render: (val, row) => (
+          QUOTE_CANCELLABLE_STATUSES.includes(row.status) ? (
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => { e.stopPropagation(); handleCancel(row) }}
+              >
+                취소
+              </Button>
+          ) : (
+              <span className="text-[var(--color-text-muted)]">-</span>
+          )
+      ),
     },
   ]
 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getQuoteById, getInternalAnalysis, reuseQuote, rewriteQuote, downloadQuotePdf, toQuote } from '../../api/quoteApi'
+import { getQuoteById, getInternalAnalysis, reuseQuote, rewriteQuote, downloadQuotePdf, cancelQuote, toQuote } from '../../api/quoteApi'
 import { getApprovalHistories } from '../../api/approvalApi'
 import { getEmailHistory } from '../../api/emailApi'
 import EmailModal from '../../components/quote/EmailModal'
-import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE } from '../../constants/quoteStatus'
+import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE, QUOTE_CANCELLABLE_STATUSES } from '../../constants/quoteStatus'
 import PageHeader from '../../components/common/PageHeader'
 import { formatKRW, canSendQuoteEmail, quoteSendBlockedMessage } from '../../utils/quoteUtils'
 
@@ -52,6 +52,7 @@ const QuoteDetailPage = () => {
     const [pdfLoading, setPdfLoading] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const [actionError, setActionError] = useState(null)
+    const [cancelModalOpen, setCancelModalOpen] = useState(false)
 
     useEffect(() => {
         if (!quoteId) return
@@ -117,6 +118,21 @@ const QuoteDetailPage = () => {
         }
     }
 
+    const handleCancel = async () => {
+        setActionLoading(true)
+        setActionError(null)
+        try {
+            const result = await cancelQuote(quoteId)
+            setQuote(result)
+            setCancelModalOpen(false)
+        } catch (e) {
+            setActionError(e?.response?.data?.message ?? '견적 취소 중 오류가 발생했습니다.')
+            setCancelModalOpen(false)
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
@@ -136,6 +152,7 @@ const QuoteDetailPage = () => {
     const isEditable = EDITABLE_STATUSES.includes(quote.status)
     const isReusable = REUSABLE_STATUSES.includes(quote.status)
     const isExpired = quote.status === 'EXPIRED'
+    const isCancellable = QUOTE_CANCELLABLE_STATUSES.includes(quote.status)
     const canSendEmail = canSendQuoteEmail(quote)
 
     const discountAmount = (quote.subtotal ?? 0) - (quote.supplyAmount ?? 0)
@@ -336,6 +353,11 @@ const QuoteDetailPage = () => {
                             {actionLoading ? '처리 중...' : '만료 견적 재작성'}
                         </button>
                     )}
+                    {isCancellable && (
+                        <button onClick={() => setCancelModalOpen(true)} disabled={actionLoading} className="px-6 py-2.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                            견적 취소
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -345,6 +367,33 @@ const QuoteDetailPage = () => {
                     onClose={() => setEmailOpen(false)}
                     onSent={() => setEmailOpen(false)}
                 />
+            )}
+
+            {cancelModalOpen && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6">
+                        <h3 className="text-base font-bold text-gray-800 mb-2">견적 취소</h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                            이 견적을 취소하시겠습니까? 연결된 승인 요청도 함께 취소됩니다.
+                        </p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setCancelModalOpen(false)}
+                                disabled={actionLoading}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                닫기
+                            </button>
+                            <button
+                                onClick={handleCancel}
+                                disabled={actionLoading}
+                                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                                {actionLoading ? '취소 처리 중...' : '취소하기'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )

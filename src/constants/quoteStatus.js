@@ -26,6 +26,12 @@ export const QUOTE_STATUS_STYLE = {
     CANCELLED: 'bg-gray-100 text-gray-400',
 }
 
+// 취소 가능한 상태 (SENT/EXPIRED/CANCELLED는 취소 불가 - 백엔드 Quote.cancel() 정책과 동일)
+export const QUOTE_CANCELLABLE_STATUSES = [
+    'DRAFT', 'SUBMITTED', 'APPROVAL_NOT_REQUIRED', 'APPROVAL_PENDING',
+    'APPROVED', 'REJECTED', 'REVISING',
+]
+
 // 목록 화면 필터 버튼용 - 한글 라벨이 실제로 포함하는 enum 상태들
 export const QUOTE_STATUS_FILTERS = {
     '전체': null,
