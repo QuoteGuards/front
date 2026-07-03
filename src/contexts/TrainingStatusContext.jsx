@@ -10,7 +10,7 @@ const TrainingStatusContext = createContext(null)
  * 교육 완료 시 사이드바 자물쇠 아이콘이 즉시 사라진다.
  */
 export function TrainingStatusProvider({ children }) {
-  const training = useTrainingStatus({ loadContent: true })
+  const training = useTrainingStatus()
   return (
     <TrainingStatusContext.Provider value={training}>
       {children}

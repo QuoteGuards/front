@@ -9,6 +9,8 @@ import {
   getManagerAiRiskSummary,
 } from '../../api/approvalApi'
 import { useAuth } from '../../hooks/useAuth'
+import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
+import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
 import PageHeader from '../../components/common/PageHeader'
 
 const REASON_LABEL = {
@@ -74,6 +76,8 @@ export default function AdminApprovalDetailPage() {
   const { approvalRequestId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { loading: trainingLoading, canReviewApproval } = useTrainingStatusContext()
+  const isManager = user?.role === 'SALES_MANAGER'
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [decision, setDecision] = useState(null) // 'approve' | 'reject'
@@ -136,6 +140,10 @@ export default function AdminApprovalDetailPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (isManager && !trainingLoading && !canReviewApproval) {
+    return <QuoteAccessRestricted reason="TRAINING_APPROVAL_NOT_COMPLETED" />
   }
 
   if (loading) {

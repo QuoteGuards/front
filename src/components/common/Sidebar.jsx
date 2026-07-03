@@ -77,7 +77,7 @@ const LockIcon = () => (
 
 const Sidebar = ({ collapsed }) => {
   const { user } = useAuth()
-  const { canWriteQuote, loading } = useTrainingStatusContext()
+  const { canWriteQuote, canReviewApproval, loading, additionalTrainingRequired } = useTrainingStatusContext()
 
   const isAdmin = user?.role === 'SUPER_ADMIN'
   const isManager = user?.role === 'SALES_MANAGER'
@@ -98,7 +98,7 @@ const Sidebar = ({ collapsed }) => {
           label: '견적 작성',
           path: '/quotes/new',
           icon: <PlusIcon />,
-          locked: isStaff && !loading && !canWriteQuote,
+          locked: (isStaff || isManager) && !loading && !canWriteQuote,
         }] : []),
         { label: quoteListLabel, path: '/quotes', icon: <ListIcon />, end: true },
         { label: '발송 이력', path: '/history', icon: <SendIcon /> },
@@ -114,7 +114,12 @@ const Sidebar = ({ collapsed }) => {
     ...(isAdmin || isManager ? [{
       group: '승인',
       items: [
-        { label: '승인 검토', path: '/admin/approval', icon: <CheckIcon /> },
+        {
+          label: '승인 검토',
+          path: '/admin/approval',
+          icon: <CheckIcon />,
+          locked: isManager && !loading && !canReviewApproval,
+        },
       ],
     }] : []),
     // ── 제품 ─────────────────────────────────
@@ -144,14 +149,13 @@ const Sidebar = ({ collapsed }) => {
       group: '관리',
       items: [
         { label: '사용자 관리', path: '/admin/users', icon: <UsersIcon /> },
-        { label: '교육 관리', path: '/admin/trainings', icon: <TrainingIcon />, end: true },
-        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
+        { label: '교육 관리', path: '/admin/trainings', icon: <TrainingIcon /> },
       ],
     }] : []),
     ...(isManager && !isAdmin ? [{
       group: '관리',
       items: [
-        { label: '교육 이수 현황', path: '/admin/trainings/status', icon: <TrainingIcon /> },
+        { label: '교육 관리', path: '/admin/trainings?tab=status', icon: <TrainingIcon /> },
       ],
     }] : []),
     // ── 내 계정 ──────────────────────────────
@@ -159,11 +163,15 @@ const Sidebar = ({ collapsed }) => {
       group: '계정',
       items: [
         { label: '마이페이지', path: '/my-page', icon: <UserIcon /> },
-        ...(isStaff ? [{
+        ...(isStaff || isManager ? [{
           label: '교육 이수',
           path: '/training',
           icon: <TrainingIcon />,
-          badge: !loading && !canWriteQuote ? '필수' : null,
+          badge: !loading && additionalTrainingRequired
+            ? '추가'
+            : !loading && ((isStaff && !canWriteQuote) || (isManager && (!canWriteQuote || !canReviewApproval)))
+              ? '필수'
+              : null,
         }] : []),
       ],
     },
