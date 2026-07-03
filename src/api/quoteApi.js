@@ -112,6 +112,15 @@ export const completeQuote = async (quoteId) => {
   return data?.data
 }
 
+/**
+ * PATCH /api/quotes/{quoteId}/cancel - 견적 취소 (작성자 본인 또는 SUPER_ADMIN)
+ * 연결된 PENDING 승인 요청이 있으면 함께 취소된다.
+ */
+export const cancelQuote = async (quoteId) => {
+  const { data } = await apiClient.patch(`/api/quotes/${quoteId}/cancel`)
+  return data?.data
+}
+
 // Backend QuoteDetailResponse → frontend model
 // 백엔드는 고객 정보를 평탄화(companyName 등 최상위)하고, 자사 정보만 company로 중첩한다.
 export const toQuote = (data) => ({

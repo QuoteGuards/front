@@ -59,6 +59,19 @@ function InfoRow({ label, value }) {
   )
 }
 
+function formatWon(value) {
+  return `${Number(value ?? 0).toLocaleString('ko-KR')}원`
+}
+
+function AmountStat({ label, value, danger }) {
+  return (
+    <div className="flex-1 text-center">
+      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <p className={`text-base font-bold ${danger ? 'text-red-600' : 'text-gray-800'}`}>{value}</p>
+    </div>
+  )
+}
+
 export default function AdminApprovalDetailPage() {
   const { approvalRequestId } = useParams()
   const navigate = useNavigate()
@@ -74,6 +87,7 @@ export default function AdminApprovalDetailPage() {
   const [aiSummary, setAiSummary] = useState(null)
   const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState('')
+  const [showItems, setShowItems] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -196,6 +210,37 @@ export default function AdminApprovalDetailPage() {
             <InfoRow label="요청 횟수" value={`${detail.requestCount}회차`} />
             {detail.processedAt && (
               <InfoRow label="처리일" value={new Date(detail.processedAt).toLocaleString('ko-KR')} />
+            )}
+
+            <div className="flex items-stretch gap-2 mt-3 pt-3 border-t border-gray-100">
+              <AmountStat label="견적금액" value={formatWon(detail.totalAmount)} />
+              <AmountStat label="예상이익" value={formatWon(detail.expectedProfitAmount)} />
+              <AmountStat
+                label="예상 이익률"
+                value={`${Number(detail.profitRate ?? 0)}%`}
+                danger={detail.reasons?.some((r) => r.reasonType === 'LOW_PROFIT')}
+              />
+            </div>
+
+            {detail.items?.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => setShowItems((prev) => !prev)}
+                  className="text-xs font-medium text-violet-600 hover:text-violet-700"
+                >
+                  {showItems ? '품목 접기 ▲' : '품목 보기 ▼'}
+                </button>
+                {showItems && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {detail.items.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xs text-gray-600">
+                        <span className="truncate">{item.productName} × {Number(item.quantity)}</span>
+                        <span className="shrink-0 text-gray-800 font-medium">{formatWon(item.lineTotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </Section>
 
