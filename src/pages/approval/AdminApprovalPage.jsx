@@ -82,9 +82,12 @@ export default function AdminApprovalPage() {
     setLoading(true)
     try {
       const fetchList = user?.role === 'SALES_MANAGER' ? getManagerPendingList : getPendingList
-      // 대기 탭은 상태 하나만 보내 기존 동작(전체 기간)을 유지하고, 그 외 탭은 선택한 월로 기간을 제한한다
-      const params = { status: statusTab, onlyMine }
+      // 대기 탭은 상태 하나만 보내 기존 동작(전체 기간)을 유지하고, 그 외 탭은 선택한 월/onlyMine으로 필터링한다.
+      // onlyMine은 대기 탭에서 체크박스 자체가 숨겨지므로 API에도 실어 보내지 않는다
+      // (대기 건은 아직 승인자가 없어 onlyMine을 걸면 전부 걸러져 0건으로 보이는 문제가 있었음)
+      const params = { status: statusTab }
       if (statusTab !== 'PENDING') {
+        params.onlyMine = onlyMine
         Object.assign(params, monthToRange(month))
       }
 
