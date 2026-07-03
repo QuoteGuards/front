@@ -72,6 +72,22 @@ function AmountStat({ label, value, danger }) {
   )
 }
 
+function formatPercent(value) {
+  return `${Number(value ?? 0)}%`
+}
+
+// 반려 → 재요청 사이 변경된 총액/이익률/할인율 한 줄 (변경 전 → 변경 후)
+function DiffRow({ label, before, after, format }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+      <span className="text-xs text-gray-400 w-24 shrink-0">{label}</span>
+      <span className="text-sm text-gray-500">{format(before)}</span>
+      <span className="text-gray-300 mx-2">→</span>
+      <span className="text-sm text-gray-800 font-semibold">{format(after)}</span>
+    </div>
+  )
+}
+
 export default function AdminApprovalDetailPage() {
   const { approvalRequestId } = useParams()
   const navigate = useNavigate()
@@ -261,6 +277,57 @@ export default function AdminApprovalDetailPage() {
               </div>
             )}
           </Section>
+
+          {/* 변경 항목 (반려 후 재요청된 건만 표시) */}
+          {detail.quoteDiff && (
+            <Section title="변경 항목 (반려 → 재요청)">
+              <DiffRow
+                label="견적금액"
+                before={detail.quoteDiff.totalAmountBefore}
+                after={detail.quoteDiff.totalAmountAfter}
+                format={formatWon}
+              />
+              <DiffRow
+                label="예상 이익률"
+                before={detail.quoteDiff.profitRateBefore}
+                after={detail.quoteDiff.profitRateAfter}
+                format={formatPercent}
+              />
+              <DiffRow
+                label="할인율"
+                before={detail.quoteDiff.discountRateBefore}
+                after={detail.quoteDiff.discountRateAfter}
+                format={formatPercent}
+              />
+
+              {(detail.quoteDiff.addedItems?.length > 0 ||
+                detail.quoteDiff.removedItems?.length > 0 ||
+                detail.quoteDiff.quantityChangedItems?.length > 0) && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-1.5">
+                  {detail.quoteDiff.addedItems?.map((item, idx) => (
+                    <div key={`added-${idx}`} className="flex items-center gap-2 text-xs">
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">추가</span>
+                      <span className="text-gray-600">{item.productName} × {Number(item.quantity)}</span>
+                    </div>
+                  ))}
+                  {detail.quoteDiff.removedItems?.map((item, idx) => (
+                    <div key={`removed-${idx}`} className="flex items-center gap-2 text-xs">
+                      <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-200 shrink-0">삭제</span>
+                      <span className="text-gray-600">{item.productName} × {Number(item.quantity)}</span>
+                    </div>
+                  ))}
+                  {detail.quoteDiff.quantityChangedItems?.map((item, idx) => (
+                    <div key={`qty-${idx}`} className="flex items-center gap-2 text-xs">
+                      <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 shrink-0">수량변경</span>
+                      <span className="text-gray-600">
+                        {item.productName} {Number(item.before)} → {Number(item.after)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Section>
+          )}
 
           {/* 상담 메모 */}
           <Section title="요청 메모">
