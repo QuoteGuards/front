@@ -4,6 +4,7 @@ import PageHeader from '../../components/common/PageHeader'
 import {
   reRequestApproval,
   updateApprovalMemo,
+  cancelApprovalRequest,
   getApprovalHistories,
   getApprovalReasons,
   getMyPendingApprovalQuotes,
@@ -128,6 +129,8 @@ function RequestTab() {
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState('')
+  const [cancelLoadingId, setCancelLoadingId] = useState(null)
+  const [cancelError, setCancelError] = useState('')
 
   // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { load() }, [])
@@ -211,12 +214,33 @@ function RequestTab() {
     }
   }
 
+  const handleCancelRequest = async (q, approvalRequestId) => {
+    if (!approvalRequestId) return
+    if (!window.confirm('이 승인 요청을 철회하시겠습니까? 견적은 임시저장 상태로 돌아가며, 다시 처음부터 제출해야 합니다.')) return
+    setCancelError('')
+    setCancelLoadingId(q.id)
+    try {
+      await cancelApprovalRequest(q.id, approvalRequestId)
+      setQuotes((prev) => prev.filter((item) => item.id !== q.id))
+      setSelectedId(null)
+    } catch (e) {
+      setCancelError(e.response?.data?.message ?? '철회 중 오류가 발생했습니다.')
+    } finally {
+      setCancelLoadingId(null)
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-gray-400 py-10 text-center">목록을 불러오는 중...</p>
   }
 
   return (
     <div>
+      {cancelError && (
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {cancelError}
+        </div>
+      )}
       {saveSuccess && (
         <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
           {saveSuccess}
@@ -364,10 +388,17 @@ function RequestTab() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 px-1 pt-1">
+                        <div className="flex items-center justify-between gap-2 px-1 pt-1">
                           <p className="text-xs text-amber-600">
                             관리자 검토를 기다리고 있습니다. 승인되면 고객에게 견적을 발송할 수 있습니다.
                           </p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCancelRequest(q, approvalRequestId) }}
+                            disabled={cancelLoadingId === q.id}
+                            className="shrink-0 text-xs text-gray-400 hover:text-red-500 font-medium disabled:opacity-50"
+                          >
+                            {cancelLoadingId === q.id ? '철회 중...' : '요청 철회'}
+                          </button>
                         </div>
                       </div>
                     )}
