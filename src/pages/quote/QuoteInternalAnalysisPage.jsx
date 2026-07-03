@@ -28,13 +28,27 @@ const APPROVAL_BADGE_CLASS = {
 }
 
 const deriveApprovalStatus = (histories) => {
-    if (!histories || histories.length === 0) return { status: 'NONE', lastMemo: null, approvalRequestId: null }
+    if (!histories || histories.length === 0) {
+        return { status: 'NONE', lastMemo: null, approvalRequestId: null }
+    }
     const sorted = [...histories].sort((a, b) => new Date(a.actedAt) - new Date(b.actedAt))
     const last = sorted[sorted.length - 1]
     const approvalRequestId = last.approvalRequestId ?? null
-    if (last.action === 'APPROVED') return { status: 'APPROVED', lastMemo: last.memo, approvalRequestId }
-    if (last.action === 'REJECTED') return { status: 'REJECTED', lastMemo: last.memo, approvalRequestId }
-    if (last.action === 'REQUESTED' || last.action === 'RE_REQUESTED') return { status: 'PENDING', lastMemo: last.memo, approvalRequestId }
+
+    if (last.action === 'APPROVED') {
+        return { status: 'APPROVED', lastMemo: last.memo, approvalRequestId }
+    }
+    if (last.action === 'REJECTED') {
+        const rejectedEntry = [...sorted].reverse().find((h) => h.action === 'REJECTED')
+        return {
+            status: 'REJECTED',
+            lastMemo: rejectedEntry?.memo ?? last.memo,
+            approvalRequestId: rejectedEntry?.approvalRequestId ?? approvalRequestId,
+        }
+    }
+    if (last.action === 'REQUESTED' || last.action === 'RE_REQUESTED') {
+        return { status: 'PENDING', lastMemo: last.memo, approvalRequestId }
+    }
     return { status: 'NONE', lastMemo: null, approvalRequestId: null }
 }
 
@@ -83,8 +97,18 @@ const QuoteInternalAnalysisPage = () => {
         setSubmitting(true)
         setError(null)
         try {
-            if (approvalStatus === 'REJECTED' && approvalRequestId) {
-                await reRequestApproval(quoteId, approvalRequestId, requestMemo)
+            const isReRequest = approvalStatus === 'REJECTED'
+
+            if (isReRequest) {
+                if (!approvalRequestId) {
+                    setError('승인 요청 정보를 찾을 수 없습니다. 페이지를 새로고침하거나 승인 요청 현황에서 재요청해 주세요.')
+                    return
+                }
+                if (!requestMemo.trim()) {
+                    setError('재요청 사유를 입력해주세요.')
+                    return
+                }
+                await reRequestApproval(quoteId, approvalRequestId, requestMemo.trim())
             } else {
                 await requestApproval(quoteId, requestMemo)
             }
@@ -220,7 +244,11 @@ const QuoteInternalAnalysisPage = () => {
                                     <textarea
                                         value={requestMemo}
                                         onChange={(e) => setRequestMemo(e.target.value)}
-                                        placeholder="승인 요청 사유를 입력하세요 (선택)"
+                                        placeholder={
+                                            approvalStatus === 'REJECTED'
+                                                ? '수정한 내용과 재요청 사유를 입력하세요.'
+                                                : '승인 요청 사유를 입력하세요 (선택)'
+                                        }
                                         rows={2}
                                         className="form-textarea"
                                     />
