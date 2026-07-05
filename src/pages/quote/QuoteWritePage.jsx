@@ -246,7 +246,6 @@ const QuoteWritePage = () => {
 
     const buildQuoteForm = () => ({
         customer,
-        discountPolicyId: items[0]?.discountPolicyId ?? null,
         items: items.map((item) => {
             const { needsReason, policyMissing } = getItemPolicyFlags(item)
             return {

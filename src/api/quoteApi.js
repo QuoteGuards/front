@@ -7,7 +7,6 @@ import { calcQuoteSummary } from '../utils/quoteUtils'
  */
 const toQuoteCreatePayload = (form) => ({
   customerId: form.customer.id,
-  discountPolicyId: form.discountPolicyId, // form에서 받은 값을 사용하도록 변경
   issuedDate: form.issuedDate,
   validUntil: form.validUntil || null,
   deliveryTerm: form.deliveryTerm,
@@ -37,7 +36,7 @@ export const createQuote = async (form) => {
 
 /**
  * PATCH /api/quotes/{quoteId} - 견적 수정 (DRAFT/REVISING 상태만 가능)
- * QuoteUpdateRequest는 discountPolicyId가 없음 (생성 시에만 지정)
+ * QuoteUpdateRequest는 discountPolicyId 없음 (생성도 서버가 품목별 policy 결정)
  */
 export const updateQuote = async (quoteId, form) => {
   const payload = {

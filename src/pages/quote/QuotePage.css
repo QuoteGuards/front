@@ -244,6 +244,26 @@
   color: #15803D;
 }
 
+.quote-page-policy-cell {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-sub);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.quote-page-th-policy {
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.quote-page-th-policy-sub {
+  font-weight: 500;
+  color: var(--color-text-sub);
+  font-size: 11px;
+}
+
 .quote-page-meta--warn {
   color: #D97706;
 }
@@ -318,6 +338,12 @@
   margin: 0 0 6px;
   font-size: 12px;
   color: var(--color-text-sub);
+}
+
+.quote-page-stat__label-hint {
+  font-weight: 400;
+  color: var(--color-text-sub);
+  opacity: 0.85;
 }
 
 .quote-page-stat__value {
