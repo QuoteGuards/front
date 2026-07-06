@@ -583,11 +583,10 @@ export default function CategoryManagePage() {
 
 function Row({ label, children }) {
   return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <label
             style={{
               minWidth: '120px',
-              paddingTop: '10px',
               fontSize: '13px',
               color: 'var(--color-text-sub)',
               fontWeight: 500,
