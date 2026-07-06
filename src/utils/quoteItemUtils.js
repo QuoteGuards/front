@@ -236,7 +236,7 @@ export function clearQuoteWriteDraft() {
 
 
 
-/** QuoteDetailResponse → items state 동기화용 */
+/** QuoteDetailResponse 견적 헤더 policy (strictest, 표시·fallback용) */
 
 export const quotePolicyFromResponse = (data) => ({
 
@@ -261,10 +261,20 @@ export const costByItemIdFromAnalysis = (analysis) => {
   return map
 }
 
-/** QuoteItemResponse + QuoteDetailResponse(견적 단위 정책) → 견적 항목 state */
+/** QuoteItemResponse → 견적 항목 state (품목 policy 우선, 없으면 견적 헤더 fallback) */
+export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {}) => {
+  const itemMax = parseApiNumber(item.maxDiscountRate)
+  const itemMin = parseApiNumber(item.minProfitRate)
+  const hasItemPolicy =
+    itemMax != null && itemMin != null
 
-export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {}) => ({
+  const maxDiscountRate = hasItemPolicy ? itemMax : parseApiNumber(quotePolicy.maxDiscountRate)
+  const minProfitRate = hasItemPolicy ? itemMin : parseApiNumber(quotePolicy.minProfitRate)
+  const discountPolicyId = hasItemPolicy
+    ? (item.discountPolicyId ?? null)
+    : (quotePolicy.discountPolicyId ?? null)
 
+  return {
   key: `saved-${item.id ?? index}`,
 
   productId: item.productId,
@@ -287,13 +297,13 @@ export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {
 
   discountReason: item.discountReason ?? '',
 
-  maxDiscountRate: parseApiNumber(quotePolicy.maxDiscountRate),
+  maxDiscountRate,
 
-  minProfitRate: parseApiNumber(quotePolicy.minProfitRate),
+  minProfitRate,
 
-  discountPolicyId: quotePolicy.discountPolicyId ?? null,
-
-})
+  discountPolicyId,
+  }
+}
 
 
 
