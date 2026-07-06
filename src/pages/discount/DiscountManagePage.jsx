@@ -11,6 +11,9 @@ import Button from '../../components/common/Button'
 import DataTable from '../../components/common/DataTable'
 import Pagination from '../../components/common/Pagination'
 import SearchableSelect from '../../components/common/SearchableSelect'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../hooks/useToast'
+import Toast from '../../components/common/Toast'
 
 const TABS = [
   { key: '', label: '전체' },
@@ -29,6 +32,8 @@ const EMPTY_FORM = {
 }
 
 export default function DiscountManagePage() {
+  const { confirm, confirmModal } = useConfirm()
+  const { toast, showToast, hideToast } = useToast()
   const [tab, setTab] = useState('')           // '' | CATEGORY | PRODUCT
   const [keywordInput, setKeywordInput] = useState('')
   const [search, setSearch] = useState({ keyword: '', active: '', categoryId: '' })
@@ -172,6 +177,7 @@ export default function DiscountManagePage() {
       if (editId == null) await createDiscountApi(payload)
       else await updateDiscountApi(editId, payload)
       setModalOpen(false)
+      showToast(editId == null ? '정책이 등록되었습니다' : '정책이 수정되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setModalError(e.response?.data?.message ?? '저장 실패 (입력값 확인)')
@@ -182,7 +188,9 @@ export default function DiscountManagePage() {
 
   const onToggleActive = async (p) => {
     try {
-      isActiveOf(p) ? await deactivateDiscountApi(p.id) : await activateDiscountApi(p.id)
+      const wasActive = isActiveOf(p)
+      wasActive ? await deactivateDiscountApi(p.id) : await activateDiscountApi(p.id)
+      showToast(wasActive ? '비활성화되었습니다' : '활성화되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setError(e.response?.data?.message ?? '상태 변경 실패')
@@ -190,9 +198,10 @@ export default function DiscountManagePage() {
   }
 
   const onDelete = async (p) => {
-    if (!confirm(`'${p.name}' 정책을 삭제할까요?`)) return
+    if (!(await confirm({ title: '할인 정책 삭제', message: `'${p.name}' 정책을 삭제할까요?`, confirmText: '삭제', danger: true }))) return
     try {
       await deleteDiscountApi(p.id)
+      showToast('삭제되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setError(e.response?.data?.message ?? '삭제 실패')
@@ -394,6 +403,8 @@ export default function DiscountManagePage() {
           </div>
         </div>
       )}
+      {confirmModal}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   )
 }
