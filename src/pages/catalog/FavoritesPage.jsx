@@ -8,6 +8,7 @@ import Button from '../../components/common/Button'
 import ProductImage from '../../components/common/ProductImage'
 import Toast from '../../components/common/Toast'
 import { useToast } from '../../hooks/useToast'
+import { useConfirm } from '../../hooks/useConfirm'
 import { addPendingQuoteItem } from '../../utils/quoteItemUtils'
 
 const SORTS = [
@@ -20,6 +21,7 @@ const SORTS = [
 export default function FavoritesPage() {
   const navigate = useNavigate()
   const { toast, showToast, hideToast } = useToast()
+  const { confirm, confirmModal } = useConfirm()
 
   const [items, setItems] = useState([])      // 즐겨찾기 전체 (활성 제품만)
   const [tree, setTree] = useState([])
@@ -103,10 +105,11 @@ export default function FavoritesPage() {
 
   const removeAll = async () => {
     if (items.length === 0) return
-    if (!confirm(`즐겨찾기 ${items.length}개를 전부 해제할까요?`)) return
+    if (!(await confirm({ title: '즐겨찾기 전체 해제', message: `즐겨찾기 ${items.length}개를 전부 해제할까요?`, confirmText: '전체 해제', danger: true }))) return
     setItems([]) // 낙관적
     try {
       await removeAllFavoritesApi() // 벌크: 서버 트랜잭션 1번
+      showToast('전체 해제되었습니다')
     } catch (e) {
       setError(e.response?.data?.message ?? '전체 해제 실패')
       load() // 실패 시 동기화
@@ -128,6 +131,7 @@ export default function FavoritesPage() {
     <div>
       <PageHeader
         breadcrumbs={['제품', '즐겨찾기']}
+        breadcrumbSep=">"
         title="즐겨찾기"
       />
 
@@ -229,6 +233,7 @@ export default function FavoritesPage() {
         </div>
       )}
 
+      {confirmModal}
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   )

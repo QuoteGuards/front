@@ -151,7 +151,7 @@ export default function ProductSearchPage() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" />
+      <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" breadcrumbSep=">" />
 
       {/* ── 검색 패널 ── */}
       <SearchPanel>
@@ -212,7 +212,7 @@ export default function ProductSearchPage() {
         {/* ── 우측 결과 ── */}
         <div className="flex-1">
           <div className="mb-3 text-sm text-[var(--color-text-sub)]">
-            검색 결과 <b className="text-[var(--color-text-main)]">{pageData.totalElements ?? 0}</b>개
+            총 <b className="text-[var(--color-text-main)]">{pageData.totalElements ?? 0}</b>개
           </div>
 
           {error && (

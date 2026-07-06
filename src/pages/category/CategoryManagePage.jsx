@@ -11,12 +11,17 @@ import {
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import Card from '../../components/common/Card'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../hooks/useToast'
+import Toast from '../../components/common/Toast'
 
 const DEPTH_LABEL = { 1: '대분류', 2: '중분류', 3: '소분류' }
 const CHILD_LABEL = { 1: '중분류', 2: '소분류' }
 
 export default function CategoryManagePage() {
   const navigate = useNavigate()
+  const { confirm, confirmModal } = useConfirm()
+  const { toast, showToast, hideToast } = useToast()
 
   const [tree, setTree] = useState([])
   const [expanded, setExpanded] = useState(new Set())
@@ -159,6 +164,7 @@ export default function CategoryManagePage() {
         })
       }
 
+      showToast(mode === 'create' ? '카테고리가 등록되었습니다' : '카테고리가 수정되었습니다')
       resetDetail()
       await load()
     } catch (e) {
@@ -172,11 +178,13 @@ export default function CategoryManagePage() {
     setError(null)
 
     try {
-      if (isActiveOf(selected)) {
+      const wasActive = isActiveOf(selected)
+      if (wasActive) {
         await deactivateCategoryApi(selected.id)
       } else {
         await activateCategoryApi(selected.id)
       }
+      showToast(wasActive ? '비활성화되었습니다' : '활성화되었습니다')
 
       const data = await load()
       const fresh = findInTree(data, selected.id)
@@ -196,12 +204,13 @@ export default function CategoryManagePage() {
 
   const onDelete = async () => {
     if (!selected) return
-    if (!confirm(`'${selected.name}' 삭제할까요?`)) return
+    if (!(await confirm({ title: '카테고리 삭제', message: `'${selected.name}' 삭제할까요?`, confirmText: '삭제', danger: true }))) return
 
     setError(null)
 
     try {
       await deleteCategoryApi(selected.id)
+      showToast('삭제되었습니다')
       resetDetail()
       await load()
     } catch (e) {
@@ -319,6 +328,7 @@ export default function CategoryManagePage() {
       <div>
         <PageHeader
             breadcrumbs={['제품', '카테고리 관리']}
+            breadcrumbSep=">"
             title="카테고리 관리"
             actions={
               <Button variant="primary" onClick={() => startCreate(null, 1)}>
@@ -577,17 +587,18 @@ export default function CategoryManagePage() {
             )}
           </Card>
         </div>
+        {confirmModal}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
       </div>
   )
 }
 
 function Row({ label, children }) {
   return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <label
             style={{
               minWidth: '120px',
-              paddingTop: '10px',
               fontSize: '13px',
               color: 'var(--color-text-sub)',
               fontWeight: 500,

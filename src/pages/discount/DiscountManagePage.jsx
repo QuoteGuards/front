@@ -11,6 +11,9 @@ import Button from '../../components/common/Button'
 import DataTable from '../../components/common/DataTable'
 import Pagination from '../../components/common/Pagination'
 import SearchableSelect from '../../components/common/SearchableSelect'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../hooks/useToast'
+import Toast from '../../components/common/Toast'
 
 const TABS = [
   { key: '', label: '전체' },
@@ -29,6 +32,8 @@ const EMPTY_FORM = {
 }
 
 export default function DiscountManagePage() {
+  const { confirm, confirmModal } = useConfirm()
+  const { toast, showToast, hideToast } = useToast()
   const [tab, setTab] = useState('')           // '' | CATEGORY | PRODUCT
   const [keywordInput, setKeywordInput] = useState('')
   const [search, setSearch] = useState({ keyword: '', active: '', categoryId: '' })
@@ -172,6 +177,7 @@ export default function DiscountManagePage() {
       if (editId == null) await createDiscountApi(payload)
       else await updateDiscountApi(editId, payload)
       setModalOpen(false)
+      showToast(editId == null ? '정책이 등록되었습니다' : '정책이 수정되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setModalError(e.response?.data?.message ?? '저장 실패 (입력값 확인)')
@@ -182,7 +188,9 @@ export default function DiscountManagePage() {
 
   const onToggleActive = async (p) => {
     try {
-      isActiveOf(p) ? await deactivateDiscountApi(p.id) : await activateDiscountApi(p.id)
+      const wasActive = isActiveOf(p)
+      wasActive ? await deactivateDiscountApi(p.id) : await activateDiscountApi(p.id)
+      showToast(wasActive ? '비활성화되었습니다' : '활성화되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setError(e.response?.data?.message ?? '상태 변경 실패')
@@ -190,9 +198,10 @@ export default function DiscountManagePage() {
   }
 
   const onDelete = async (p) => {
-    if (!confirm(`'${p.name}' 정책을 삭제할까요?`)) return
+    if (!(await confirm({ title: '할인 정책 삭제', message: `'${p.name}' 정책을 삭제할까요?`, confirmText: '삭제', danger: true }))) return
     try {
       await deleteDiscountApi(p.id)
+      showToast('삭제되었습니다')
       await Promise.all([load(), loadActiveCount()])
     } catch (e) {
       setError(e.response?.data?.message ?? '삭제 실패')
@@ -205,10 +214,16 @@ export default function DiscountManagePage() {
       key: '_target', title: '적용 대상',
       render: (_, p) => {
         const b = TARGET_BADGE[p.targetType] ?? TARGET_BADGE.ALL
+        const t = targetText(p)
         return (
-          <div>
-            <span className={`status-badge status-badge--${b.color}`}>{b.label}</span>
-            <div className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{targetText(p)}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className={`status-badge status-badge--${b.color}`} style={{ flexShrink: 0, minWidth: '68px', justifyContent: 'center' }}>{b.label}</span>
+            {t && (
+              <span title={t} style={{
+                fontSize: '12px', color: 'var(--color-text-sub)', maxWidth: '150px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{t}</span>
+            )}
           </div>
         )
       },
@@ -217,19 +232,21 @@ export default function DiscountManagePage() {
     { key: 'minProfitRate', title: '최소 이익률', align: 'right', render: (v) => pct(v) },
     { key: 'highAmountThreshold', title: '고액 기준', align: 'right', render: (v) => <span style={{ color: 'var(--color-text-sub)' }}>{won(v)}</span> },
     {
-      key: '_period', title: '적용 기간', align: 'center',
-      render: (_, p) => <span className="text-xs" style={{ color: 'var(--color-text-sub)' }}>{date(p.effectiveFrom)} ~ {p.effectiveTo ? date(p.effectiveTo) : '무기한'}</span>,
+      key: '_period', title: '적용 기간',
+      render: (_, p) => <span className="text-xs" style={{ color: 'var(--color-text-sub)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{date(p.effectiveFrom)} ~ {p.effectiveTo ? date(p.effectiveTo) : '무기한'}</span>,
     },
     {
       key: '_status', title: '상태', align: 'center',
-      render: (_, p) => <span className={`status-badge status-badge--${isActiveOf(p) ? 'green' : 'gray'}`}>{isActiveOf(p) ? '활성' : '비활성'}</span>,
+      render: (_, p) => <span className={`status-badge status-badge--${isActiveOf(p) ? 'green' : 'gray'}`} style={{ minWidth: '48px', justifyContent: 'center' }}>{isActiveOf(p) ? '활성' : '비활성'}</span>,
     },
     {
       key: '_actions', title: '관리', align: 'center',
       render: (_, p) => (
-        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', alignItems: 'center' }}>
           <Button variant="outline" size="sm" onClick={() => openEdit(p)}>수정</Button>
-          <Button variant="ghost" size="sm" onClick={() => onToggleActive(p)}>{isActiveOf(p) ? '비활성화' : '활성화'}</Button>
+          <span style={{ display: 'inline-flex', justifyContent: 'center', minWidth: '72px' }}>
+            <Button variant="ghost" size="sm" onClick={() => onToggleActive(p)}>{isActiveOf(p) ? '비활성화' : '활성화'}</Button>
+          </span>
           <Button variant="danger" size="sm" onClick={() => onDelete(p)}>삭제</Button>
         </div>
       ),
@@ -240,6 +257,7 @@ export default function DiscountManagePage() {
     <div>
       <PageHeader
         breadcrumbs={['제품', '할인 정책']}
+        breadcrumbSep=">"
         title="할인 정책"
         actions={<Button variant="primary" onClick={openCreate}>+ 정책 등록</Button>}
       />
@@ -257,7 +275,7 @@ export default function DiscountManagePage() {
           <input className="form-input" style={{ width: '220px' }} placeholder="정책명 검색"
             value={keywordInput} onChange={e => setKeywordInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && onSearch()} />
-          <SearchableSelect width="220px" value={search.categoryId}
+          <SearchableSelect width="300px" value={search.categoryId}
             placeholder="카테고리 전체"
             options={[{ value: '', label: '카테고리 전체' }, ...cats.map(c => ({ value: c.id, label: c.path }))]}
             onChange={v => { setSearch(s => ({ ...s, categoryId: v })); setPage(0) }} />
@@ -386,6 +404,8 @@ export default function DiscountManagePage() {
           </div>
         </div>
       )}
+      {confirmModal}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   )
 }

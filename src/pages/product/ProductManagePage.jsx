@@ -20,6 +20,9 @@ import SegmentedControl from '../../components/common/SegmentedControl'
 import DataTable from '../../components/common/DataTable'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useToast } from '../../hooks/useToast'
+import Toast from '../../components/common/Toast'
 
 const VAT_FILTER_OPTIONS = [
   { value: '', label: 'VAT 전체' },
@@ -55,6 +58,8 @@ const EMPTY_FORM = {
 }
 
 export default function ProductManagePage() {
+  const { confirm, confirmModal } = useConfirm()
+  const { toast, showToast, hideToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const initCategoryId = searchParams.get('categoryId') ?? ''
 
@@ -341,6 +346,7 @@ export default function ProductManagePage() {
       }
 
       setModalOpen(false)
+      showToast(editId == null ? '제품이 등록되었습니다' : '제품이 수정되었습니다')
       await load()
     } catch (e) {
       setModalError(e.response?.data?.message ?? '저장 실패 (제품코드 중복/형식 확인)')
@@ -349,11 +355,13 @@ export default function ProductManagePage() {
 
   const onToggleActive = async (product) => {
     try {
-      if (isActiveOf(product)) {
+      const wasActive = isActiveOf(product)
+      if (wasActive) {
         await deactivateProductApi(product.id)
       } else {
         await activateProductApi(product.id)
       }
+      showToast(wasActive ? '비활성화되었습니다' : '활성화되었습니다')
 
       await load()
     } catch (e) {
@@ -362,10 +370,11 @@ export default function ProductManagePage() {
   }
 
   const onDelete = async (product) => {
-    if (!confirm(`'${product.name}' 삭제할까요? (견적에 연결된 제품은 삭제 불가)`)) return
+    if (!(await confirm({ title: '제품 삭제', message: `'${product.name}' 삭제할까요?\n(견적에 연결된 제품은 삭제 불가)`, confirmText: '삭제', danger: true }))) return
 
     try {
       await deleteProductApi(product.id)
+      showToast('삭제되었습니다')
       await load()
     } catch (e) {
       setError(e.response?.data?.message ?? '삭제 실패')
@@ -401,7 +410,7 @@ export default function ProductManagePage() {
 
     if (ids.length === 0) return
 
-    if (label === '삭제' && !confirm(`선택한 ${ids.length}개 제품을 삭제할까요? (견적 연결 제품은 실패)`)) {
+    if (label === '삭제' && !(await confirm({ title: '제품 일괄 삭제', message: `선택한 ${ids.length}개 제품을 삭제할까요?\n(견적 연결 제품은 실패)`, confirmText: '삭제', danger: true }))) {
       return
     }
 
@@ -409,6 +418,7 @@ export default function ProductManagePage() {
 
     try {
       await fn(ids)
+      showToast(`${ids.length}개 제품 ${label} 완료`)
       await load()
     } catch (e) {
       setError(e.response?.data?.message ?? `일괄 ${label} 실패`)
@@ -428,11 +438,11 @@ export default function ProductManagePage() {
 
       if (
           total > exportCap &&
-          !confirm(
-              `검색 결과가 ${total.toLocaleString('ko-KR')}개입니다. 처음 ${exportCap.toLocaleString(
-                  'ko-KR',
-              )}개만 내보냅니다. 계속할까요?`,
-          )
+          !(await confirm({
+            title: 'CSV 내보내기',
+            message: `검색 결과가 ${total.toLocaleString('ko-KR')}개입니다. 처음 ${exportCap.toLocaleString('ko-KR')}개만 내보냅니다. 계속할까요?`,
+            confirmText: '내보내기',
+          }))
       ) {
         return
       }
@@ -524,7 +534,15 @@ export default function ProductManagePage() {
     {
       key: '_cat',
       title: '카테고리',
-      render: (_, row) => <span style={{ color: 'var(--color-text-sub)' }}>{catLabel(row)}</span>,
+      render: (_, row) => {
+        const label = catLabel(row)
+        return (
+          <span title={label} style={{
+            color: 'var(--color-text-sub)', display: 'inline-block', maxWidth: '220px',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom',
+          }}>{label}</span>
+        )
+      },
     },
     {
       key: 'unitPrice',
@@ -639,6 +657,7 @@ export default function ProductManagePage() {
       <div>
         <PageHeader
             breadcrumbs={['제품', '제품 관리']}
+            breadcrumbSep=">"
             title="제품 관리"
             actions={
               <>
@@ -654,7 +673,7 @@ export default function ProductManagePage() {
 
         <SearchPanel>
           <SearchRow label="카테고리">
-            <SearchableSelect width="240px" value={filter.categoryId} placeholder="전체"
+            <SearchableSelect width="300px" value={filter.categoryId} placeholder="전체"
               options={[{ value: '', label: '전체' }, ...allCats.map((c) => ({ value: c.id, label: c.path }))]}
               onChange={(v) => setFilter({ ...filter, categoryId: v })} />
           </SearchRow>
@@ -907,6 +926,8 @@ export default function ProductManagePage() {
               </div>
             </div>
         )}
+        {confirmModal}
+        {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
       </div>
   )
 }
