@@ -396,19 +396,30 @@ export default function DashboardPage() {
               <Button size="sm" variant={popularSort === 'sales' ? 'primary' : 'ghost'} onClick={() => setPopularSort('sales')}>매출순</Button>
             </div>
           }>
-          {popular.length === 0 ? <Empty /> : (
-            <table className="w-full text-sm">
-              <thead className="text-xs text-[var(--color-text-muted)]">
-                <tr>
-                  <th className="text-left py-1 w-8">#</th>
-                  <th className="text-left">제품</th>
-                  <th className="text-right" style={popularSort === 'order' ? { color: 'var(--color-primary)' } : undefined}>견적포함</th>
-                  <th className="text-right" style={popularSort === 'quantity' ? { color: 'var(--color-primary)' } : undefined}>수량</th>
-                  <th className="text-right" style={popularSort === 'sales' ? { color: 'var(--color-primary)' } : undefined}>매출기여</th>
-                </tr>
-              </thead>
-              <tbody>
-                {popularSorted.map((p, i) => (
+          <table className="w-full text-sm">
+            <thead className="text-xs text-[var(--color-text-muted)]">
+              <tr>
+                <th className="text-left py-1 w-8">#</th>
+                <th className="text-left">제품</th>
+                <th className="text-right" style={popularSort === 'order' ? { color: 'var(--color-primary)' } : undefined}>견적포함</th>
+                <th className="text-right" style={popularSort === 'quantity' ? { color: 'var(--color-primary)' } : undefined}>수량</th>
+                <th className="text-right" style={popularSort === 'sales' ? { color: 'var(--color-primary)' } : undefined}>매출기여</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* 항상 10행 고정 — 데이터 없는 자리는 순번 + '-'로 채워 높이 유지 */}
+              {Array.from({ length: 10 }, (_, i) => {
+                const p = popularSorted[i]
+                if (!p) {
+                  // 빈 슬롯: 순번·값 없이 높이만 유지 (시선이 실제 데이터에 집중되게)
+                  return (
+                    <tr key={`empty-${i}`} style={{ borderTop: '1px dashed var(--color-border)' }}>
+                      <td className="py-1.5">&nbsp;</td>
+                      <td></td><td></td><td></td><td></td>
+                    </tr>
+                  )
+                }
+                return (
                   <tr key={p.productId} style={{ borderTop: '1px solid var(--color-border)' }}>
                     <td className="py-1.5 text-[var(--color-text-muted)]">{i + 1}</td>
                     <td className="font-medium">{p.productName}</td>
@@ -416,10 +427,10 @@ export default function DashboardPage() {
                     <td className="text-right" style={{ color: 'var(--color-text-sub)', fontWeight: popularSort === 'quantity' ? 700 : 400 }}>{num(p.totalQuantity)}</td>
                     <td className="text-right" style={{ color: 'var(--color-primary)', fontWeight: popularSort === 'sales' ? 700 : 400 }}>{won(p.totalSalesAmount)}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                )
+              })}
+            </tbody>
+          </table>
         </Panel>
 
         {/* ── 영업사원별 통계 ── */}
