@@ -521,11 +521,13 @@ function amountTick(v, unit) {
   return n.toLocaleString('ko-KR', { maximumFractionDigits: unit.digits })
 }
 
-// 금액 축약 (억/만원) — 요약 카드용 (정확값 아님)
+// 금액 축약 (억/만원) — 요약 카드용 (정확값 아님). 음수(손실)도 부호 유지하며 축약
 function wonShort(v) {
   const n = Number(v) || 0
-  if (n >= 1e8) return `${(n / 1e8).toFixed(1).replace(/\.0$/, '')}억`
-  if (n >= 1e4) return `${Math.round(n / 1e4).toLocaleString('ko-KR')}만`
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(1).replace(/\.0$/, '')}억`
+  if (abs >= 1e4) return `${sign}${Math.round(abs / 1e4).toLocaleString('ko-KR')}만`
   return `${n.toLocaleString('ko-KR')}원`
 }
 
