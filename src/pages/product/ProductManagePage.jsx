@@ -524,7 +524,15 @@ export default function ProductManagePage() {
     {
       key: '_cat',
       title: '카테고리',
-      render: (_, row) => <span style={{ color: 'var(--color-text-sub)' }}>{catLabel(row)}</span>,
+      render: (_, row) => {
+        const label = catLabel(row)
+        return (
+          <span title={label} style={{
+            color: 'var(--color-text-sub)', display: 'inline-block', maxWidth: '220px',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom',
+          }}>{label}</span>
+        )
+      },
     },
     {
       key: 'unitPrice',
@@ -654,7 +662,7 @@ export default function ProductManagePage() {
 
         <SearchPanel>
           <SearchRow label="카테고리">
-            <SearchableSelect width="240px" value={filter.categoryId} placeholder="전체"
+            <SearchableSelect width="300px" value={filter.categoryId} placeholder="전체"
               options={[{ value: '', label: '전체' }, ...allCats.map((c) => ({ value: c.id, label: c.path }))]}
               onChange={(v) => setFilter({ ...filter, categoryId: v })} />
           </SearchRow>

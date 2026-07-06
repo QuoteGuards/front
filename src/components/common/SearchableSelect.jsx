@@ -73,6 +73,7 @@ export default function SearchableSelect({
     <div ref={ref} style={{ position: 'relative', width }}>
       <button ref={triggerRef} type="button" className="form-select" disabled={disabled}
         aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
+        title={selected ? selected.label : undefined}
         onClick={() => setOpen(o => !o)}
         onKeyDown={(e) => { if (e.key === 'ArrowDown' && !open) { e.preventDefault(); setOpen(true) } }}
         style={{
@@ -106,7 +107,7 @@ export default function SearchableSelect({
               const isActive = idx === activeIndex
               return (
                 <li key={String(o.value)} id={`${baseId}-opt-${idx}`} data-idx={idx}
-                  role="option" aria-selected={isSel}
+                  role="option" aria-selected={isSel} title={o.label}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => pick(o.value)}
                   style={{
