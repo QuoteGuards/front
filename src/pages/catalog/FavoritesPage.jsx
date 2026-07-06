@@ -116,8 +116,12 @@ export default function FavoritesPage() {
   const goDetail = (p) => navigate(`/catalog/${p.id}`)
   // 화면 이동 없이 담아두고 알림만 표시 (같은 제품이면 수량 합산)
   const addToQuote = (p) => {
-    const count = addPendingQuoteItem(p, 1)
-    showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+    try {
+      const count = addPendingQuoteItem(p, 1)
+      showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+    } catch {
+      showToast('견적 담기에 실패했습니다. 다시 시도해주세요.', 'error')
+    }
   }
 
   return (

@@ -32,6 +32,10 @@ const initialCustomer = { id: null, companyName: '', contactName: '', email: '',
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 
+// 담은 제품 병합 시 원가/할인정책 정보가 없을 때 안내 (mount·?id 병합 경로 공용)
+const PENDING_POLICY_WARNING =
+    '적용 가능한 할인정책 정보를 불러오지 못한 제품이 있습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.'
+
 const QuoteWritePage = () => {
     const navigate = useNavigate()
     const location = useLocation()
@@ -180,9 +184,7 @@ const QuoteWritePage = () => {
             .then((newItems) => {
                 setItems((prev) => mergeItems(prev, newItems))
                 if (newItems.some((it) => !hasItemPolicyInfo(it))) {
-                    setSaveError(
-                        '적용 가능한 할인정책 정보를 불러오지 못한 제품이 있습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.',
-                    )
+                    setSaveError(PENDING_POLICY_WARNING)
                 }
             })
             .catch(() => {
@@ -234,7 +236,12 @@ const QuoteWritePage = () => {
                     if (cancelled) return
                     setItems(mergeItems(serverItems, newItems))
                     clearPendingQuoteItems()
+                    if (newItems.some((it) => !hasItemPolicyInfo(it))) {
+                        setSaveError(PENDING_POLICY_WARNING)
+                    }
                 } else {
+                    // 편집 불가(locked) 견적: 담은 제품은 병합하지 않고 그대로 보존(clear 안 함)
+                    // → 다음 편집 가능한 견적/신규 작성 진입 시 반영. 의도적으로 유지하는 정책.
                     setItems(serverItems)
                 }
 

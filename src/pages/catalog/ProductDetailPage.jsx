@@ -71,8 +71,12 @@ export default function ProductDetailPage() {
 
   // 화면 이동 없이 담아두고 알림만 표시 (같은 제품이면 수량 합산)
   const addToQuote = () => {
-    const count = addPendingQuoteItem(product, Number(qty) || 1)
-    showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+    try {
+      const count = addPendingQuoteItem(product, Number(qty) || 1)
+      showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+    } catch {
+      showToast('견적 담기에 실패했습니다. 다시 시도해주세요.', 'error')
+    }
   }
 
   if (loading) return <div className="p-10 text-center text-[var(--color-text-muted)]">불러오는 중…</div>

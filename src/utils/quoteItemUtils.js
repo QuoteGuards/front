@@ -275,7 +275,12 @@ export function addPendingQuoteItem(product, quantity = 1) {
   } else {
     list.push({ ...product, quantity: qty })
   }
-  sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(list))
+  try {
+    sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(list))
+  } catch {
+    // 저장 실패(용량 초과·프라이빗 모드 등) → 호출부(addToQuote)에서 실패 토스트를 띄우도록 전파
+    throw new Error('견적 담기 저장에 실패했습니다.')
+  }
   return list.length
 }
 
