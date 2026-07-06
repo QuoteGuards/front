@@ -10,7 +10,9 @@ const AUTH_CREDENTIAL_CODES = new Set(['AUTH_002', 'AUTH_003']);
 function validateForm(email, password) {
   const errors = {};
   if (!email.trim()) {
-    errors.email = '회원번호를 입력해주세요.';
+    errors.email = '이메일을 입력해주세요.';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    errors.email = '올바른 이메일 형식이 아닙니다.';
   }
   if (!password) {
     errors.password = '비밀번호를 입력해주세요.';
@@ -73,7 +75,7 @@ export default function LoginPage() {
         const message = err?.response?.data?.message ?? '로그인에 실패했습니다.';
 
         if (AUTH_CREDENTIAL_CODES.has(code)) {
-          setFieldErrors({ form: '회원번호 또는 비밀번호가 올바르지 않습니다.' });
+          setFieldErrors({ form: '이메일 또는 비밀번호가 올바르지 않습니다.' });
         } else if (AUTH_STATUS_CODES.has(code)) {
           setFormError({ type: 'status', code, message });
         } else if (!err?.response) {
@@ -101,7 +103,7 @@ export default function LoginPage() {
             alignItems: 'center', justifyContent: 'center', marginBottom: '12px',
           }}>QG</div>
           <h1 className="login-card__title">QuoteGuard</h1>
-          <p className="login-card__sub">회원번호와 비밀번호를 입력해주세요.</p>
+          <p className="login-card__sub">이메일과 비밀번호를 입력해주세요.</p>
         </div>
 
         {hasAlert && (
@@ -113,18 +115,19 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="login-form__group">
-            <label htmlFor={emailId} className="form-label">회원번호</label>
+            <label htmlFor={emailId} className="form-label">이메일</label>
             <input
               id={emailId}
-              type="text"
+              type="email"
               autoComplete="username"
+              inputMode="email"
               className={['form-input', fieldErrors.email ? 'form-input--error' : ''].filter(Boolean).join(' ')}
               value={email}
               onChange={(e) => { setEmail(e.target.value); clearErrors(); }}
               disabled={isSubmitting}
               aria-invalid={!!fieldErrors.email}
               aria-describedby={fieldErrors.email ? `${emailId}-error` : undefined}
-              placeholder="회원번호를 입력하세요"
+              placeholder="이메일을 입력하세요"
             />
             {fieldErrors.email && (
               <span id={`${emailId}-error`} role="alert" className="form-error-msg">
