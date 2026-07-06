@@ -1,3 +1,6 @@
+import { getStoredToken } from '../contexts/AuthContext'
+import { decodeJwt } from './jwt'
+
 /** API 숫자 필드 파싱 (null/undefined면 null — 잘못된 기본값 넣지 않음) */
 
 export const parseApiNumber = (value) => {
@@ -196,11 +199,24 @@ export const productToQuoteItem = (product, quantity = 1) => ({
 
 
 
-const QUOTE_WRITE_DRAFT_KEY = 'quoteGuard.quoteWriteDraft'
+const QUOTE_WRITE_DRAFT_KEY_PREFIX = 'quoteGuard.quoteWriteDraft'
+const LEGACY_QUOTE_WRITE_DRAFT_KEY = 'quoteGuard.quoteWriteDraft'
 
-/** 견적 작성 화면 이탈 후 복귀 시 폼 복원용 (sessionStorage) */
-export function buildQuoteWriteDraft(payload) {
+function getCurrentWriterId() {
+  const token = getStoredToken()
+  if (!token) return null
+  return decodeJwt(token)?.sub ?? null
+}
+
+function getQuoteWriteDraftKey(writerId = getCurrentWriterId()) {
+  if (!writerId) return null
+  return `${QUOTE_WRITE_DRAFT_KEY_PREFIX}.${writerId}`
+}
+
+/** 견적 작성 화면 이탈 후 복귀 시 폼 복원용 (sessionStorage, 로그인 사용자별 분리) */
+export function buildQuoteWriteDraft(payload, writerId = getCurrentWriterId()) {
   return {
+    writerId,
     customer: payload.customer,
     memo: payload.memo ?? '',
     issuedDate: payload.issuedDate,
@@ -213,31 +229,45 @@ export function buildQuoteWriteDraft(payload) {
 }
 
 export function saveQuoteWriteDraft(draft) {
-  sessionStorage.setItem(QUOTE_WRITE_DRAFT_KEY, JSON.stringify(buildQuoteWriteDraft(draft)))
+  const writerId = getCurrentWriterId()
+  const key = getQuoteWriteDraftKey(writerId)
+  if (!key) return
+  sessionStorage.setItem(key, JSON.stringify(buildQuoteWriteDraft(draft, writerId)))
 }
-
-
 
 export function loadQuoteWriteDraft() {
+  const writerId = getCurrentWriterId()
+  const key = getQuoteWriteDraftKey(writerId)
+  if (!key) return null
 
   try {
-
-    const raw = sessionStorage.getItem(QUOTE_WRITE_DRAFT_KEY)
-
-    return raw ? JSON.parse(raw) : null
-
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed.writerId && parsed.writerId !== writerId) return null
+    return parsed
   } catch {
-
     return null
-
   }
-
 }
 
-
-
 export function clearQuoteWriteDraft() {
-  sessionStorage.removeItem(QUOTE_WRITE_DRAFT_KEY)
+  const key = getQuoteWriteDraftKey()
+  if (key) sessionStorage.removeItem(key)
+  sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
+}
+
+/** 로그아웃 시 다른 계정으로 draft가 노출되지 않도록 전체 삭제 */
+export function clearAllQuoteWriteDrafts() {
+  const keysToRemove = []
+  for (let i = 0; i < sessionStorage.length; i += 1) {
+    const key = sessionStorage.key(i)
+    if (key?.startsWith(QUOTE_WRITE_DRAFT_KEY_PREFIX)) {
+      keysToRemove.push(key)
+    }
+  }
+  keysToRemove.forEach((key) => sessionStorage.removeItem(key))
+  sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
 }
 
 /** 마운트 시 sessionStorage draft를 동기 로드 (URL id와 일치할 때만) */
