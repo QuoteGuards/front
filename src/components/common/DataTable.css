@@ -65,6 +65,14 @@
   background: #E0EDFF;
 }
 
+/* 지연(SLA 초과) 행 강조 */
+.data-table__row--overdue {
+  background: #FEF2F2;
+}
+.data-table__row--overdue:hover {
+  background: #FEE2E2;
+}
+
 .data-table__td {
   padding: 14px 16px;
   color: var(--color-text-main);

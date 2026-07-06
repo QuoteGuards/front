@@ -12,6 +12,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
 import PageHeader from '../../components/common/PageHeader'
+import Toast from '../../components/common/Toast'
 
 const REASON_LABEL = {
   DISCOUNT_EXCEEDED: '할인율 초과',
@@ -104,6 +105,7 @@ export default function AdminApprovalDetailPage() {
   const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState('')
   const [showItems, setShowItems] = useState(false)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -142,6 +144,11 @@ export default function AdminApprovalDetailPage() {
   const handleSubmit = async () => {
     if (!decision) { setError('승인 또는 반려를 선택해주세요.'); return }
     if (decision === 'reject' && !memo.trim()) { setError('반려 사유를 입력해주세요.'); return }
+    const confirmMessage = decision === 'approve'
+      ? '이 견적을 승인하시겠습니까?'
+      : '이 견적을 반려하시겠습니까? 반려하면 담당 영업사원이 견적을 수정해 재요청해야 합니다.'
+    if (!window.confirm(confirmMessage)) return
+
     setError('')
     setSubmitting(true)
     try {
@@ -150,10 +157,11 @@ export default function AdminApprovalDetailPage() {
       } else {
         await rejectQuote(detail.quoteId, detail.id, memo.trim())
       }
-      navigate('/admin/approval')
+      setToast({ type: 'success', message: decision === 'approve' ? '승인 처리되었습니다.' : '반려 처리되었습니다.' })
+      setTimeout(() => navigate('/admin/approval'), 900)
     } catch (e) {
       setError(e.response?.data?.message ?? '처리 중 오류가 발생했습니다.')
-    } finally {
+      setToast({ type: 'error', message: '처리 중 오류가 발생했습니다.' })
       setSubmitting(false)
     }
   }
@@ -187,7 +195,7 @@ export default function AdminApprovalDetailPage() {
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['승인 관리', '승인 상세']} />
+      <PageHeader breadcrumbs={['승인', '승인 상세']} />
       {/* 헤더 */}
       <div className="px-8 pt-8 pb-5 border-b border-gray-200 bg-white flex items-center gap-4">
         <button
@@ -502,6 +510,10 @@ export default function AdminApprovalDetailPage() {
           </div>
         </div>
       </div>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
     </div>
   )
 }

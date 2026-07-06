@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
 import {
   reRequestApproval,
   updateApprovalMemo,
@@ -117,6 +118,51 @@ function buildGuideSteps(reasons) {
 
 const TEMP_KEY = (id) => `reRequestMemo_${id}`
 
+// ── 공용: 좌측 목록 / 우측 상세 분할 레이아웃 ────────────────
+function SplitLayout({ list, detail }) {
+  return (
+    <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-2">
+        {list}
+      </div>
+      <div className="flex-1 min-w-0 w-full">
+        {detail}
+      </div>
+    </div>
+  )
+}
+
+// ── 공용: 목록 항목 행 ────────────────────────────────────
+function ListRow({ active, onClick, id, title, subtitle, badge }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'w-full text-left rounded-lg border px-4 py-3 transition-colors',
+        active ? 'border-violet-400 bg-violet-50' : 'border-gray-200 bg-white hover:bg-gray-50',
+      ].join(' ')}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 shrink-0">#{id}</span>
+        <span className="text-sm font-medium text-gray-800 truncate">{title}</span>
+      </div>
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-xs text-gray-400">{subtitle}</span>
+        {badge}
+      </div>
+    </button>
+  )
+}
+
+// ── 공용: 우측 상세 패널이 비어있을 때 ────────────────────
+function EmptyDetail({ text }) {
+  return (
+    <div className="min-h-[320px] flex items-center justify-center bg-white rounded-xl border border-dashed border-gray-200">
+      <p className="text-sm text-gray-400">{text}</p>
+    </div>
+  )
+}
+
 // ── 탭 1: 승인 요청 ───────────────────────────────────────
 function RequestTab() {
   const [quotes, setQuotes] = useState([])
@@ -147,12 +193,7 @@ function RequestTab() {
     }
   }
 
-  const handleToggle = async (q) => {
-    if (selectedId === q.id) {
-      setSelectedId(null)
-      setEditingId(null)
-      return
-    }
+  const selectQuote = async (q) => {
     setSelectedId(q.id)
     setEditingId(null)
     setSaveError('')
@@ -234,6 +275,28 @@ function RequestTab() {
     return <p className="text-sm text-gray-400 py-10 text-center">목록을 불러오는 중...</p>
   }
 
+  if (quotes.length === 0) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-sm text-gray-400">승인 대기 중인 견적이 없습니다.</p>
+        <p className="text-xs text-gray-300 mt-1">
+          승인이 필요한 견적은 견적 목록에서 먼저 제출하세요.
+        </p>
+      </div>
+    )
+  }
+
+  const selectedQuote = quotes.find((q) => q.id === selectedId) ?? null
+  const detail = selectedId ? detailMap[selectedId] : null
+  const lastRequest = detail?.histories
+    ? [...detail.histories].reverse().find((h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED')
+    : null
+  const requestCount = detail?.histories?.filter(
+    (h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED'
+  ).length ?? 0
+  const approvalRequestId = lastRequest?.approvalRequestId
+  const isEditing = editingId === selectedId
+
   return (
     <div>
       {cancelError && (
@@ -247,168 +310,131 @@ function RequestTab() {
         </div>
       )}
 
-      {quotes.length === 0 ? (
-        <div className="py-20 text-center">
-          <p className="text-sm text-gray-400">승인 대기 중인 견적이 없습니다.</p>
-          <p className="text-xs text-gray-300 mt-1">
-            승인이 필요한 견적은 견적 목록에서 먼저 제출하세요.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {quotes.map((q) => {
-            const detail = detailMap[q.id]
-            const lastRequest = detail?.histories
-              ? [...detail.histories].reverse().find(
-                  (h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED'
-                )
-              : null
-            const requestCount = detail?.histories?.filter(
-              (h) => h.action === 'REQUESTED' || h.action === 'RE_REQUESTED'
-            ).length ?? 0
-            const approvalRequestId = lastRequest?.approvalRequestId
-            const isEditing = editingId === q.id
+      <SplitLayout
+        list={quotes.map((q) => (
+          <ListRow
+            key={q.id}
+            id={q.id}
+            active={selectedId === q.id}
+            onClick={() => selectQuote(q)}
+            title={q.customerName ?? '—'}
+            subtitle={`제출일: ${formatDateShort(q.submittedAt ?? q.createdAt)}`}
+            badge={
+              <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+                대기
+              </span>
+            }
+          />
+        ))}
+        detail={
+          !selectedQuote ? (
+            <EmptyDetail text="왼쪽 목록에서 견적을 선택하세요." />
+          ) : detailLoading && !detail ? (
+            <div className="min-h-[320px] flex items-center justify-center bg-white rounded-xl border border-gray-200">
+              <p className="text-xs text-gray-400">불러오는 중...</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-5 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                  #{selectedQuote.id}
+                </span>
+                <p className="text-sm font-semibold text-gray-800">{selectedQuote.customerName ?? '—'}</p>
+              </div>
 
-            return (
-              <div
-                key={q.id}
-                className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
-              >
-                <div
-                  className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleToggle(q)}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                      #{q.id}
-                    </span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{q.customerName ?? '—'}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        제출일: {formatDateShort(q.submittedAt ?? q.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
-                      승인 대기 중
-                    </span>
-                    <span className="text-xs text-gray-300">{selectedId === q.id ? '↑' : '↓'}</span>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-lg border border-gray-100 px-4 py-3">
+                  <p className="text-xs text-gray-400">요청일시</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">
+                    {formatDate(lastRequest?.actedAt ?? selectedQuote.submittedAt)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg border border-gray-100 px-4 py-3">
+                  <p className="text-xs text-gray-400">요청 횟수</p>
+                  <p className="text-sm font-medium text-gray-800 mt-0.5">
+                    {requestCount > 0 ? `${requestCount}회` : '1회'}
+                  </p>
+                </div>
+              </div>
+
+              {detail?.reasons?.length > 0 && (
+                <div className="bg-gray-50 rounded-lg border border-gray-100 px-4 py-3">
+                  <p className="text-xs text-gray-400 mb-2">승인 필요 사유</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {detail.reasons.map((r) => {
+                      const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+                      return (
+                        <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                          {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
+              )}
 
-                {selectedId === q.id && (
-                  <div className="px-5 pb-5 border-t border-gray-100 bg-gray-50">
-                    {detailLoading && !detail ? (
-                      <p className="text-xs text-gray-400 py-6 text-center">불러오는 중...</p>
-                    ) : (
-                      <div className="pt-4 flex flex-col gap-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
-                            <p className="text-xs text-gray-400">요청일시</p>
-                            <p className="text-sm font-medium text-gray-800 mt-0.5">
-                              {formatDate(lastRequest?.actedAt ?? q.submittedAt)}
-                            </p>
-                          </div>
-                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
-                            <p className="text-xs text-gray-400">요청 횟수</p>
-                            <p className="text-sm font-medium text-gray-800 mt-0.5">
-                              {requestCount > 0 ? `${requestCount}회` : '1회'}
-                            </p>
-                          </div>
-                        </div>
+              <div className="bg-gray-50 rounded-lg border border-gray-100 px-4 py-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs text-gray-400">전달한 메모</p>
+                  {!isEditing && (
+                    <button
+                      onClick={() => startEdit(lastRequest?.memo)}
+                      className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                    >
+                      메모 수정
+                    </button>
+                  )}
+                </div>
 
-                        {detail?.reasons?.length > 0 && (
-                          <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
-                            <p className="text-xs text-gray-400 mb-2">승인 필요 사유</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {detail.reasons.map((r) => {
-                                const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
-                                return (
-                                  <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
-                                    {REASON_LABEL[r.reasonType] ?? r.reasonType}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="bg-white rounded-lg border border-gray-100 px-4 py-3">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <p className="text-xs text-gray-400">전달한 메모</p>
-                            {!isEditing && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); startEdit(lastRequest?.memo) }}
-                                className="text-xs text-violet-600 hover:text-violet-700 font-medium"
-                              >
-                                메모 수정
-                              </button>
-                            )}
-                          </div>
-
-                          {isEditing ? (
-                            <>
-                              <textarea
-                                value={editMemo}
-                                onChange={(e) => setEditMemo(e.target.value)}
-                                placeholder="관리자에게 전달할 메모를 입력하세요."
-                                rows={3}
-                                className="w-full border border-violet-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              {saveError && (
-                                <p className="text-xs text-red-500 mt-1.5">{saveError}</p>
-                              )}
-                              <div className="flex gap-2 mt-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleSaveMemo(q, approvalRequestId)
-                                  }}
-                                  disabled={saveLoading}
-                                  className="flex-1 py-2 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400"
-                                >
-                                  {saveLoading ? '저장 중...' : '저장'}
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                                  disabled={saveLoading}
-                                  className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                                >
-                                  취소
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap min-h-[1.5rem]">
-                              {lastRequest?.memo || <span className="text-gray-300">작성된 메모가 없습니다.</span>}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2 px-1 pt-1">
-                          <p className="text-xs text-amber-600">
-                            관리자 검토를 기다리고 있습니다. 승인되면 고객에게 견적을 발송할 수 있습니다.
-                          </p>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleCancelRequest(q, approvalRequestId) }}
-                            disabled={cancelLoadingId === q.id}
-                            className="shrink-0 text-xs text-gray-400 hover:text-red-500 font-medium disabled:opacity-50"
-                          >
-                            {cancelLoadingId === q.id ? '철회 중...' : '요청 철회'}
-                          </button>
-                        </div>
-                      </div>
+                {isEditing ? (
+                  <>
+                    <textarea
+                      value={editMemo}
+                      onChange={(e) => setEditMemo(e.target.value)}
+                      placeholder="관리자에게 전달할 메모를 입력하세요."
+                      rows={3}
+                      className="w-full border border-violet-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                    {saveError && (
+                      <p className="text-xs text-red-500 mt-1.5">{saveError}</p>
                     )}
-                  </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        className="flex-1"
+                        onClick={() => handleSaveMemo(selectedQuote, approvalRequestId)}
+                        disabled={saveLoading}
+                      >
+                        {saveLoading ? '저장 중...' : '저장'}
+                      </Button>
+                      <Button variant="ghost" onClick={cancelEdit} disabled={saveLoading}>
+                        취소
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap min-h-[1.5rem]">
+                    {lastRequest?.memo || <span className="text-gray-300">작성된 메모가 없습니다.</span>}
+                  </p>
                 )}
               </div>
-            )
-          })}
-        </div>
-      )}
+
+              <div className="flex items-center justify-between gap-2 px-1 pt-1 border-t border-gray-100">
+                <p className="text-xs text-amber-600 pt-3">
+                  관리자 검토를 기다리고 있습니다. 승인되면 고객에게 견적을 발송할 수 있습니다.
+                </p>
+                <button
+                  onClick={() => handleCancelRequest(selectedQuote, approvalRequestId)}
+                  disabled={cancelLoadingId === selectedQuote.id}
+                  className="shrink-0 text-xs text-gray-400 hover:text-red-500 font-medium disabled:opacity-50 pt-3"
+                >
+                  {cancelLoadingId === selectedQuote.id ? '철회 중...' : '요청 철회'}
+                </button>
+              </div>
+            </div>
+          )
+        }
+      />
     </div>
   )
 }
@@ -467,7 +493,7 @@ function RejectReRequestTab() {
     }
   }
 
-  const handleBack = () => {
+  const resetSelection = () => {
     setSelectedQuote(null)
     setHistories([])
     setReasons([])
@@ -497,7 +523,7 @@ function RejectReRequestTab() {
       }
       await reRequestApproval(selectedQuote.id, approvalRequestId, reRequestMemo.trim())
       localStorage.removeItem(TEMP_KEY(selectedQuote.id))
-      handleBack()
+      resetSelection()
       load()
     } catch (e) {
       setError(e.response?.data?.message ?? '재요청 중 오류가 발생했습니다.')
@@ -524,197 +550,184 @@ function RejectReRequestTab() {
     return <p className="text-sm text-gray-400 py-10 text-center">목록을 불러오는 중...</p>
   }
 
-  // ── 목록 화면 ────────────────────────────────────────────
-  if (!selectedQuote) {
-    if (quotes.length === 0) {
-      return (
-        <div className="py-20 text-center">
-          <p className="text-sm text-gray-400">반려된 견적이 없습니다.</p>
-        </div>
-      )
-    }
+  if (quotes.length === 0) {
     return (
-      <div className="flex flex-col gap-3">
-        {quotes.map((q) => (
-          <button
-            key={q.id}
-            onClick={() => selectQuote(q)}
-            className="w-full text-left bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-red-300 hover:bg-red-50/40 transition-all shadow-sm group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                  #{q.id}
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{q.customerName ?? '—'}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{formatDateShort(q.createdAt)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 text-xs rounded-full bg-red-100 text-red-600 border border-red-200 font-medium">
-                  반려됨
-                </span>
-                <span className="text-gray-300 text-sm group-hover:text-red-400 transition-colors">→</span>
-              </div>
-            </div>
-          </button>
-        ))}
+      <div className="py-20 text-center">
+        <p className="text-sm text-gray-400">반려된 견적이 없습니다.</p>
       </div>
     )
   }
 
-  // ── 로딩 ─────────────────────────────────────────────────
-  if (detailLoading) {
-    return (
-      <div className="py-20 text-center text-sm text-gray-400">정보를 불러오는 중...</div>
-    )
-  }
-
-  // ── 상세 화면 ─────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-4">
+    <SplitLayout
+      list={quotes.map((q) => (
+        <ListRow
+          key={q.id}
+          id={q.id}
+          active={selectedQuote?.id === q.id}
+          onClick={() => selectQuote(q)}
+          title={q.customerName ?? '—'}
+          subtitle={formatDateShort(q.createdAt)}
+          badge={
+            <span className="px-2 py-0.5 text-[11px] rounded-full bg-red-100 text-red-600 border border-red-200 font-medium">
+              반려됨
+            </span>
+          }
+        />
+      ))}
+      detail={
+        !selectedQuote ? (
+          <EmptyDetail text="왼쪽 목록에서 반려된 견적을 선택하세요." />
+        ) : detailLoading ? (
+          <div className="min-h-[320px] flex items-center justify-center bg-white rounded-xl border border-gray-200">
+            <p className="text-sm text-gray-400">정보를 불러오는 중...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
 
-      {/* 반려 사유 */}
-      {rejectedEntry?.memo && (
-        <div className="bg-white rounded-xl border border-red-100 shadow-sm">
-          <div className="px-5 py-4 border-b border-red-50">
-            <h3 className="text-sm font-semibold text-red-600">반려 사유</h3>
-          </div>
-          <div className="px-5 py-4">
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {rejectedEntry.memo}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* 원 요청 정보 */}
-      {(requestedEntry || maxDiscountRate !== null) && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">원 요청 정보</h3>
-          </div>
-          <div className="px-5 py-4 grid grid-cols-2 gap-3">
-            {requestedEntry && (
-              <div>
-                <p className="text-xs text-gray-400">최초 요청일시</p>
-                <p className="text-sm font-medium text-gray-800 mt-0.5">
-                  {formatDate(requestedEntry.actedAt)}
-                </p>
-              </div>
-            )}
-            {maxDiscountRate !== null && (
-              <div>
-                <p className="text-xs text-gray-400">최대 할인율</p>
-                <p className="text-sm font-medium text-gray-800 mt-0.5">
-                  {maxDiscountRate.toFixed(1)}%
-                </p>
-              </div>
-            )}
-          </div>
-          {requestedEntry?.memo && (
-            <div className="px-5 pb-4">
-              <p className="text-xs text-gray-400 mb-1">최초 요청 메모</p>
-              <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 whitespace-pre-wrap">
-                {requestedEntry.memo}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 리스크 항목 */}
-      {reasons.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-800">리스크 항목</h3>
-          </div>
-          <div className="px-5 py-4 flex flex-wrap gap-2">
-            {reasons.map((r) => {
-              const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
-              return (
-                <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
-                  {REASON_LABEL[r.reasonType] ?? r.reasonType}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 수정 가이드 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">수정 가이드</h3>
-          <button
-            onClick={() => navigate(`/quotes/new?id=${selectedQuote.id}`)}
-            className="text-xs text-violet-600 hover:text-violet-700 font-medium"
-          >
-            견적 수정하러 가기 →
-          </button>
-        </div>
-        <div className="px-5 py-4">
-          <div className="flex flex-col gap-3">
-            {guideSteps.map(({ step, title, desc, required }) => (
-              <div key={step} className="flex gap-3 items-start">
-                <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center shrink-0">
-                  {step}
+            {/* 반려 사유 */}
+            {rejectedEntry?.memo && (
+              <div className="bg-white rounded-xl border border-red-100 shadow-sm">
+                <div className="px-5 py-4 border-b border-red-50">
+                  <h3 className="text-sm font-semibold text-red-600">반려 사유</h3>
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-gray-800">{title}</p>
-                    {required && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 border border-red-100">
-                        필수
-                      </span>
-                    )}
+                <div className="px-5 py-4">
+                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {rejectedEntry.memo}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 원 요청 정보 */}
+            {(requestedEntry || maxDiscountRate !== null) && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-800">원 요청 정보</h3>
+                </div>
+                <div className="px-5 py-4 grid grid-cols-2 gap-3">
+                  {requestedEntry && (
+                    <div>
+                      <p className="text-xs text-gray-400">최초 요청일시</p>
+                      <p className="text-sm font-medium text-gray-800 mt-0.5">
+                        {formatDate(requestedEntry.actedAt)}
+                      </p>
+                    </div>
+                  )}
+                  {maxDiscountRate !== null && (
+                    <div>
+                      <p className="text-xs text-gray-400">최대 할인율</p>
+                      <p className="text-sm font-medium text-gray-800 mt-0.5">
+                        {maxDiscountRate.toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {requestedEntry?.memo && (
+                  <div className="px-5 pb-4">
+                    <p className="text-xs text-gray-400 mb-1">최초 요청 메모</p>
+                    <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 whitespace-pre-wrap">
+                      {requestedEntry.memo}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                )}
+              </div>
+            )}
+
+            {/* 리스크 항목 */}
+            {reasons.length > 0 && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-800">리스크 항목</h3>
+                </div>
+                <div className="px-5 py-4 flex flex-wrap gap-2">
+                  {reasons.map((r) => {
+                    const s = REASON_BADGE_STYLE[r.reasonType] ?? { background: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB' }
+                    return (
+                      <span key={r.id} style={{ ...s, padding: '2px 10px', fontSize: '12px', borderRadius: '9999px', display: 'inline-block' }}>
+                        {REASON_LABEL[r.reasonType] ?? r.reasonType}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            )}
 
-      {/* 재요청 사유 입력 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-800">재요청 사유</h3>
-          <p className="text-xs text-gray-400 mt-1">
-            재요청하면 위 리스크 항목은 최신 견적 내용을 기준으로 다시 계산되어 갱신됩니다.
-          </p>
-        </div>
-        <div className="px-5 py-4">
-          <textarea
-            value={reRequestMemo}
-            onChange={(e) => setReRequestMemo(e.target.value)}
-            placeholder="수정한 내용과 재요청 사유를 입력하세요."
-            rows={4}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-          {tempSaved && <p className="text-xs text-emerald-600 mt-2">임시 저장되었습니다.</p>}
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleTempSave}
-              disabled={submitting}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
-            >
-              임시저장
-            </button>
-            <button
-              onClick={handleReRequest}
-              disabled={submitting}
-              className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-              {submitting ? '처리 중...' : '재요청하기'}
-            </button>
+            {/* 수정 가이드 */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-800">수정 가이드</h3>
+                <button
+                  onClick={() => navigate(`/quotes/new?id=${selectedQuote.id}`)}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-medium"
+                >
+                  견적 수정하러 가기 →
+                </button>
+              </div>
+              <div className="px-5 py-4">
+                <div className="flex flex-col gap-3">
+                  {guideSteps.map(({ step, title, desc, required }) => (
+                    <div key={step} className="flex gap-3 items-start">
+                      <div className="w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold flex items-center justify-center shrink-0">
+                        {step}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-gray-800">{title}</p>
+                          {required && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-500 border border-red-100">
+                              필수
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 재요청 사유 입력 */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-800">재요청 사유</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  재요청하면 위 리스크 항목은 최신 견적 내용을 기준으로 다시 계산되어 갱신됩니다.
+                </p>
+              </div>
+              <div className="px-5 py-4">
+                <textarea
+                  value={reRequestMemo}
+                  onChange={(e) => setReRequestMemo(e.target.value)}
+                  placeholder="수정한 내용과 재요청 사유를 입력하세요."
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+                {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+                {tempSaved && <p className="text-xs text-emerald-600 mt-2">임시 저장되었습니다.</p>}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={handleTempSave}
+                    disabled={submitting}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:cursor-not-allowed"
+                  >
+                    임시저장
+                  </button>
+                  <button
+                    onClick={handleReRequest}
+                    disabled={submitting}
+                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? '처리 중...' : '재요청하기'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        )
+      }
+    />
   )
 }
 
@@ -764,11 +777,6 @@ function HistoryTab() {
     }
   }
 
-  const handleBack = () => {
-    setSelectedQuote(null)
-    setHistories([])
-  }
-
   const firstRequested = histories.find((h) => h.action === 'REQUESTED')
   const lastAction = histories.length > 0 ? histories[histories.length - 1] : null
   const totalTime = elapsedTime(firstRequested?.actedAt, lastAction?.actedAt)
@@ -778,173 +786,154 @@ function HistoryTab() {
     return <p className="text-sm text-gray-400 py-10 text-center">목록을 불러오는 중...</p>
   }
 
-  // ── 목록 화면 ─────────────────────────────────────────────
-  if (!selectedQuote) {
-    if (quotes.length === 0) {
-      return (
-        <div className="py-20 text-center">
-          <p className="text-sm text-gray-400">조회할 이력이 없습니다.</p>
-        </div>
-      )
-    }
+  if (quotes.length === 0) {
     return (
-      <div className="flex flex-col gap-3">
-        {quotes.map((q) => {
-          const badge = HISTORY_STATUS[q.status] ?? { text: q.status, cls: 'bg-gray-100 text-gray-600' }
-          return (
-            <button
-              key={q.id}
-              onClick={() => selectQuote(q)}
-              className="w-full text-left bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-violet-300 hover:bg-violet-50/30 transition-all shadow-sm group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-                    #{q.id}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{q.customerName ?? '—'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{formatDateShort(q.createdAt)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${badge.cls}`}>
-                    {badge.text}
-                  </span>
-                  <span className="text-gray-300 text-sm group-hover:text-violet-400 transition-colors">→</span>
-                </div>
-              </div>
-            </button>
-          )
-        })}
+      <div className="py-20 text-center">
+        <p className="text-sm text-gray-400">조회할 이력이 없습니다.</p>
       </div>
     )
   }
 
-  // ── 로딩 ─────────────────────────────────────────────────
-  if (histLoading) {
-    return <div className="py-20 text-center text-sm text-gray-400">이력을 불러오는 중...</div>
-  }
-
-  // ── 상세 화면 ─────────────────────────────────────────────
-  const badge = HISTORY_STATUS[selectedQuote.status] ?? { text: selectedQuote.status, cls: 'bg-gray-100 text-gray-600' }
+  const badge = selectedQuote
+    ? HISTORY_STATUS[selectedQuote.status] ?? { text: selectedQuote.status, cls: 'bg-gray-100 text-gray-600' }
+    : null
 
   return (
-    <div className="flex flex-col gap-4">
-
-      {/* 견적 요약 헤더 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
-              #{selectedQuote.id}
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-gray-800">{selectedQuote.customerName ?? '—'}</p>
-              {requesterName && (
-                <p className="text-xs text-gray-400 mt-0.5">{requesterName} (영업사원)</p>
-              )}
-            </div>
+    <SplitLayout
+      list={quotes.map((q) => {
+        const rowBadge = HISTORY_STATUS[q.status] ?? { text: q.status, cls: 'bg-gray-100 text-gray-600' }
+        return (
+          <ListRow
+            key={q.id}
+            id={q.id}
+            active={selectedQuote?.id === q.id}
+            onClick={() => selectQuote(q)}
+            title={q.customerName ?? '—'}
+            subtitle={formatDateShort(q.createdAt)}
+            badge={
+              <span className={`px-2 py-0.5 text-[11px] rounded-full font-medium ${rowBadge.cls}`}>
+                {rowBadge.text}
+              </span>
+            }
+          />
+        )
+      })}
+      detail={
+        !selectedQuote ? (
+          <EmptyDetail text="왼쪽 목록에서 견적을 선택하세요." />
+        ) : histLoading ? (
+          <div className="min-h-[320px] flex items-center justify-center bg-white rounded-xl border border-gray-200">
+            <p className="text-sm text-gray-400">이력을 불러오는 중...</p>
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
-            {badge.text}
-          </span>
-        </div>
+        ) : (
+          <div className="flex flex-col gap-4">
 
-        <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-          <div>
-            <p className="text-xs text-gray-400 mb-0.5">견적 작성일</p>
-            <p className="text-sm font-medium text-gray-800">{formatDateShort(selectedQuote.createdAt)}</p>
-          </div>
-          {selectedQuote.totalAmount > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">견적 금액</p>
-              <p className="text-sm font-medium text-gray-800">
-                {Number(selectedQuote.totalAmount).toLocaleString('ko-KR')}원
-              </p>
-            </div>
-          )}
-          {totalTime && (
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">총 소요시간</p>
-              <p className="text-sm font-medium text-gray-800">{totalTime}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 처리 타임라인 */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-800">처리 타임라인</h3>
-        </div>
-        <div className="px-5 py-5">
-          {histories.length === 0 ? (
-            <p className="text-sm text-gray-400 py-5 text-center">이력이 없습니다.</p>
-          ) : (
-            <div className="flex flex-col">
-              {histories.map((h, idx) => (
-                <div key={h.id} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        ACTION_DOT_COLOR[h.action] ?? 'bg-gray-400'
-                      }`}
-                    >
-                      <span className="text-white text-xs font-bold">
-                        {h.action === 'APPROVED'
-                          ? '✓'
-                          : h.action === 'REJECTED'
-                          ? '✗'
-                          : h.action === 'REQUESTED'
-                          ? '↑'
-                          : '↺'}
-                      </span>
-                    </div>
-                    {idx < histories.length - 1 && (
-                      <div className="w-px flex-1 bg-gray-200 my-1 min-h-6" />
-                    )}
-                  </div>
-
-                  <div className="pb-6 flex-1">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-semibold ${
-                            ACTION_TEXT_COLOR[h.action] ?? 'text-gray-700'
-                          }`}
-                        >
-                          {ACTION_LABEL[h.action] ?? h.action}
-                        </span>
-                        <span className="text-xs text-gray-400">{h.actorName}</span>
-                      </div>
-                      <span className="text-xs text-gray-400 shrink-0 ml-4">
-                        {formatDate(h.actedAt)}
-                      </span>
-                    </div>
-                    {h.memo && (
-                      <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mt-1.5">
-                        {h.memo}
-                      </p>
+            {/* 견적 요약 헤더 */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
+                    #{selectedQuote.id}
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{selectedQuote.customerName ?? '—'}</p>
+                    {requesterName && (
+                      <p className="text-xs text-gray-400 mt-0.5">{requesterName} (영업사원)</p>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
+                  {badge.text}
+                </span>
+              </div>
 
-      {/* 하단 버튼 */}
-      <div className="flex items-center pt-2 pb-4">
-        <button
-          onClick={handleBack}
-          className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          ← 목록
-        </button>
-      </div>
-    </div>
+              <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">견적 작성일</p>
+                  <p className="text-sm font-medium text-gray-800">{formatDateShort(selectedQuote.createdAt)}</p>
+                </div>
+                {selectedQuote.totalAmount > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">견적 금액</p>
+                    <p className="text-sm font-medium text-gray-800">
+                      {Number(selectedQuote.totalAmount).toLocaleString('ko-KR')}원
+                    </p>
+                  </div>
+                )}
+                {totalTime && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-0.5">총 소요시간</p>
+                    <p className="text-sm font-medium text-gray-800">{totalTime}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 처리 타임라인 */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-800">처리 타임라인</h3>
+              </div>
+              <div className="px-5 py-5">
+                {histories.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-5 text-center">이력이 없습니다.</p>
+                ) : (
+                  <div className="flex flex-col">
+                    {histories.map((h, idx) => (
+                      <div key={h.id} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                              ACTION_DOT_COLOR[h.action] ?? 'bg-gray-400'
+                            }`}
+                          >
+                            <span className="text-white text-xs font-bold">
+                              {h.action === 'APPROVED'
+                                ? '✓'
+                                : h.action === 'REJECTED'
+                                ? '✗'
+                                : h.action === 'REQUESTED'
+                                ? '↑'
+                                : '↺'}
+                            </span>
+                          </div>
+                          {idx < histories.length - 1 && (
+                            <div className="w-px flex-1 bg-gray-200 my-1 min-h-6" />
+                          )}
+                        </div>
+
+                        <div className="pb-6 flex-1">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`text-sm font-semibold ${
+                                  ACTION_TEXT_COLOR[h.action] ?? 'text-gray-700'
+                                }`}
+                              >
+                                {ACTION_LABEL[h.action] ?? h.action}
+                              </span>
+                              <span className="text-xs text-gray-400">{h.actorName}</span>
+                            </div>
+                            <span className="text-xs text-gray-400 shrink-0 ml-4">
+                              {formatDate(h.actedAt)}
+                            </span>
+                          </div>
+                          {h.memo && (
+                            <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 mt-1.5">
+                              {h.memo}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
+    />
   )
 }
 
@@ -954,7 +943,7 @@ export default function StaffApprovalPage() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={['승인 관리', '내 승인 요청']} title="승인 요청 현황" />
+      <PageHeader breadcrumbs={['승인', '승인 요청 현황']} title="승인 요청 현황" />
 
       <div
         style={{
