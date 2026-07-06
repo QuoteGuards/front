@@ -182,6 +182,12 @@ export default function DashboardPage() {
   }, [summary, statusCounts])
   const donutTotal = useMemo(() => donutData.reduce((a, b) => a + b.value, 0), [donutData])
   const approvedValue = useMemo(() => donutData.find(d => d.name === '승인')?.value ?? 0, [donutData])
+  const rejectedValue = useMemo(() => donutData.find(d => d.name === '반려')?.value ?? 0, [donutData])
+  // 승인율 = 승인 / (승인+반려) — 대기(pending) 제외한 '결정된 건' 기준
+  const approvalRate = useMemo(() => {
+    const decided = approvedValue + rejectedValue
+    return decided ? Math.round((approvedValue / decided) * 100) : 0
+  }, [approvedValue, rejectedValue])
 
   const handlePeriodChange = (key) => {
     setPeriod(key)
@@ -342,14 +348,14 @@ export default function DashboardPage() {
                   <PieChart>
                     <Pie data={donutData} dataKey="value" nameKey="name" cx="50%" cy="50%"
                       innerRadius={62} outerRadius={90} paddingAngle={2} startAngle={90} endAngle={-270}>
-                      {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                      {donutData.map((d) => <Cell key={d.name} fill={d.color} />)}
                     </Pie>
                     <Tooltip formatter={(v, n) => [`${num(v)}건`, n]} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                   <span className="text-[28px] font-bold leading-none" style={{ color: CHART.approved }}>
-                    {donutTotal ? Math.round((approvedValue / donutTotal) * 100) : 0}%
+                    {approvalRate}%
                   </span>
                   <span className="text-[12px] text-[var(--color-text-sub)] mt-1">승인율</span>
                 </div>
@@ -388,7 +394,7 @@ export default function DashboardPage() {
           {statusCounts.length === 0 ? <Empty /> : <StatusFlow counts={statusCounts} />}
         </Panel>
 
-        {/* ── 인기 제품 순위 (주문순 / 조회순) ── */}
+        {/* ── 인기 제품 순위 (견적포함순 / 수량순 / 매출순) ── */}
         <Panel title="인기 제품 순위 (TOP 10)"
           action={
             <div style={{ display: 'flex', gap: '4px' }}>
