@@ -87,15 +87,18 @@ const QuoteWritePage = () => {
         setItems((prev) => prev.filter((item) => item.key !== key))
     }
 
-    formSnapshotRef.current = {
-        customer,
-        memo,
-        issuedDate,
-        validUntil,
-        deliveryTerm,
-        items,
-        savedQuote,
-    }
+    // unmount 시 최신 폼 상태를 읽기 위한 ref (렌더 중 직접 대입 금지 — react-hooks 규칙)
+    useEffect(() => {
+        formSnapshotRef.current = {
+            customer,
+            memo,
+            issuedDate,
+            validUntil,
+            deliveryTerm,
+            items,
+            savedQuote,
+        }
+    }, [customer, memo, issuedDate, validUntil, deliveryTerm, items, savedQuote])
 
     const persistDraft = useCallback((overrides = {}) => {
         saveQuoteWriteDraft({
@@ -441,7 +444,8 @@ const QuoteWritePage = () => {
     return (
         <div className="quote-page">
             <PageHeader
-                breadcrumbs={['견적 관리', '견적 작성']}
+                breadcrumbSep=">"
+                breadcrumbs={['견적', '견적 작성']}
                 title="견적 작성"
             />
 

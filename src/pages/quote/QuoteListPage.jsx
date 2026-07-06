@@ -19,12 +19,10 @@ const formatRate = (val) => {
 const LIST_CONFIG = {
   SUPER_ADMIN: {
     title: '전체 견적 목록',
-    breadcrumb: '전체 견적',
     showNewButton: false,
   },
   SALES_STAFF: {
     title: '내 견적 목록',
-    breadcrumb: '내 견적',
     showNewButton: true,
   },
 }
@@ -32,11 +30,9 @@ const LIST_CONFIG = {
 const MANAGER_TAB_CONFIG = {
   mine: {
     title: '내 견적 목록',
-    breadcrumb: '내 견적',
   },
   team: {
     title: '담당 견적 목록',
-    breadcrumb: '담당 견적',
   },
 }
 
@@ -103,16 +99,18 @@ const QuoteListPage = () => {
     {
       key: 'id',
       title: '견적번호',
+      align: 'center',
       render: (val) => (
           <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">
           {val}
         </span>
       ),
     },
-    { key: 'buyerName', title: '거래처' },
+    { key: 'buyerName', title: '거래처', align: 'center' },
     {
       key: 'contactName',
       title: '담당자',
+      align: 'center',
       render: (val) => <span className="text-[var(--color-text-sub)] text-[13px]">{val}</span>,
     },
   ]
@@ -120,6 +118,7 @@ const QuoteListPage = () => {
   const writerColumn = {
     key: 'writerName',
     title: '작성자',
+    align: 'center',
     render: (val, row) => (
         <span className="text-[13px]">
         {val || '-'}
@@ -134,6 +133,7 @@ const QuoteListPage = () => {
     {
       key: 'createdAt',
       title: '발행일',
+      align: 'center',
       render: (val) => (
           <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val || '-'}</span>
       ),
@@ -141,6 +141,7 @@ const QuoteListPage = () => {
     {
       key: 'validUntil',
       title: '유효기한',
+      align: 'center',
       render: (val) => (
           <span className="text-[var(--color-text-sub)] text-[13px] whitespace-nowrap">{val || '-'}</span>
       ),
@@ -148,7 +149,7 @@ const QuoteListPage = () => {
     {
       key: 'totalAmount',
       title: '합계금액',
-      align: 'right',
+      align: 'center',
       render: (val) => <span className="font-semibold">{formatKRW(val)}</span>,
     },
   ]
@@ -158,13 +159,13 @@ const QuoteListPage = () => {
         {
           key: 'profitRate',
           title: '이익률',
-          align: 'right',
+          align: 'center',
           render: (val) => <span className="text-[13px]">{formatRate(val)}</span>,
         },
         {
           key: 'discountRate',
           title: '할인율',
-          align: 'right',
+          align: 'center',
           render: (val) => <span className="text-[13px]">{formatRate(val)}</span>,
         },
       ]
@@ -204,7 +205,7 @@ const QuoteListPage = () => {
   if (error && !loading && quotes.length === 0) {
     return (
         <div>
-          <PageHeader breadcrumbs={['견적 관리', config.breadcrumb]} title={config.title} />
+          <PageHeader breadcrumbSep=">" breadcrumbs={['견적', config.title]} title={config.title} />
           <p className="text-[var(--color-danger)] text-sm">{error}</p>
         </div>
     )
@@ -213,7 +214,8 @@ const QuoteListPage = () => {
   return (
       <div>
         <PageHeader
-            breadcrumbs={['견적 관리', config.breadcrumb]}
+            breadcrumbSep=">"
+            breadcrumbs={['견적', config.title]}
             title={config.title}
             actions={
               config.showNewButton ? (
@@ -309,12 +311,13 @@ const QuoteListPage = () => {
                   </Button>
                 </>
             )}
-            <span className="text-[13px] text-[var(--color-text-muted)] ml-2">
-            {filtered.length}건 표시 중
-          </span>
           </SearchRow>
 
         </SearchPanel>
+
+        <div className="quote-list__toolbar">
+          <span className="quote-list__count">총 {filtered.length}건</span>
+        </div>
 
         <DataTable
             columns={columns}
