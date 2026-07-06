@@ -21,6 +21,7 @@ const CHART = {
 }
 
 const STAFF_PAGE_SIZE = 8
+const DEPT_PAGE_SIZE = 8
 
 function getDateRange(periodKey) {
   const today = new Date()
@@ -85,6 +86,7 @@ export default function DashboardPage() {
   const [staffPage, setStaffPage] = useState(0)
   const [dept, setDept] = useState([])
   const [deptSort, setDeptSort] = useState('amount') // amount | quotes | name
+  const [deptPage, setDeptPage] = useState(0)
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -101,6 +103,7 @@ export default function DashboardPage() {
       ])
       setSummary(s); setAnalysis(a); setTrend(t); setStatusCounts(q); setPopular(p); setStaff(st); setDept(dp)
       setStaffPage(0) // 기간 변경으로 데이터 갱신되면 페이지 초기화
+      setDeptPage(0)
     } catch (e) {
       setError(e.response?.data?.message ?? '대시보드 조회 실패')
     } finally {
@@ -142,6 +145,9 @@ export default function DashboardPage() {
     else arr.sort((a, b) => (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0))
     return arr
   }, [dept, deptSort])
+  const deptTotalPages = Math.ceil(deptSorted.length / DEPT_PAGE_SIZE)
+  const deptSafePage = Math.min(deptPage, Math.max(0, deptTotalPages - 1))
+  const deptPaged = deptSorted.slice(deptSafePage * DEPT_PAGE_SIZE, deptSafePage * DEPT_PAGE_SIZE + DEPT_PAGE_SIZE)
 
   // 차트용 월별 데이터 ("2026-06" → "6월", 이번 달 강조 플래그)
   const trendChart = useMemo(() => {
@@ -436,36 +442,39 @@ export default function DashboardPage() {
         <Panel title="부서별 통계"
           action={dept.length > 0 && (
             <select className="form-select" style={{ height: '30px', fontSize: '12px', width: '104px' }}
-              aria-label="부서 정렬 기준" value={deptSort} onChange={e => setDeptSort(e.target.value)}>
+              aria-label="부서 정렬 기준" value={deptSort} onChange={e => { setDeptSort(e.target.value); setDeptPage(0) }}>
               <option value="amount">총액순</option>
               <option value="quotes">작성순</option>
               <option value="name">이름순</option>
             </select>
           )}>
           {dept.length === 0 ? <Empty /> : (
-            <table className="w-full text-sm">
-              <thead className="text-xs text-[var(--color-text-muted)]">
-                <tr><th className="text-left py-1">부서</th><th className="text-right">작성</th><th className="text-right">승인율</th><th className="text-right">반려율</th><th className="text-right">견적 총액</th></tr>
-              </thead>
-              <tbody>
-                {deptSorted.map(d => {
-                  const clickable = d.department !== '미지정'
-                  const isSel = department === d.department
-                  return (
-                    <tr key={d.department}
-                      onClick={clickable ? () => setDepartment(d.department) : undefined}
-                      title={clickable ? `${d.department} 부서로 필터` : undefined}
-                      style={{ borderTop: '1px solid var(--color-border)', cursor: clickable ? 'pointer' : 'default', background: isSel ? '#EFF6FF' : 'transparent' }}>
-                      <td className="py-1.5 font-medium" style={{ color: isSel ? 'var(--color-primary)' : undefined }}>{d.department}</td>
-                      <td className="text-right">{num(d.totalQuotes)}</td>
-                      <td className="text-right" style={{ color: 'var(--color-success)' }}>{pct(d.approvalRate)}</td>
-                      <td className="text-right" style={{ color: 'var(--color-danger)' }}>{pct(d.rejectionRate)}</td>
-                      <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(d.totalAmount)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <>
+              <table className="w-full text-sm">
+                <thead className="text-xs text-[var(--color-text-muted)]">
+                  <tr><th className="text-left py-1">부서</th><th className="text-right">작성</th><th className="text-right">승인율</th><th className="text-right">반려율</th><th className="text-right">견적 총액</th></tr>
+                </thead>
+                <tbody>
+                  {deptPaged.map(d => {
+                    const clickable = d.department !== '미지정'
+                    const isSel = department === d.department
+                    return (
+                      <tr key={d.department}
+                        onClick={clickable ? () => setDepartment(d.department) : undefined}
+                        title={clickable ? `${d.department} 부서로 필터` : undefined}
+                        style={{ borderTop: '1px solid var(--color-border)', cursor: clickable ? 'pointer' : 'default', background: isSel ? '#EFF6FF' : 'transparent' }}>
+                        <td className="py-1.5 font-medium" style={{ color: isSel ? 'var(--color-primary)' : undefined }}>{d.department}</td>
+                        <td className="text-right">{num(d.totalQuotes)}</td>
+                        <td className="text-right" style={{ color: 'var(--color-success)' }}>{pct(d.approvalRate)}</td>
+                        <td className="text-right" style={{ color: 'var(--color-danger)' }}>{pct(d.rejectionRate)}</td>
+                        <td className="text-right" style={{ color: 'var(--color-primary)' }}>{won(d.totalAmount)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <Pagination page={deptSafePage} totalPages={deptTotalPages} onChange={setDeptPage} showEdge={false} />
+            </>
           )}
         </Panel>
       </div>
