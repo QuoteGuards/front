@@ -23,7 +23,7 @@ const HistoryPage = () => {
 
   return (
     <div>
-      <PageHeader breadcrumbs={['견적 관리', '발송 이력']} title="발송 이력" />
+      <PageHeader breadcrumbSep=">" breadcrumbs={['견적', '발송 이력']} title="발송 이력" />
       <HistoryFilter
         searchInput={searchInput}
         onSearchInputChange={setSearchInput}

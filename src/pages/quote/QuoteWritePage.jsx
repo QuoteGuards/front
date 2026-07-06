@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, Fragment } from 'react'
+﻿import { useState, useEffect, useRef, Fragment, useCallback } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
@@ -19,6 +19,9 @@ import {
     saveQuoteWriteDraft,
     loadQuoteWriteDraft,
     clearQuoteWriteDraft,
+    resolveMountQuoteDraft,
+    getPendingQuoteItems,
+    clearPendingQuoteItems,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
@@ -29,34 +32,46 @@ const initialCustomer = { id: null, companyName: '', contactName: '', email: '',
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
 
+// 담은 제품 병합 시 원가/할인정책 정보가 없을 때 안내 (mount·?id 병합 경로 공용)
+const PENDING_POLICY_WARNING =
+    '적용 가능한 할인정책 정보를 불러오지 못한 제품이 있습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.'
+
 const QuoteWritePage = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const [searchParams, setSearchParams] = useSearchParams()
     const { loading, canWriteQuote, trainingStatus, confirmGuide } = useTrainingStatus()
     const catalogAddHandled = useRef(false)
+    const formSnapshotRef = useRef(null)
 
-    const [restoring, setRestoring] = useState(() => !!searchParams.get('id') && !location.state?.addProduct)
+    const [mountDraft] = useState(() => resolveMountQuoteDraft())
+
+    const [restoring, setRestoring] = useState(() => {
+        if (location.state?.addProduct) return false
+        const idParam = searchParams.get('id')
+        if (!idParam) return false
+        return mountDraft?.savedQuote?.id !== Number(idParam)
+    })
 
     const [guideOpen, setGuideOpen] = useState(false)
     const [loadingGuide, setLoadingGuide] = useState(false)
     const [guideConfirming, setGuideConfirming] = useState(false)
     const [guideContent, setGuideContent] = useState('')
 
-    const [customer, setCustomer] = useState(initialCustomer)
-    const [memo, setMemo] = useState('')
+    const [customer, setCustomer] = useState(() => mountDraft?.customer ?? initialCustomer)
+    const [memo, setMemo] = useState(() => mountDraft?.memo ?? '')
     const [memoSummary, setMemoSummary] = useState('')
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryError, setSummaryError] = useState('')
-    const [issuedDate, setIssuedDate] = useState(todayLocal())
-    const [validUntil, setValidUntil] = useState('')
-    const [deliveryTerm, setDeliveryTerm] = useState('')
-    const [items, setItems] = useState([])
-    const [addingProduct, setAddingProduct] = useState(false)
+    const [issuedDate, setIssuedDate] = useState(() => mountDraft?.issuedDate ?? todayLocal())
+    const [validUntil, setValidUntil] = useState(() => mountDraft?.validUntil ?? '')
+    const [deliveryTerm, setDeliveryTerm] = useState(() => mountDraft?.deliveryTerm ?? '')
+    const [items, setItems] = useState(() => mountDraft?.items ?? [])
+    const [addingProduct, setAddingProduct] = useState(() => !!location.state?.addProduct)
 
     const [saving, setSaving] = useState(false)
     const [saveError, setSaveError] = useState(null)
-    const [savedQuote, setSavedQuote] = useState(null)
+    const [savedQuote, setSavedQuote] = useState(() => mountDraft?.savedQuote ?? null)
 
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState(null)
@@ -72,83 +87,134 @@ const QuoteWritePage = () => {
         setItems((prev) => prev.filter((item) => item.key !== key))
     }
 
-    const restoreDraftForm = (draft) => {
-        if (!draft) return
-        setCustomer(draft.customer ?? initialCustomer)
-        setMemo(draft.memo ?? '')
-        setIssuedDate(draft.issuedDate ?? todayLocal())
-        setValidUntil(draft.validUntil ?? '')
-        setDeliveryTerm(draft.deliveryTerm ?? '')
-        if (draft.savedQuote) setSavedQuote(draft.savedQuote)
-    }
-
-    // catalog에서 견적에 추가 후 복귀: sessionStorage draft 복원 + 제품 append
+    // unmount 시 최신 폼 상태를 읽기 위한 ref (렌더 중 직접 대입 금지 — react-hooks 규칙)
     useEffect(() => {
-        const addProduct = location.state?.addProduct
-        if (!addProduct || catalogAddHandled.current) return
-        catalogAddHandled.current = true
-
-        const draft = loadQuoteWriteDraft()
-        restoreDraftForm(draft)
-        clearQuoteWriteDraft()
-
-        if (draft?.savedQuote?.id) {
-            setSearchParams({ id: String(draft.savedQuote.id) }, { replace: true })
+        formSnapshotRef.current = {
+            customer,
+            memo,
+            issuedDate,
+            validUntil,
+            deliveryTerm,
+            items,
+            savedQuote,
         }
+    }, [customer, memo, issuedDate, validUntil, deliveryTerm, items, savedQuote])
 
-        setAddingProduct(true)
+    const persistDraft = useCallback((overrides = {}) => {
+        saveQuoteWriteDraft({
+            customer,
+            memo,
+            issuedDate,
+            validUntil,
+            deliveryTerm,
+            items,
+            savedQuote,
+            ...overrides,
+        })
+    }, [customer, memo, issuedDate, validUntil, deliveryTerm, items, savedQuote])
 
-        const appendProduct = async () => {
-            let product = addProduct
+    // 페이지 이탈 시 최신 작성 내용 저장
+    useEffect(() => {
+        return () => {
+            const form = formSnapshotRef.current
+            if (!form) return
+            if (form.savedQuote && !EDITABLE_STATUSES.includes(form.savedQuote.status)) return
+            saveQuoteWriteDraft(form)
+        }
+    }, [])
+
+    // URL ?id= 동기화 (draft에 임시저장 id만 있을 때)
+    useEffect(() => {
+        if (location.state?.addProduct) return
+        if (searchParams.get('id') || !mountDraft?.savedQuote?.id) return
+        setSearchParams({ id: String(mountDraft.savedQuote.id) }, { replace: true })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // 작성 중 상태 자동 보존 (사이드바·다른 탭 이동 후 복귀용)
+    useEffect(() => {
+        if (restoring || addingProduct || location.state?.addProduct) return
+        if (savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)) return
+        persistDraft()
+    }, [persistDraft, restoring, addingProduct, savedQuote, location.state?.addProduct])
+
+    // 담아둔(pending) 제품을 최신 정보로 재조회 → 견적 항목으로 변환 (병합은 setItems 시점에)
+    const fetchPendingItems = async (pending) => {
+        const out = []
+        for (const p of pending) {
+            let product = p
             try {
-                const detail = await getQuoteProductContextApi(addProduct.id)
+                const detail = await getQuoteProductContextApi(p.id)
                 product = {
                     ...detail,
-                    id: detail.productId ?? addProduct.id,
-                    name: detail.productName ?? addProduct.name,
-                    code: detail.productCode ?? addProduct.code,
-                    quantity: addProduct.quantity ?? 1,
+                    id: detail.productId ?? p.id,
+                    name: detail.productName ?? p.name,
+                    code: detail.productCode ?? p.code,
                 }
             } catch {
-                // API 실패 시 catalog에서 넘긴 목록 데이터 사용
+                // API 실패 시 담아둔 목록 데이터 사용
             }
-            const newItem = productToQuoteItem(product, product.quantity ?? 1)
-            setItems([...(draft?.items ?? []), newItem])
-            if (!hasItemPolicyInfo(newItem)) {
-                setSaveError(
-                    '적용 가능한 할인정책 정보를 불러오지 못했습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.',
-                )
+            out.push(productToQuoteItem(product, Number(p.quantity) || 1))
+        }
+        return out
+    }
+
+    // prev 품목에 새 품목 병합 (같은 productId면 수량 합산)
+    const mergeItems = (prev, newItems) => {
+        const merged = prev.map((it) => ({ ...it }))
+        for (const ni of newItems) {
+            const existing = merged.find((it) => it.productId === ni.productId)
+            if (existing) {
+                existing.quantity = (Number(existing.quantity) || 0) + (Number(ni.quantity) || 1)
+            } else {
+                merged.push(ni)
             }
         }
+        return merged
+    }
 
-        appendProduct()
+    // 제품 탐색에서 담아둔(pending) 제품을 현재 품목에 병합 (신규/작성중 draft 진입)
+    // (기존 견적 편집 ?id= 서버복원 경로는 아래 복원 effect가 로드 후 병합)
+    /* eslint-disable react-hooks/set-state-in-effect */
+    useEffect(() => {
+        if (catalogAddHandled.current || restoring) return
+        const pending = getPendingQuoteItems()
+        if (pending.length === 0) return
+        catalogAddHandled.current = true
+        setAddingProduct(true)
+
+        fetchPendingItems(pending)
+            .then((newItems) => {
+                setItems((prev) => mergeItems(prev, newItems))
+                if (newItems.some((it) => !hasItemPolicyInfo(it))) {
+                    setSaveError(PENDING_POLICY_WARNING)
+                }
+            })
             .catch(() => {
                 setSaveError('제품 정보를 불러오지 못했습니다. 다시 추가해주세요.')
             })
             .finally(() => {
                 setAddingProduct(false)
-                catalogAddHandled.current = false
-                // search(?id=)는 유지하고 location.state만 비움 — pathname만 navigate하면 쿼리가 사라짐
-                const search =
-                    draft?.savedQuote?.id != null
-                        ? `?id=${draft.savedQuote.id}`
-                        : location.search
-                navigate({ pathname: location.pathname, search }, { replace: true, state: {} })
+                clearPendingQuoteItems()
             })
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.state])
+    }, [])
+    /* eslint-enable react-hooks/set-state-in-effect */
 
-    // URL ?id= 로 기존 견적 복원 (catalog 복귀가 아닐 때만)
+    // URL ?id= 로 기존 견적 복원 (로컬 draft 없을 때만)
     useEffect(() => {
         const idParam = searchParams.get('id')
         if (!idParam || location.state?.addProduct) return
+
+        const draft = loadQuoteWriteDraft()
+        if (draft?.savedQuote?.id === Number(idParam)) return
 
         let cancelled = false
         Promise.all([
             getQuoteById(idParam),
             getInternalAnalysis(idParam).catch(() => null),
         ])
-            .then(([data, analysis]) => {
+            .then(async ([data, analysis]) => {
                 if (cancelled) return
                 setCustomer({
                     id: data.customerId,
@@ -162,9 +228,25 @@ const QuoteWritePage = () => {
                 setIssuedDate(data.issuedDate ?? todayLocal())
                 setValidUntil(data.validUntil ?? '')
                 setDeliveryTerm(data.deliveryTerm ?? '')
-                setItems(itemsFromQuoteResponse(data, {
+
+                const serverItems = itemsFromQuoteResponse(data, {
                     costByItemId: costByItemIdFromAnalysis(analysis),
-                }))
+                })
+                // 편집 가능한 견적이면 제품 탐색에서 담아둔(pending) 제품을 병합
+                const pending = getPendingQuoteItems()
+                if (pending.length > 0 && EDITABLE_STATUSES.includes(data.status)) {
+                    const newItems = await fetchPendingItems(pending)
+                    if (cancelled) return
+                    setItems(mergeItems(serverItems, newItems))
+                    clearPendingQuoteItems()
+                    if (newItems.some((it) => !hasItemPolicyInfo(it))) {
+                        setSaveError(PENDING_POLICY_WARNING)
+                    }
+                } else {
+                    // 편집 불가(locked) 견적: 담은 제품은 병합하지 않고 그대로 보존(clear 안 함)
+                    // → 다음 편집 가능한 견적/신규 작성 진입 시 반영. 의도적으로 유지하는 정책.
+                    setItems(serverItems)
+                }
 
                 setSavedQuote({ id: data.id, quoteNumber: data.quoteNumber, status: data.status })
 
@@ -213,16 +295,26 @@ const QuoteWritePage = () => {
     }
 
     const handleGoToCatalog = () => {
-        saveQuoteWriteDraft({
-            customer,
-            memo,
-            issuedDate,
-            validUntil,
-            deliveryTerm,
-            items,
-            savedQuote,
-        })
+        persistDraft()
         navigate('/catalog')
+    }
+
+    const handleResetForm = () => {
+        if (!window.confirm('작성 중인 내용을 모두 초기화할까요?\n저장하지 않은 변경사항은 사라집니다.')) return
+        clearQuoteWriteDraft()
+        setCustomer(initialCustomer)
+        setMemo('')
+        setMemoSummary('')
+        setSummaryError('')
+        setIssuedDate(todayLocal())
+        setValidUntil('')
+        setDeliveryTerm('')
+        setItems([])
+        setSavedQuote(null)
+        setSaveError(null)
+        setSubmitError(null)
+        setSubmitResult(null)
+        setSearchParams({}, { replace: true })
     }
 
     const validate = () => {
@@ -246,7 +338,6 @@ const QuoteWritePage = () => {
 
     const buildQuoteForm = () => ({
         customer,
-        discountPolicyId: items[0]?.discountPolicyId ?? null,
         items: items.map((item) => {
             const { needsReason, policyMissing } = getItemPolicyFlags(item)
             return {
@@ -312,6 +403,7 @@ const QuoteWritePage = () => {
             const result = await completeQuote(updated.id)
             setSubmitResult(result)
             setSavedQuote(result)
+            clearQuoteWriteDraft()
         } catch (e) {
             setSubmitError(e?.response?.data?.message ?? '제출 중 오류가 발생했습니다.')
         } finally {
@@ -352,7 +444,8 @@ const QuoteWritePage = () => {
     return (
         <div className="quote-page">
             <PageHeader
-                breadcrumbs={['견적 관리', '견적 작성']}
+                breadcrumbSep=">"
+                breadcrumbs={['견적', '견적 작성']}
                 title="견적 작성"
             />
 
@@ -651,6 +744,16 @@ const QuoteWritePage = () => {
                         >
                             미리보기
                         </Button>
+                        {!isLocked && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="quote-page-actions__reset"
+                                onClick={handleResetForm}
+                            >
+                                작성 초기화
+                            </Button>
+                        )}
                     </div>
                     <Button
                         variant="primary"

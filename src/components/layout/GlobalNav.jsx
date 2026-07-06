@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyProfile } from '../../hooks/useMyProfile'
 import { logoutApi } from '../../api/authApi'
+import { clearAllQuoteWriteDrafts } from '../../utils/quoteItemUtils'
 import NotificationBell from '../notification/NotificationBell'
 import './GlobalNav.css'
 
@@ -50,6 +51,7 @@ const GlobalNav = ({ collapsed, onToggle }) => {
 
   const handleLogout = async () => {
     try { await logoutApi() } catch { /* 서버 오류가 있어도 클라이언트 로그아웃 진행 */ }
+    clearAllQuoteWriteDrafts()
     logout()
     navigate('/login', { replace: true })
   }

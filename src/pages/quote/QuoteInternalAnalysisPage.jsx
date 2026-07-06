@@ -5,6 +5,7 @@ import { requestApproval, reRequestApproval, getApprovalHistories } from '../../
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import { formatKRW } from '../../utils/quoteUtils'
+import { parseApiNumber } from '../../utils/quoteItemUtils'
 import './QuotePage.css'
 
 const REASON_LABEL = {
@@ -26,6 +27,9 @@ const APPROVAL_BADGE_CLASS = {
     APPROVED: 'quote-page-badge--approved',
     REJECTED: 'quote-page-badge--rejected',
 }
+
+const BREADCRUMBS = ['견적', '내부 분석']
+const PAGE_TITLE = '내부 견적 분석'
 
 const deriveApprovalStatus = (histories) => {
     if (!histories || histories.length === 0) {
@@ -130,7 +134,7 @@ const QuoteInternalAnalysisPage = () => {
     if (loading) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={BREADCRUMBS} title={PAGE_TITLE} />
                 <div className="quote-page-loading">내부 분석 데이터를 불러오는 중...</div>
             </div>
         )
@@ -139,29 +143,28 @@ const QuoteInternalAnalysisPage = () => {
     if (error && !analysis) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={BREADCRUMBS} title={PAGE_TITLE} />
                 <div className="quote-page-alert quote-page-alert--error">{error}</div>
             </div>
         )
     }
 
     const profitRate = Number(analysis.profitRate ?? 0)
+    const strictestMinProfit = parseApiNumber(analysis.strictestMinProfitRate)
+    const quoteProfitTone =
+        strictestMinProfit != null && profitRate < strictestMinProfit ? 'danger' : 'success'
 
     return (
         <div className="quote-page">
             <PageHeader
-                breadcrumbs={['견적 관리', '내부 분석']}
-                title="내부 견적 분석"
-                actions={
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/quotes/new?id=${quoteId}`)}>
-                        ← 견적 작성으로
-                    </Button>
-                }
+                breadcrumbSep=">"
+                breadcrumbs={BREADCRUMBS}
+                title={PAGE_TITLE}
             />
 
             <div className="quote-page__meta">
                 <p className="quote-page__meta-label">견적번호: {analysis.quoteNumber}</p>
-                <span className={`quote-page-badge ${APPROVAL_BADGE_CLASS[approvalStatus]}`}>
+                <span className={`quote-page-badge quote-page-badge--lg ${APPROVAL_BADGE_CLASS[approvalStatus]}`}>
                     {APPROVAL_STATUS_LABEL[approvalStatus]}
                 </span>
             </div>
@@ -174,12 +177,19 @@ const QuoteInternalAnalysisPage = () => {
                         { title: '예상 이익금', val: formatKRW(analysis.expectedProfitAmount) },
                         {
                             title: '전체 이익률',
+                            titleSuffix:
+                                strictestMinProfit != null ? `(기준 ${strictestMinProfit}%)` : null,
                             val: `${profitRate.toFixed(1)}%`,
-                            tone: profitRate < 20 ? 'danger' : 'success',
+                            tone: quoteProfitTone,
                         },
                     ].map((item) => (
                         <div key={item.title} className="quote-page-stat">
-                            <p className="quote-page-stat__label">{item.title}</p>
+                            <p className="quote-page-stat__label">
+                                {item.title}
+                                {item.titleSuffix ? (
+                                    <span className="quote-page-stat__label-hint"> {item.titleSuffix}</span>
+                                ) : null}
+                            </p>
                             <p className={`quote-page-stat__value${item.tone ? ` quote-page-stat__value--${item.tone}` : ''}`}>
                                 {item.val}
                             </p>
@@ -195,9 +205,15 @@ const QuoteInternalAnalysisPage = () => {
                         <table className="quote-page-table">
                             <thead>
                                 <tr>
-                                    {['제품명', '판매가', '원가', '수량', '할인율', '공급가', '이익금/이익률'].map((h) => (
-                                        <th key={h}>{h}</th>
-                                    ))}
+                                    <th>제품명</th>
+                                    <th>판매가</th>
+                                    <th>원가</th>
+                                    <th>수량</th>
+                                    <th>할인율</th>
+                                    <th className="quote-page-th-policy">최대 할인율</th>
+                                    <th>공급가</th>
+                                    <th className="quote-page-th-policy">최소 이익률</th>
+                                    <th>이익금/이익률</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -205,16 +221,37 @@ const QuoteInternalAnalysisPage = () => {
                                     const lineCost = item.costPrice * item.quantity
                                     const lineProfit = item.lineSupplyAmount - lineCost
                                     const lineProfitRate = item.lineSupplyAmount === 0 ? 0 : (lineProfit / item.lineSupplyAmount) * 100
+                                    const itemMinProfit = parseApiNumber(item.minProfitRate)
+                                    const itemMaxDiscount = parseApiNumber(item.maxDiscountRate)
+                                    const discountRate = Number(item.discountRate ?? 0)
+                                    const exceedsMaxDiscount =
+                                        itemMaxDiscount != null && discountRate > itemMaxDiscount
+                                    const lineProfitTone =
+                                        itemMinProfit != null && lineProfitRate < itemMinProfit
+                                            ? 'quote-page-profit-cell--danger'
+                                            : 'quote-page-profit-cell--success'
                                     return (
                                         <tr key={item.id}>
                                             <td>{item.productName}</td>
                                             <td>{formatKRW(item.unitPrice)}</td>
                                             <td>{formatKRW(item.costPrice)}</td>
                                             <td>{item.quantity}</td>
-                                            <td>{Number(item.discountRate ?? 0)}%</td>
-                                            <td>{formatKRW(item.lineSupplyAmount)}</td>
                                             <td
-                                                className={`quote-page-profit-cell ${lineProfitRate < 20 ? 'quote-page-profit-cell--danger' : 'quote-page-profit-cell--success'}`}
+                                                className={
+                                                    exceedsMaxDiscount ? 'quote-page-profit-cell--danger' : undefined
+                                                }
+                                            >
+                                                {discountRate}%
+                                            </td>
+                                            <td className="quote-page-policy-cell">
+                                                {itemMaxDiscount != null ? `${itemMaxDiscount}%` : '—'}
+                                            </td>
+                                            <td>{formatKRW(item.lineSupplyAmount)}</td>
+                                            <td className="quote-page-policy-cell">
+                                                {itemMinProfit != null ? `${itemMinProfit}%` : '—'}
+                                            </td>
+                                            <td
+                                                className={`quote-page-profit-cell ${lineProfitTone}`}
                                             >
                                                 {formatKRW(lineProfit)} ({lineProfitRate.toFixed(1)}%)
                                             </td>

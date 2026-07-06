@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createCustomer } from '../../api/customerApi'
+import { getMyProfileApi } from '../../api/myProfileApi'
 import Button from '../common/Button'
 
 const initialForm = {
@@ -16,6 +17,22 @@ const CustomerCreateModal = ({ onClose, onCreated }) => {
     const [form, setForm] = useState(initialForm)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState(null)
+
+    // 담당자명 기본값: 로그인 사원 이름 (수정 가능)
+    useEffect(() => {
+        let cancelled = false
+        getMyProfileApi()
+            .then((res) => {
+                if (cancelled) return
+                const userName = res?.data?.name?.trim()
+                if (!userName) return
+                setForm((prev) => (
+                    prev.contactName.trim() ? prev : { ...prev, contactName: userName }
+                ))
+            })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [])
 
     const set = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
@@ -55,7 +72,15 @@ const CustomerCreateModal = ({ onClose, onCreated }) => {
                     </div>
                     <div>
                         <label className="block text-xs font-semibold text-[var(--color-text-sub)] mb-1">담당자명 *</label>
-                        <input value={form.contactName} onChange={set('contactName')} className="form-input" />
+                        <input
+                            value={form.contactName}
+                            onChange={set('contactName')}
+                            placeholder="고객 담당자명"
+                            className="form-input"
+                        />
+                        <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+                            기본값은 로그인 계정 이름이며 필요 시 수정할 수 있습니다.
+                        </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>

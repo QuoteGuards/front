@@ -8,6 +8,7 @@ import EmailModal from '../../components/quote/EmailModal'
 import Toast from '../../components/common/Toast'
 import PageHeader from '../../components/common/PageHeader'
 import { canSendQuoteEmail, quoteSendBlockedMessage } from '../../utils/quoteUtils'
+import './QuotePage.css'
 
 const QuotePreviewPage = () => {
   const { id } = useParams()
@@ -56,12 +57,17 @@ const QuotePreviewPage = () => {
   }
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
-      <PageHeader breadcrumbs={['견적 관리', '견적 미리보기']} />
-      <div className="no-print flex items-center justify-between px-8 pt-8 pb-4">
-        <h1 className="text-xl font-bold text-gray-800">견적서 상세 및 미리보기</h1>
-        <span className="text-sm text-gray-400">견적번호: {quote.id}</span>
-      </div>
+    <div className="quote-page">
+      <PageHeader
+        breadcrumbSep=">"
+        breadcrumbs={['견적', '견적 미리보기']}
+        title="견적서 상세 및 미리보기"
+        actions={
+          <span className="quote-page-quote-no no-print">
+            견적번호 <strong>{quote.id}</strong>
+          </span>
+        }
+      />
 
       <QuoteActionBar
         onPdfDownload={handlePdfDownload}

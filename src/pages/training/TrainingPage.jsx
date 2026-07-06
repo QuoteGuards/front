@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
 import { useAuth } from '../../hooks/useAuth'
@@ -9,7 +9,10 @@ import TrainingSummaryCards from '../../components/training/TrainingSummaryCards
 import { TRAINING_COMPLETE_THRESHOLD } from '../../constants/training'
 import { TRAINING_TYPE_LABEL } from '../../constants/trainingCourses'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
 import './TrainingPage.css'
+
+const MANAGER_COURSE_ORDER = ['QUOTE_WRITE', 'MANAGER_OPERATIONS']
 
 const TrainingPage = () => {
     const navigate = useNavigate()
@@ -37,10 +40,20 @@ const TrainingPage = () => {
     const [durationSeconds, setDurationSeconds] = useState(0)
     const [pickedVideoId, setPickedVideoId] = useState(null)
 
+    const displayCourses = useMemo(() => {
+        if (!isManager) return requiredCourses
+        const byType = new Map(requiredCourses.map((course) => [course.trainingType, course]))
+        return MANAGER_COURSE_ORDER.map((type) => byType.get(type)).filter(Boolean)
+    }, [isManager, requiredCourses])
+
+    const defaultCourseType = displayCourses.find((course) => !course.completed)?.trainingType
+        ?? displayCourses[0]?.trainingType
+        ?? null
+
     const selectedCourseType = pickedCourseType != null
-        && requiredCourses.some((course) => course.trainingType === pickedCourseType)
+        && displayCourses.some((course) => course.trainingType === pickedCourseType)
         ? pickedCourseType
-        : (requiredCourses[0]?.trainingType ?? null)
+        : defaultCourseType
 
     useEffect(() => {
         if (!selectedCourseType) return undefined
@@ -63,10 +76,10 @@ const TrainingPage = () => {
         }
     }, [selectedCourseType, loadCourseContent])
 
-    const courseStatus = requiredCourses.find((course) => course.trainingType === selectedCourseType) ?? null
+    const courseStatus = displayCourses.find((course) => course.trainingType === selectedCourseType) ?? null
     const statusVideos = courseStatus?.videos
     const contentVideos = trainingContent?.videos
-    const sourceVideos = statusVideos?.length ? statusVideos : (contentVideos ?? [])
+    const sourceVideos = (statusVideos?.length ? statusVideos : contentVideos) ?? []
     const videos = [...sourceVideos].sort((a, b) => a.sortOrder - b.sortOrder)
 
     const selectedVideoId = pickedVideoId != null && videos.some((video) => video.id === pickedVideoId)
@@ -132,12 +145,17 @@ const TrainingPage = () => {
     const primaryActionEnabled = isManager ? canReviewApproval && courseCanClickComplete : canClickComplete
 
     return (
-        <div>
+        <div className="training-page">
             <PageHeader
+                breadcrumbSep=">"
                 breadcrumbs={['계정', '교육 이수']}
-                title={trainingContent?.title || '필수 교육 이수'}
-                actions={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                title="교육 이수"
+            />
+
+            <div className="training-page__shell">
+                <div className="training-page__main">
+                <div className="training-intro">
+                    <div className="training-intro__badges">
                         {trainingContent?.required && (
                             <span className="training-header__required">필수</span>
                         )}
@@ -146,87 +164,88 @@ const TrainingPage = () => {
                         )}
                         <TrainingStatusBadge status={courseStatus?.status ?? trainingStatus?.status} />
                     </div>
-                }
-            />
 
-            <div className="training-header" style={{ borderTop: 'none' }}>
-                {requiredCourses.length > 1 && (
-                    <div className="training-video-tabs" role="tablist" aria-label="필수 교육 코스">
-                        {requiredCourses.map((course) => (
-                            <button
-                                key={course.trainingType}
-                                type="button"
-                                role="tab"
-                                aria-selected={selectedCourseType === course.trainingType}
-                                className={[
-                                    'training-video-tab',
-                                    selectedCourseType === course.trainingType ? 'training-video-tab--active' : '',
-                                    course.completed ? 'training-video-tab--done' : '',
-                                ].filter(Boolean).join(' ')}
-                                onClick={() => {
-                                    setPickedCourseType(course.trainingType)
-                                    setPickedVideoId(null)
-                                }}
-                            >
-                                <span>{TRAINING_TYPE_LABEL[course.trainingType] ?? course.trainingType}</span>
-                                {course.completed && <span className="training-video-tab__badge">완료</span>}
-                            </button>
-                        ))}
-                    </div>
-                )}
+                    {displayCourses.length > 1 && (
+                        <div className="training-course-tabs" role="tablist" aria-label="필수 교육 코스">
+                            {displayCourses.map((course) => (
+                                <button
+                                    key={course.trainingType}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={selectedCourseType === course.trainingType}
+                                    className={[
+                                        'training-course-tab',
+                                        selectedCourseType === course.trainingType ? 'training-course-tab--active' : '',
+                                        course.completed ? 'training-course-tab--done' : '',
+                                    ].filter(Boolean).join(' ')}
+                                    onClick={() => {
+                                        setPickedCourseType(course.trainingType)
+                                        setPickedVideoId(null)
+                                    }}
+                                >
+                                    <span>{TRAINING_TYPE_LABEL[course.trainingType] ?? course.trainingType}</span>
+                                    {course.completed && <span className="training-course-tab__badge">완료</span>}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
-                <p className="training-header__desc">
-                    {trainingContent?.description || (isManager
-                        ? '승인 검토를 위해 필수 교육 영상을 모두 시청하고 가이드 확인을 완료해 주세요.'
-                        : '견적 작성 기능을 사용하려면 활성화된 교육 영상을 모두 시청하고 가이드 확인을 완료해 주세요.')}
-                </p>
+                    <p className="training-intro__desc">
+                        {trainingContent?.description || (isManager
+                            ? '승인 검토를 위해 필수 교육 영상을 모두 시청하고 가이드 확인을 완료해 주세요.'
+                            : '견적 작성 기능을 사용하려면 활성화된 교육 영상을 모두 시청하고 가이드 확인을 완료해 주세요.')}
+                    </p>
 
-                {(additionalTrainingRequired || courseAdditionalTraining) && (
-                    <div className="training-notice training-notice--alert">
-                        <p className="training-notice__title">추가 교육이 필요합니다</p>
-                        <p className="training-notice__body">
-                            새로운 필수 교육 영상이 추가되었습니다. ({completedVideoCount}/{activeVideoCount} 완료)
-                            {isManager
-                                ? ' 추가 영상을 이수하기 전까지 승인 처리가 제한됩니다.'
-                                : ' 추가 영상을 이수하기 전까지 견적 작성이 제한됩니다.'}
-                        </p>
-                    </div>
-                )}
+                    {(additionalTrainingRequired || courseAdditionalTraining) && (
+                        <div className="training-notice training-notice--alert">
+                            <p className="training-notice__title">추가 교육이 필요합니다</p>
+                            <p className="training-notice__body">
+                                새로운 필수 교육 영상이 추가되었습니다. ({completedVideoCount}/{activeVideoCount} 완료)
+                                {isManager
+                                    ? ' 추가 영상을 이수하기 전까지 승인 처리가 제한됩니다.'
+                                    : ' 추가 영상을 이수하기 전까지 견적 작성이 제한됩니다.'}
+                            </p>
+                        </div>
+                    )}
 
-                {showStaffNotice && (
-                    <div className="training-notice">
-                        <p className="training-notice__title">교육 이수 필요</p>
-                        <p className="training-notice__body">
-                            활성 교육 영상 {activeVideoCount}개를 모두 {TRAINING_COMPLETE_THRESHOLD}% 이상 시청하고 가이드 확인을 완료해야 합니다.
-                        </p>
-                    </div>
-                )}
+                    {showStaffNotice && (
+                        <div className="training-notice">
+                            <p className="training-notice__title">교육 이수 필요</p>
+                            <p className="training-notice__body">
+                                활성 교육 영상 {activeVideoCount}개를 모두 {TRAINING_COMPLETE_THRESHOLD}% 이상 시청하고 가이드 확인을 완료해야 합니다.
+                            </p>
+                        </div>
+                    )}
 
-                {showManagerNotice && (
-                    <div className="training-notice">
-                        <p className="training-notice__title">관리자 교육 이수 필요</p>
-                        <p className="training-notice__body">
-                            승인·반려 처리를 위해 필수 교육을 모두 이수해야 합니다.
-                        </p>
-                    </div>
-                )}
-
-                <div className="training-summary">
-                    <TrainingSummaryCards
-                        status={courseStatus ?? trainingStatus}
-                        durationSeconds={durationSeconds}
-                        activeVideoCount={activeVideoCount}
-                        completedVideoCount={completedVideoCount}
-                    />
+                    {showManagerNotice && (
+                        <div className="training-notice">
+                            <p className="training-notice__title">관리자 교육 이수 필요</p>
+                            <p className="training-notice__body">
+                                승인·반려 처리를 위해 필수 교육을 모두 이수해야 합니다.
+                            </p>
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            <div className="training-content">
-                <div className="training-card">
-                    <div className="training-video-card__header">
-                        <span className="training-video-card__label">
-                            교육 영상 ({completedVideoCount}/{activeVideoCount} 완료)
-                        </span>
+                <div className="training-card training-video-panel">
+                    <div className="training-video-panel__hero">
+                        <div>
+                            <p className="training-video-panel__eyebrow">STEP 1 · 교육 영상</p>
+                            <h2 className="training-video-panel__title">
+                                {selectedVideo?.title || trainingContent?.title || '교육 영상'}
+                            </h2>
+                            <p className="training-video-panel__sub">
+                                {completedVideoCount}/{activeVideoCount}개 영상 완료 · 최소 시청률 {TRAINING_COMPLETE_THRESHOLD}%
+                            </p>
+                        </div>
+                        <div className="training-video-panel__badge" aria-hidden="true">
+                            <span className="training-video-panel__badge-value">
+                                {activeVideoCount > 0
+                                    ? Math.round((completedVideoCount / activeVideoCount) * 100)
+                                    : 0}%
+                            </span>
+                            <span className="training-video-panel__badge-label">진행</span>
+                        </div>
                     </div>
 
                     {contentLoading ? (
@@ -236,94 +255,130 @@ const TrainingPage = () => {
                             등록된 활성 교육 영상이 없습니다. 관리자에게 문의해 주세요.
                         </div>
                     ) : (
-                        <>
+                        <div className={videos.length > 1 ? 'training-video-layout' : 'training-video-layout training-video-layout--single'}>
                             {videos.length > 1 && (
-                                <div className="training-video-tabs" role="tablist" aria-label="교육 영상 목록">
+                                <div className="training-video-picker" role="tablist" aria-label="교육 영상 목록">
+                                    <p className="training-video-picker__label">영상 목록</p>
                                     {videos.map((video, index) => {
                                         const done = Number(video.progressRate ?? 0) >= TRAINING_COMPLETE_THRESHOLD
+                                        const isActive = selectedVideoId === video.id
+                                        const rate = Number(video.progressRate ?? 0)
                                         return (
                                             <button
                                                 key={video.id}
                                                 type="button"
                                                 role="tab"
-                                                aria-selected={selectedVideoId === video.id}
+                                                aria-selected={isActive}
                                                 className={[
-                                                    'training-video-tab',
-                                                    selectedVideoId === video.id ? 'training-video-tab--active' : '',
-                                                    done ? 'training-video-tab--done' : '',
+                                                    'training-video-picker__item',
+                                                    isActive ? 'training-video-picker__item--active' : '',
+                                                    done ? 'training-video-picker__item--done' : '',
                                                 ].filter(Boolean).join(' ')}
                                                 onClick={() => setPickedVideoId(video.id)}
                                             >
-                                                <span>{video.title || `영상 ${index + 1}`}</span>
-                                                {done && <span className="training-video-tab__badge">완료</span>}
+                                                <span className="training-video-picker__index">{index + 1}</span>
+                                                <span className="training-video-picker__text">
+                                                    <span className="training-video-picker__name">
+                                                        {video.title || `영상 ${index + 1}`}
+                                                    </span>
+                                                    <span className="training-video-picker__rate">
+                                                        시청률 {rate.toFixed(0)}%
+                                                    </span>
+                                                </span>
+                                                {done && <span className="training-video-picker__badge">완료</span>}
                                             </button>
                                         )
                                     })}
                                 </div>
                             )}
 
-                            <div className="training-video-card__header" style={{ marginTop: '12px' }}>
-                                <span className="training-video-card__subtitle">
-                                    {selectedVideo?.title || '교육 영상'}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={handleManualVideoComplete}
-                                    className={[
-                                        'training-video-complete-btn',
-                                        Number(selectedVideo?.progressRate ?? 0) >= 100 ? 'training-video-complete-btn--done' : '',
-                                    ].filter(Boolean).join(' ')}
-                                >
-                                    {Number(selectedVideo?.progressRate ?? 0) >= 100 ? '✓ 영상 시청 완료' : '영상 시청 완료 처리'}
-                                </button>
+                            <div className="training-video-player-wrap">
+                                <TrainingVideoPlayer
+                                    key={selectedVideo?.id ?? 'empty'}
+                                    videoUrl={selectedVideo?.videoUrl}
+                                    initialStatus={selectedVideo}
+                                    onSaveProgress={handleSaveProgress}
+                                    onDurationChange={setDurationSeconds}
+                                    onManualComplete={handleManualVideoComplete}
+                                    manualCompleteDone={Number(selectedVideo?.progressRate ?? 0) >= TRAINING_COMPLETE_THRESHOLD}
+                                />
                             </div>
-
-                            <TrainingVideoPlayer
-                                key={selectedVideo?.id ?? 'empty'}
-                                videoUrl={selectedVideo?.videoUrl}
-                                initialStatus={selectedVideo}
-                                onSaveProgress={handleSaveProgress}
-                                onDurationChange={setDurationSeconds}
-                            />
-                        </>
+                        </div>
                     )}
                 </div>
 
-                <div className="training-card">
-                    <div className="training-guide-card">
-                        <div>
-                            <p className="training-guide-card__info-title">교육 가이드 확인</p>
-                            <p className="training-guide-card__info-sub">
-                                {isManager && selectedCourseType === 'MANAGER_OPERATIONS'
-                                    ? '승인 검토 절차, 부서 운영 정책 등을 확인하세요.'
-                                    : '견적 작성 절차, 할인율 기준, 승인 요청 조건 등을 확인하세요.'}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setGuideOpen(true)}
-                            className={[
-                                'training-guide-btn',
-                                courseGuideConfirmed ? 'training-guide-btn--done' : '',
-                            ].filter(Boolean).join(' ')}
-                        >
-                            {courseGuideConfirmed ? '✓ 가이드 확인 완료' : '가이드 확인하기'}
-                        </button>
+                <div className="training-card training-guide-panel">
+                    <div className="training-guide-panel__head">
+                        <p className="training-guide-panel__eyebrow">STEP 2 · 가이드</p>
+                        <p className="training-guide-card__info-title">교육 가이드 확인</p>
+                        <p className="training-guide-card__info-sub">
+                            {isManager && selectedCourseType === 'MANAGER_OPERATIONS'
+                                ? '승인 검토 절차, 부서 운영 정책 등을 확인하세요.'
+                                : '견적 작성 절차, 할인율 기준, 승인 요청 조건 등을 확인하세요.'}
+                        </p>
                     </div>
+                    <Button
+                        type="button"
+                        variant={courseGuideConfirmed ? 'success' : 'outline'}
+                        size="sm"
+                        onClick={() => setGuideOpen(true)}
+                    >
+                        {courseGuideConfirmed ? '✓ 가이드 확인 완료' : '가이드 확인하기'}
+                    </Button>
                 </div>
 
                 <div className="training-actions">
-                    <button
+                    <Button
                         type="button"
+                        variant="primary"
+                        size="md"
                         disabled={!primaryActionEnabled}
                         onClick={handleCompleteAction}
-                        className="training-complete-btn"
                     >
                         {isManager
-                            ? (canReviewApproval ? '승인 검토 화면으로 이동하기 →' : '교육 이수 후 승인 검토 가능')
-                            : (canWriteQuote ? '견적 작성 화면으로 이동하기 →' : '이수 완료 처리하기')}
-                    </button>
+                            ? (canReviewApproval ? '승인 검토 화면으로 이동' : '교육 이수 후 승인 검토 가능')
+                            : (canWriteQuote ? '견적 작성 화면으로 이동' : '이수 완료 처리하기')}
+                    </Button>
                 </div>
+                </div>
+
+                <aside className="training-page__aside">
+                    <div className="training-summary">
+                        <TrainingSummaryCards
+                            status={courseStatus ?? trainingStatus}
+                            durationSeconds={durationSeconds}
+                            activeVideoCount={activeVideoCount}
+                            completedVideoCount={completedVideoCount}
+                        />
+                    </div>
+
+                    <div className="training-steps">
+                        <p className="training-steps__title">이수 체크리스트</p>
+                        <ol className="training-steps__list">
+                            <li className={completedVideoCount === activeVideoCount && activeVideoCount > 0 ? 'training-steps__item--done' : ''}>
+                                <span className="training-steps__num">1</span>
+                                <span className="training-steps__text">
+                                    교육 영상 시청
+                                    <small>{completedVideoCount}/{activeVideoCount} 완료</small>
+                                </span>
+                            </li>
+                            <li className={courseGuideConfirmed ? 'training-steps__item--done' : ''}>
+                                <span className="training-steps__num">2</span>
+                                <span className="training-steps__text">
+                                    가이드 확인
+                                    <small>{courseGuideConfirmed ? '확인 완료' : '미확인'}</small>
+                                </span>
+                            </li>
+                            <li className={primaryActionEnabled ? 'training-steps__item--done' : ''}>
+                                <span className="training-steps__num">3</span>
+                                <span className="training-steps__text">
+                                    이수 완료
+                                    <small>{courseCompleted ? '완료' : '진행 중'}</small>
+                                </span>
+                            </li>
+                        </ol>
+                    </div>
+                </aside>
             </div>
 
             {guideOpen && (

@@ -1,3 +1,6 @@
+import { getStoredToken } from '../contexts/AuthContext'
+import { decodeJwt } from './jwt'
+
 /** API 숫자 필드 파싱 (null/undefined면 null — 잘못된 기본값 넣지 않음) */
 
 export const parseApiNumber = (value) => {
@@ -196,47 +199,132 @@ export const productToQuoteItem = (product, quantity = 1) => ({
 
 
 
-const QUOTE_WRITE_DRAFT_KEY = 'quoteGuard.quoteWriteDraft'
+const QUOTE_WRITE_DRAFT_KEY_PREFIX = 'quoteGuard.quoteWriteDraft'
+const LEGACY_QUOTE_WRITE_DRAFT_KEY = 'quoteGuard.quoteWriteDraft'
 
+function getCurrentWriterId() {
+  const token = getStoredToken()
+  if (!token) return null
+  return decodeJwt(token)?.sub ?? null
+}
 
+function getQuoteWriteDraftKey(writerId = getCurrentWriterId()) {
+  if (!writerId) return null
+  return `${QUOTE_WRITE_DRAFT_KEY_PREFIX}.${writerId}`
+}
 
-/** 제품 탐색 갔다 올 때 작성 중 폼 복원용 (sessionStorage) */
+/** 견적 작성 화면 이탈 후 복귀 시 폼 복원용 (sessionStorage, 로그인 사용자별 분리) */
+export function buildQuoteWriteDraft(payload, writerId = getCurrentWriterId()) {
+  return {
+    writerId,
+    customer: payload.customer,
+    memo: payload.memo ?? '',
+    issuedDate: payload.issuedDate,
+    validUntil: payload.validUntil ?? '',
+    deliveryTerm: payload.deliveryTerm ?? '',
+    items: payload.items ?? [],
+    savedQuote: payload.savedQuote ?? null,
+    updatedAt: Date.now(),
+  }
+}
 
 export function saveQuoteWriteDraft(draft) {
-
-  sessionStorage.setItem(QUOTE_WRITE_DRAFT_KEY, JSON.stringify(draft))
-
+  const writerId = getCurrentWriterId()
+  const key = getQuoteWriteDraftKey(writerId)
+  if (!key) return
+  sessionStorage.setItem(key, JSON.stringify(buildQuoteWriteDraft(draft, writerId)))
 }
-
-
 
 export function loadQuoteWriteDraft() {
+  const writerId = getCurrentWriterId()
+  const key = getQuoteWriteDraftKey(writerId)
+  if (!key) return null
 
   try {
-
-    const raw = sessionStorage.getItem(QUOTE_WRITE_DRAFT_KEY)
-
-    return raw ? JSON.parse(raw) : null
-
+    const raw = sessionStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed.writerId && parsed.writerId !== writerId) return null
+    return parsed
   } catch {
-
     return null
-
   }
-
 }
-
-
 
 export function clearQuoteWriteDraft() {
+  const key = getQuoteWriteDraftKey()
+  if (key) sessionStorage.removeItem(key)
+  sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
+}
 
-  sessionStorage.removeItem(QUOTE_WRITE_DRAFT_KEY)
+/** 로그아웃 시 다른 계정으로 draft가 노출되지 않도록 전체 삭제 */
+export function clearAllQuoteWriteDrafts() {
+  try {
+    const keysToRemove = []
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith(QUOTE_WRITE_DRAFT_KEY_PREFIX)) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => sessionStorage.removeItem(key))
+    sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
+  } catch {
+    // 프라이빗 모드·저장소 제한 등 — 로그아웃 흐름은 계속 진행
+  }
+}
 
+/** 마운트 시 sessionStorage draft를 동기 로드 (URL id와 일치할 때만) */
+export function resolveMountQuoteDraft() {
+  const idParam = new URLSearchParams(window.location.search).get('id')
+  const draft = loadQuoteWriteDraft()
+  if (!draft) return null
+  if (idParam && draft.savedQuote?.id !== Number(idParam)) return null
+  return draft
+}
+
+
+const PENDING_ITEMS_KEY = 'quoteGuard.pendingQuoteItems'
+
+/** 제품 탐색 화면에서 "견적에 추가"로 담아둔 제품 목록 (sessionStorage, 견적 진입 시 병합) */
+export function getPendingQuoteItems() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_ITEMS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 담은 제품 추가. 같은 productId면 수량 합산(누적).
+ * @returns 담긴 서로 다른 제품 종류 수 (배지 표시용)
+ */
+export function addPendingQuoteItem(product, quantity = 1) {
+  const qty = Math.max(1, Number(quantity) || 1)
+  const list = getPendingQuoteItems()
+  const idx = list.findIndex((it) => it.id === product.id)
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], quantity: (Number(list[idx].quantity) || 0) + qty }
+  } else {
+    list.push({ ...product, quantity: qty })
+  }
+  try {
+    sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(list))
+  } catch {
+    // 저장 실패(용량 초과·프라이빗 모드 등) → 호출부(addToQuote)에서 실패 토스트를 띄우도록 전파
+    throw new Error('견적 담기 저장에 실패했습니다.')
+  }
+  return list.length
+}
+
+export function clearPendingQuoteItems() {
+  sessionStorage.removeItem(PENDING_ITEMS_KEY)
 }
 
 
 
-/** QuoteDetailResponse → items state 동기화용 */
+/** QuoteDetailResponse 견적 헤더 policy (strictest, 표시·fallback용) */
 
 export const quotePolicyFromResponse = (data) => ({
 
@@ -261,10 +349,20 @@ export const costByItemIdFromAnalysis = (analysis) => {
   return map
 }
 
-/** QuoteItemResponse + QuoteDetailResponse(견적 단위 정책) → 견적 항목 state */
+/** QuoteItemResponse → 견적 항목 state (품목 policy 우선, 없으면 견적 헤더 fallback) */
+export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {}) => {
+  const itemMax = parseApiNumber(item.maxDiscountRate)
+  const itemMin = parseApiNumber(item.minProfitRate)
+  const hasItemPolicy =
+    itemMax != null && itemMin != null
 
-export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {}) => ({
+  const maxDiscountRate = hasItemPolicy ? itemMax : parseApiNumber(quotePolicy.maxDiscountRate)
+  const minProfitRate = hasItemPolicy ? itemMin : parseApiNumber(quotePolicy.minProfitRate)
+  const discountPolicyId = hasItemPolicy
+    ? (item.discountPolicyId ?? null)
+    : (quotePolicy.discountPolicyId ?? null)
 
+  return {
   key: `saved-${item.id ?? index}`,
 
   productId: item.productId,
@@ -287,13 +385,13 @@ export const quoteItemFromApi = (item, index, quotePolicy = {}, costByItemId = {
 
   discountReason: item.discountReason ?? '',
 
-  maxDiscountRate: parseApiNumber(quotePolicy.maxDiscountRate),
+  maxDiscountRate,
 
-  minProfitRate: parseApiNumber(quotePolicy.minProfitRate),
+  minProfitRate,
 
-  discountPolicyId: quotePolicy.discountPolicyId ?? null,
-
-})
+  discountPolicyId,
+  }
+}
 
 
 
