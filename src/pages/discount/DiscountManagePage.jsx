@@ -257,6 +257,7 @@ export default function DiscountManagePage() {
     <div>
       <PageHeader
         breadcrumbs={['제품', '할인 정책']}
+        breadcrumbSep=">"
         title="할인 정책"
         actions={<Button variant="primary" onClick={openCreate}>+ 정책 등록</Button>}
       />

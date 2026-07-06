@@ -128,6 +128,7 @@ export default function FavoritesPage() {
     <div>
       <PageHeader
         breadcrumbs={['제품', '즐겨찾기']}
+        breadcrumbSep=">"
         title="즐겨찾기"
       />
 

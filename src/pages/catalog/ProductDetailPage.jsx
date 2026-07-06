@@ -95,7 +95,7 @@ export default function ProductDetailPage() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={['제품', '제품 상세']} />
+      <PageHeader breadcrumbs={['제품', '제품 상세']} breadcrumbSep=">" />
 
       {/* 돌아가기 */}
       <div style={{ marginBottom: '16px' }}>

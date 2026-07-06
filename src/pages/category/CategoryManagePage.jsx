@@ -328,6 +328,7 @@ export default function CategoryManagePage() {
       <div>
         <PageHeader
             breadcrumbs={['제품', '카테고리 관리']}
+            breadcrumbSep=">"
             title="카테고리 관리"
             actions={
               <Button variant="primary" onClick={() => startCreate(null, 1)}>

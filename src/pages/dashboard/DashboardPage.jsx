@@ -207,6 +207,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         breadcrumbs={['통계', '대시보드']}
+        breadcrumbSep=">"
         title="통계 대시보드"
         actions={
           <div className="flex items-center gap-2 flex-wrap">

@@ -657,6 +657,7 @@ export default function ProductManagePage() {
       <div>
         <PageHeader
             breadcrumbs={['제품', '제품 관리']}
+            breadcrumbSep=">"
             title="제품 관리"
             actions={
               <>

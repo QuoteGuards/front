@@ -151,7 +151,7 @@ export default function ProductSearchPage() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" />
+      <PageHeader breadcrumbs={['제품', '제품 탐색']} title="제품 탐색" breadcrumbSep=">" />
 
       {/* ── 검색 패널 ── */}
       <SearchPanel>
