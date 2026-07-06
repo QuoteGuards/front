@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { TRAINING_COMPLETE_THRESHOLD } from '../../constants/training'
+import Button from '../common/Button'
 
-const SAVE_INTERVAL_MS = 7000 // 5~10초 사이 debounce
+const SAVE_INTERVAL_MS = 7000
 
 const formatTime = (sec) => {
     const s = Math.max(0, Math.floor(sec || 0))
@@ -10,7 +11,15 @@ const formatTime = (sec) => {
     return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`
 }
 
-const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurationChange }) => {
+const TrainingVideoPlayer = ({
+    videoUrl,
+    initialStatus,
+    onSaveProgress,
+    onDurationChange,
+    onManualComplete,
+    manualCompleteLabel = '영상 시청 완료 처리',
+    manualCompleteDone = false,
+}) => {
     const videoRef = useRef(null)
     const maxWatchedRef = useRef(initialStatus?.watchedSeconds ?? 0)
     const lastSavedRef = useRef(0)
@@ -101,7 +110,7 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
             video.removeEventListener('ended', handleEnded)
             persist(true)
         }
-    }, [videoUrl, persist])
+    }, [videoUrl, persist, lastWatchedSeconds])
 
     const handleResumeClick = () => {
         const video = videoRef.current
@@ -111,39 +120,48 @@ const TrainingVideoPlayer = ({ videoUrl, initialStatus, onSaveProgress, onDurati
     }
 
     return (
-        <div>
-            <div className="rounded-xl overflow-hidden bg-black aspect-video">
+        <div className="training-video-player">
+            <div className="training-video-player__frame">
                 {videoUrl ? (
-                    <video ref={videoRef} src={videoUrl} controls className="w-full h-full" />
+                    <video ref={videoRef} src={videoUrl} controls />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                    <div className="training-video-player__empty">
                         영상을 불러올 수 없습니다.
                     </div>
                 )}
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+            <div className="training-video-player__meta">
                 <span>
-                    현재 시청 시간 {formatTime(currentTime)} / 영상 총 길이 {formatTime(duration)}
+                    현재 시청 {formatTime(currentTime)} / 총 {formatTime(duration)}
                 </span>
-                <span className="font-semibold text-violet-700">시청률 {progressRate.toFixed(1)}%</span>
+                <span className="training-video-player__rate">시청률 {progressRate.toFixed(1)}%</span>
             </div>
 
-            <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className="training-video-player__bar">
                 <div
-                    className="h-full bg-violet-600 transition-all"
+                    className="training-video-player__bar-fill"
                     style={{ width: `${Math.min(100, progressRate)}%` }}
                 />
             </div>
 
-            {canResume && (
-                <button
-                    onClick={handleResumeClick}
-                    className="mt-3 text-xs px-3 py-1.5 rounded-lg border border-violet-300 text-violet-700 hover:bg-violet-50 transition-colors"
-                >
-                    ▶ {formatTime(lastWatchedSeconds)}부터 이어보기
-                </button>
-            )}
+            <div className="training-video-player__toolbar">
+                {canResume && (
+                    <Button type="button" variant="outline" size="sm" onClick={handleResumeClick}>
+                        ▶ {formatTime(lastWatchedSeconds)}부터 이어보기
+                    </Button>
+                )}
+                {onManualComplete && (
+                    <Button
+                        type="button"
+                        variant={manualCompleteDone ? 'success' : 'outline'}
+                        size="sm"
+                        onClick={onManualComplete}
+                    >
+                        {manualCompleteDone ? '✓ 영상 시청 완료' : manualCompleteLabel}
+                    </Button>
+                )}
+            </div>
         </div>
     )
 }

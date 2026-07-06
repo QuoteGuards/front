@@ -4,9 +4,11 @@ import { getQuoteById, getInternalAnalysis, reuseQuote, rewriteQuote, downloadQu
 import { getApprovalHistories } from '../../api/approvalApi'
 import { getEmailHistory } from '../../api/emailApi'
 import EmailModal from '../../components/quote/EmailModal'
-import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_STATUS_STYLE as STATUS_STYLE, QUOTE_CANCELLABLE_STATUSES } from '../../constants/quoteStatus'
+import { QUOTE_STATUS_LABEL as STATUS_LABEL, QUOTE_CANCELLABLE_STATUSES } from '../../constants/quoteStatus'
 import PageHeader from '../../components/common/PageHeader'
+import Button from '../../components/common/Button'
 import { formatKRW, canSendQuoteEmail, quoteSendBlockedMessage } from '../../utils/quoteUtils'
+import './QuotePage.css'
 
 // APPROVAL_PENDING 상태는 "승인이 필요하다고 판정됨"만 의미하고
 // 실제 승인 요청(ApprovalRequest)을 보냈는지는 별도로 이력을 봐야 알 수 있음
@@ -134,19 +136,11 @@ const QuoteDetailPage = () => {
     }
 
     if (loading) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
-                <p className="text-gray-400 text-sm">견적 정보를 불러오는 중...</p>
-            </div>
-        )
+        return <div className="quote-page-loading">견적 정보를 불러오는 중...</div>
     }
 
     if (error || !quote) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-screen bg-gray-50">
-                <p className="text-red-400 text-sm">{error ?? '견적 정보를 불러올 수 없습니다.'}</p>
-            </div>
-        )
+        return <div className="quote-page-loading" style={{ color: 'var(--color-danger)' }}>{error ?? '견적 정보를 불러올 수 없습니다.'}</div>
     }
 
     const isEditable = EDITABLE_STATUSES.includes(quote.status)
@@ -157,60 +151,64 @@ const QuoteDetailPage = () => {
 
     const discountAmount = (quote.subtotal ?? 0) - (quote.supplyAmount ?? 0)
 
+    const statusLabel = quote.status === 'APPROVAL_PENDING'
+        ? (hasSubmittedApprovalRequest(histories) ? '승인 대기중 (요청됨)' : '승인 필요 (요청 전)')
+        : quote.status === 'REVISING' && getLastRejection(histories)
+            ? '반려됨 (수정 필요)'
+            : (STATUS_LABEL[quote.status] ?? quote.status)
+
     return (
-        <div className="flex-1 bg-gray-50 min-h-screen pb-10">
-        <PageHeader breadcrumbs={['견적 관리', '견적 상세']} />
-            <div className="bg-white border-b border-gray-200 px-8 py-5">
-                <button onClick={() => navigate('/quotes')} className="text-xs text-gray-400 hover:text-gray-600 mb-2">
-                    ← 내 견적 목록
-                </button>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-gray-800">견적 상세</h1>
-                        <p className="text-sm text-gray-400 mt-1">
-                            견적번호: {quote.quoteNumber} · 작성일: {quote.createdAt?.slice(0, 10)} · 유효기간: {quote.validUntil ?? '-'}
-                        </p>
-                    </div>
-                    <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${quote.status === 'REVISING' && getLastRejection(histories)
-                        ? 'bg-red-100 text-red-600'
-                        : STATUS_STYLE[quote.status] ?? 'bg-gray-100 text-gray-500'
-                        }`}>
-                        {quote.status === 'APPROVAL_PENDING'
-                            ? (hasSubmittedApprovalRequest(histories) ? '승인 대기중 (요청됨)' : '승인 필요 (요청 전)')
-                            : quote.status === 'REVISING' && getLastRejection(histories)
-                                ? '반려됨 (수정 필요)'
-                                : (STATUS_LABEL[quote.status] ?? quote.status)}
-                    </span>
-                </div>
+        <div className="quote-page">
+            <PageHeader
+                breadcrumbSep=">"
+                breadcrumbs={['견적', '견적 상세']}
+                title="견적 상세"
+                actions={
+                    <Button variant="outline" size="sm" onClick={() => navigate('/quotes')}>
+                        ← 내 견적 목록
+                    </Button>
+                }
+            />
+
+            <div className="quote-page__meta">
+                <p className="quote-page__meta-label">
+                    견적번호: {quote.quoteNumber} · 작성일: {quote.createdAt?.slice(0, 10)} · 유효기간: {quote.validUntil ?? '-'}
+                </p>
+                <span className={`quote-page-badge quote-page-badge--lg ${
+                    quote.status === 'REVISING' && getLastRejection(histories)
+                        ? 'quote-page-badge--rejected'
+                        : ['APPROVED', 'APPROVAL_NOT_REQUIRED', 'SENT'].includes(quote.status)
+                            ? 'quote-page-badge--approved'
+                            : 'quote-page-badge--pending'
+                }`}>
+                    {statusLabel}
+                </span>
             </div>
 
-            <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+            <div className="quote-detail__stack">
                 {quote.status === 'REVISING' && getLastRejection(histories) && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                    <div className="quote-page-alert quote-page-alert--error">
                         <p className="font-semibold">✗ 반려 사유</p>
                         <p className="mt-0.5 text-xs">{getLastRejection(histories).memo || '사유 없음'}</p>
                     </div>
                 )}
                 {quote.approvalRequired && (quote.approvalReasons ?? []).length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <div className="quote-page-alert quote-page-alert--warning">
                         <p className="font-semibold">⚠ 승인 필요 사유</p>
                         <p className="mt-0.5 text-xs">{quote.approvalReasons.join(', ')}</p>
                     </div>
                 )}
                 {actionError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{actionError}</div>
+                    <div className="quote-page-alert quote-page-alert--error">{actionError}</div>
                 )}
                 {!canSendEmail && (
-                    <div
-                        id="quote-send-blocked-reason"
-                        className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800"
-                    >
+                    <div id="quote-send-blocked-reason" className="quote-page-alert quote-page-alert--warning">
                         {quoteSendBlockedMessage(quote)}
                     </div>
                 )}
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">고객 정보</h2>
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title mb-4">고객 정보</h2>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <Field label="고객명" value={quote.companyName} />
                         <Field label="담당자" value={quote.contactName} />
@@ -226,16 +224,17 @@ const QuoteDetailPage = () => {
                     )}
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">제품 목록</h2>
-                    <table className="w-full text-sm text-center">
-                        <thead className="bg-gray-50 text-gray-500">
-                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계'].map((h) => <th key={h} className="py-2 font-medium">{h}</th>)}</tr>
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title mb-4">제품 목록</h2>
+                    <div className="quote-page-table-wrap">
+                    <table className="quote-page-table">
+                        <thead>
+                            <tr>{['제품명', '수량', '단가', '할인율', '소계', 'VAT', '합계'].map((h) => <th key={h}>{h}</th>)}</tr>
                         </thead>
                         <tbody>
                             {(quote.items ?? []).map((item) => (
-                                <tr key={item.id} className="border-t border-gray-100">
-                                    <td className="py-2 text-left">{item.productName}</td>
+                                <tr key={item.id}>
+                                    <td>{item.productName}</td>
                                     <td>{item.quantity}</td>
                                     <td>{formatKRW(item.unitPrice)}</td>
                                     <td>{Number(item.discountRate ?? 0)}%</td>
@@ -246,18 +245,19 @@ const QuoteDetailPage = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-1 text-sm max-w-xs ml-auto">
-                        <div className="flex justify-between text-gray-500"><span>공급가액</span><span>{formatKRW(quote.subtotal)}</span></div>
-                        <div className="flex justify-between text-red-500"><span>할인금액</span><span>- {formatKRW(discountAmount)}</span></div>
-                        <div className="flex justify-between text-gray-500"><span>VAT</span><span>{formatKRW(quote.taxAmount)}</span></div>
-                        <div className="flex justify-between font-bold text-base pt-1 border-t border-gray-100"><span>최종 견적금액</span><span>{formatKRW(quote.totalAmount)}</span></div>
+                    <div className="quote-page-summary mt-4">
+                        <div className="quote-page-summary__row"><span>공급가액</span><span>{formatKRW(quote.subtotal)}</span></div>
+                        <div className="quote-page-summary__row quote-page-summary__row--discount"><span>할인금액</span><span>- {formatKRW(discountAmount)}</span></div>
+                        <div className="quote-page-summary__row"><span>VAT</span><span>{formatKRW(quote.taxAmount)}</span></div>
+                        <div className="quote-page-summary__total"><span>최종 견적금액</span><span>{formatKRW(quote.totalAmount)}</span></div>
                     </div>
                 </div>
 
                 {analysis && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                        <h2 className="text-sm font-bold text-gray-800 mb-4">내부 분석 정보</h2>
+                    <div className="quote-page-card">
+                        <h2 className="quote-page-card__title mb-4">내부 분석 정보</h2>
                         <div className="grid grid-cols-3 gap-4 text-sm">
                             <SummaryCard label="총 원가" value={formatKRW(analysis.totalCostAmount)} />
                             <SummaryCard label="예상 이익금" value={formatKRW(analysis.expectedProfitAmount)} />
@@ -270,8 +270,8 @@ const QuoteDetailPage = () => {
                     </div>
                 )}
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">승인 요청 이력</h2>
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title mb-4">승인 요청 이력</h2>
                     {histories.length === 0 ? (
                         <p className="text-sm text-gray-400">승인 요청 이력이 없습니다.</p>
                     ) : (
@@ -292,8 +292,8 @@ const QuoteDetailPage = () => {
                     )}
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                    <h2 className="text-sm font-bold text-gray-800 mb-4">발송 이력</h2>
+                <div className="quote-page-card">
+                    <h2 className="quote-page-card__title mb-4">발송 이력</h2>
                     {emailHistory.length === 0 ? (
                         <p className="text-sm text-gray-400">발송 이력이 없습니다.</p>
                     ) : (
@@ -314,49 +314,44 @@ const QuoteDetailPage = () => {
                     )}
                 </div>
 
-                <div className="flex flex-wrap justify-center gap-3 pt-2">
+                <div className="quote-detail__actions">
                     {isEditable && (
-                        <button onClick={() => navigate(`/quotes/new?id=${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                        <Button variant="outline" onClick={() => navigate(`/quotes/new?id=${quote.id}`)}>
                             이어 작성
-                        </button>
+                        </Button>
                     )}
-                    <button onClick={() => navigate(`/quotes/analysis/${quote.id}`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    <Button variant="outline" onClick={() => navigate(`/quotes/analysis/${quote.id}`)}>
                         내부 분석
-                    </button>
-                    <button onClick={() => navigate(`/quotes/${quote.quoteNumber}/preview`)} className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate(`/quotes/${quote.quoteNumber}/preview`)}>
                         견적 미리보기
-                    </button>
-                    <button onClick={handleDownloadPdf} disabled={pdfLoading} className="px-6 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                    </Button>
+                    <Button variant="primary" onClick={handleDownloadPdf} disabled={pdfLoading}>
                         {pdfLoading ? 'PDF 생성 중...' : 'PDF 다운로드'}
-                    </button>
+                    </Button>
                     {canSendEmail ? (
-                        <button onClick={() => setEmailOpen(true)} className="px-6 py-2.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+                        <Button variant="secondary" onClick={() => setEmailOpen(true)}>
                             이메일 발송
-                        </button>
+                        </Button>
                     ) : (
-                        <button
-                            type="button"
-                            disabled
-                            aria-describedby="quote-send-blocked-reason"
-                            className="px-6 py-2.5 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed"
-                        >
+                        <Button type="button" variant="ghost" disabled aria-describedby="quote-send-blocked-reason">
                             이메일 발송 불가
-                        </button>
+                        </Button>
                     )}
                     {isReusable && (
-                        <button onClick={handleReuse} disabled={actionLoading} className="px-6 py-2.5 rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                        <Button variant="outline" onClick={handleReuse} disabled={actionLoading}>
                             {actionLoading ? '처리 중...' : '복사 후 재작성'}
-                        </button>
+                        </Button>
                     )}
                     {isExpired && (
-                        <button onClick={handleRewrite} disabled={actionLoading} className="px-6 py-2.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 disabled:opacity-50">
+                        <Button variant="outline" onClick={handleRewrite} disabled={actionLoading}>
                             {actionLoading ? '처리 중...' : '만료 견적 재작성'}
-                        </button>
+                        </Button>
                     )}
                     {isCancellable && (
-                        <button onClick={() => setCancelModalOpen(true)} disabled={actionLoading} className="px-6 py-2.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-50">
+                        <Button variant="danger" onClick={() => setCancelModalOpen(true)} disabled={actionLoading}>
                             견적 취소
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>
@@ -377,20 +372,20 @@ const QuoteDetailPage = () => {
                             이 견적을 취소하시겠습니까? 연결된 승인 요청도 함께 취소됩니다.
                         </p>
                         <div className="flex justify-end gap-2">
-                            <button
+                            <Button
+                                variant="outline"
                                 onClick={() => setCancelModalOpen(false)}
                                 disabled={actionLoading}
-                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                             >
                                 닫기
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="danger"
                                 onClick={handleCancel}
                                 disabled={actionLoading}
-                                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                             >
                                 {actionLoading ? '취소 처리 중...' : '취소하기'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>

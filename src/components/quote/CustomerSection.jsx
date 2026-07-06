@@ -90,7 +90,7 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
             </div>
 
             <div className="relative mb-4">
-                <div className="flex gap-2">
+                <div className="quote-page-customer-search">
                     <input
                         value={keyword}
                         onChange={(e) => {
@@ -99,9 +99,9 @@ const CustomerSection = ({ customer, onSelect, onFieldChange }) => {
                         }}
                         onFocus={() => setShowResults(true)}
                         placeholder="고객명 또는 연락처로 검색..."
-                        className="form-input flex-1"
+                        className="form-input"
                     />
-                    <Button variant="outline" size="sm" onClick={() => runSearch(keyword)}>
+                    <Button variant="secondary" onClick={() => runSearch(keyword)}>
                         검색
                     </Button>
                 </div>

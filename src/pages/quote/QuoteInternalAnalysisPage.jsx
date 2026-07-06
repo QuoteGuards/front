@@ -131,7 +131,7 @@ const QuoteInternalAnalysisPage = () => {
     if (loading) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={['견적', '내부 분석']} title="내부 견적 분석" />
                 <div className="quote-page-loading">내부 분석 데이터를 불러오는 중...</div>
             </div>
         )
@@ -140,7 +140,7 @@ const QuoteInternalAnalysisPage = () => {
     if (error && !analysis) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbs={['견적 관리', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={['견적', '내부 분석']} title="내부 견적 분석" />
                 <div className="quote-page-alert quote-page-alert--error">{error}</div>
             </div>
         )
@@ -154,18 +154,14 @@ const QuoteInternalAnalysisPage = () => {
     return (
         <div className="quote-page">
             <PageHeader
-                breadcrumbs={['견적 관리', '내부 분석']}
+                breadcrumbSep=">"
+                breadcrumbs={['견적', '내부 분석']}
                 title="내부 견적 분석"
-                actions={
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/quotes/new?id=${quoteId}`)}>
-                        ← 견적 작성으로
-                    </Button>
-                }
             />
 
             <div className="quote-page__meta">
                 <p className="quote-page__meta-label">견적번호: {analysis.quoteNumber}</p>
-                <span className={`quote-page-badge ${APPROVAL_BADGE_CLASS[approvalStatus]}`}>
+                <span className={`quote-page-badge quote-page-badge--lg ${APPROVAL_BADGE_CLASS[approvalStatus]}`}>
                     {APPROVAL_STATUS_LABEL[approvalStatus]}
                 </span>
             </div>
