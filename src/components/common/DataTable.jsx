@@ -7,6 +7,7 @@ import './DataTable.css'
  * @param {boolean} [loading]
  * @param {string} [emptyText]
  * @param {function} [onRowClick]
+ * @param {function} [rowClassName] - (row) => string, 행마다 추가로 붙일 클래스명 (선택)
  */
 const DataTable = ({
   columns = [],
@@ -15,6 +16,7 @@ const DataTable = ({
   loading = false,
   emptyText = '데이터가 없습니다.',
   onRowClick,
+  rowClassName,
 }) => {
   const colCount = columns.length
 
@@ -51,7 +53,11 @@ const DataTable = ({
             data.map((row) => (
               <tr
                 key={row[rowKey]}
-                className={['data-table__row', onRowClick ? 'data-table__row--clickable' : ''].join(' ')}
+                className={[
+                  'data-table__row',
+                  onRowClick ? 'data-table__row--clickable' : '',
+                  rowClassName ? rowClassName(row) : '',
+                ].filter(Boolean).join(' ')}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={onRowClick ? (e) => {
