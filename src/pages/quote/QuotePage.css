@@ -371,7 +371,21 @@
 
 .quote-page-actions__left {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.quote-page-actions__reset {
+  margin-left: auto;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.quote-page-actions__reset:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #991b1b;
 }
 
 .quote-page-actions--center {
