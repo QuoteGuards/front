@@ -198,14 +198,22 @@ export const productToQuoteItem = (product, quantity = 1) => ({
 
 const QUOTE_WRITE_DRAFT_KEY = 'quoteGuard.quoteWriteDraft'
 
-
-
-/** 제품 탐색 갔다 올 때 작성 중 폼 복원용 (sessionStorage) */
+/** 견적 작성 화면 이탈 후 복귀 시 폼 복원용 (sessionStorage) */
+export function buildQuoteWriteDraft(payload) {
+  return {
+    customer: payload.customer,
+    memo: payload.memo ?? '',
+    issuedDate: payload.issuedDate,
+    validUntil: payload.validUntil ?? '',
+    deliveryTerm: payload.deliveryTerm ?? '',
+    items: payload.items ?? [],
+    savedQuote: payload.savedQuote ?? null,
+    updatedAt: Date.now(),
+  }
+}
 
 export function saveQuoteWriteDraft(draft) {
-
-  sessionStorage.setItem(QUOTE_WRITE_DRAFT_KEY, JSON.stringify(draft))
-
+  sessionStorage.setItem(QUOTE_WRITE_DRAFT_KEY, JSON.stringify(buildQuoteWriteDraft(draft)))
 }
 
 
@@ -229,9 +237,16 @@ export function loadQuoteWriteDraft() {
 
 
 export function clearQuoteWriteDraft() {
-
   sessionStorage.removeItem(QUOTE_WRITE_DRAFT_KEY)
+}
 
+/** 마운트 시 sessionStorage draft를 동기 로드 (URL id와 일치할 때만) */
+export function resolveMountQuoteDraft() {
+  const idParam = new URLSearchParams(window.location.search).get('id')
+  const draft = loadQuoteWriteDraft()
+  if (!draft) return null
+  if (idParam && draft.savedQuote?.id !== Number(idParam)) return null
+  return draft
 }
 
 

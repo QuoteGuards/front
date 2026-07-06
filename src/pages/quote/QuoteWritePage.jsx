@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, Fragment } from 'react'
+﻿import { useState, useEffect, useRef, Fragment, useCallback } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useTrainingStatus } from '../../hooks/useTrainingStatus'
 import QuoteAccessRestricted from '../../components/quote/QuoteAccessRestricted'
@@ -19,6 +19,7 @@ import {
     saveQuoteWriteDraft,
     loadQuoteWriteDraft,
     clearQuoteWriteDraft,
+    resolveMountQuoteDraft,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
@@ -35,28 +36,36 @@ const QuoteWritePage = () => {
     const [searchParams, setSearchParams] = useSearchParams()
     const { loading, canWriteQuote, trainingStatus, confirmGuide } = useTrainingStatus()
     const catalogAddHandled = useRef(false)
+    const formSnapshotRef = useRef(null)
 
-    const [restoring, setRestoring] = useState(() => !!searchParams.get('id') && !location.state?.addProduct)
+    const [mountDraft] = useState(() => resolveMountQuoteDraft())
+
+    const [restoring, setRestoring] = useState(() => {
+        if (location.state?.addProduct) return false
+        const idParam = searchParams.get('id')
+        if (!idParam) return false
+        return mountDraft?.savedQuote?.id !== Number(idParam)
+    })
 
     const [guideOpen, setGuideOpen] = useState(false)
     const [loadingGuide, setLoadingGuide] = useState(false)
     const [guideConfirming, setGuideConfirming] = useState(false)
     const [guideContent, setGuideContent] = useState('')
 
-    const [customer, setCustomer] = useState(initialCustomer)
-    const [memo, setMemo] = useState('')
+    const [customer, setCustomer] = useState(() => mountDraft?.customer ?? initialCustomer)
+    const [memo, setMemo] = useState(() => mountDraft?.memo ?? '')
     const [memoSummary, setMemoSummary] = useState('')
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [summaryError, setSummaryError] = useState('')
-    const [issuedDate, setIssuedDate] = useState(todayLocal())
-    const [validUntil, setValidUntil] = useState('')
-    const [deliveryTerm, setDeliveryTerm] = useState('')
-    const [items, setItems] = useState([])
-    const [addingProduct, setAddingProduct] = useState(false)
+    const [issuedDate, setIssuedDate] = useState(() => mountDraft?.issuedDate ?? todayLocal())
+    const [validUntil, setValidUntil] = useState(() => mountDraft?.validUntil ?? '')
+    const [deliveryTerm, setDeliveryTerm] = useState(() => mountDraft?.deliveryTerm ?? '')
+    const [items, setItems] = useState(() => mountDraft?.items ?? [])
+    const [addingProduct, setAddingProduct] = useState(() => !!location.state?.addProduct)
 
     const [saving, setSaving] = useState(false)
     const [saveError, setSaveError] = useState(null)
-    const [savedQuote, setSavedQuote] = useState(null)
+    const [savedQuote, setSavedQuote] = useState(() => mountDraft?.savedQuote ?? null)
 
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState(null)
@@ -72,31 +81,64 @@ const QuoteWritePage = () => {
         setItems((prev) => prev.filter((item) => item.key !== key))
     }
 
-    const restoreDraftForm = (draft) => {
-        if (!draft) return
-        setCustomer(draft.customer ?? initialCustomer)
-        setMemo(draft.memo ?? '')
-        setIssuedDate(draft.issuedDate ?? todayLocal())
-        setValidUntil(draft.validUntil ?? '')
-        setDeliveryTerm(draft.deliveryTerm ?? '')
-        if (draft.savedQuote) setSavedQuote(draft.savedQuote)
+    formSnapshotRef.current = {
+        customer,
+        memo,
+        issuedDate,
+        validUntil,
+        deliveryTerm,
+        items,
+        savedQuote,
     }
 
-    // catalog에서 견적에 추가 후 복귀: sessionStorage draft 복원 + 제품 append
+    const persistDraft = useCallback((overrides = {}) => {
+        saveQuoteWriteDraft({
+            customer,
+            memo,
+            issuedDate,
+            validUntil,
+            deliveryTerm,
+            items,
+            savedQuote,
+            ...overrides,
+        })
+    }, [customer, memo, issuedDate, validUntil, deliveryTerm, items, savedQuote])
+
+    // 페이지 이탈 시 최신 작성 내용 저장
+    useEffect(() => {
+        return () => {
+            const form = formSnapshotRef.current
+            if (!form) return
+            if (form.savedQuote && !EDITABLE_STATUSES.includes(form.savedQuote.status)) return
+            saveQuoteWriteDraft(form)
+        }
+    }, [])
+
+    // URL ?id= 동기화 (draft에 임시저장 id만 있을 때)
+    useEffect(() => {
+        if (location.state?.addProduct) return
+        if (searchParams.get('id') || !mountDraft?.savedQuote?.id) return
+        setSearchParams({ id: String(mountDraft.savedQuote.id) }, { replace: true })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // 작성 중 상태 자동 보존 (사이드바·다른 탭 이동 후 복귀용)
+    useEffect(() => {
+        if (restoring || addingProduct || location.state?.addProduct) return
+        if (savedQuote && !EDITABLE_STATUSES.includes(savedQuote.status)) return
+        persistDraft()
+    }, [persistDraft, restoring, addingProduct, savedQuote, location.state?.addProduct])
+
+    // catalog에서 견적에 추가 후 복귀: 기존 품목에 append
     useEffect(() => {
         const addProduct = location.state?.addProduct
         if (!addProduct || catalogAddHandled.current) return
         catalogAddHandled.current = true
-
-        const draft = loadQuoteWriteDraft()
-        restoreDraftForm(draft)
-        clearQuoteWriteDraft()
-
-        if (draft?.savedQuote?.id) {
-            setSearchParams({ id: String(draft.savedQuote.id) }, { replace: true })
-        }
-
         setAddingProduct(true)
+
+        if (mountDraft?.savedQuote?.id && !searchParams.get('id')) {
+            setSearchParams({ id: String(mountDraft.savedQuote.id) }, { replace: true })
+        }
 
         const appendProduct = async () => {
             let product = addProduct
@@ -113,7 +155,20 @@ const QuoteWritePage = () => {
                 // API 실패 시 catalog에서 넘긴 목록 데이터 사용
             }
             const newItem = productToQuoteItem(product, product.quantity ?? 1)
-            setItems([...(draft?.items ?? []), newItem])
+            setItems((prev) => {
+                const nextItems = [...prev, newItem]
+                const snapshot = formSnapshotRef.current ?? {}
+                saveQuoteWriteDraft({
+                    customer: snapshot.customer ?? initialCustomer,
+                    memo: snapshot.memo ?? '',
+                    issuedDate: snapshot.issuedDate ?? todayLocal(),
+                    validUntil: snapshot.validUntil ?? '',
+                    deliveryTerm: snapshot.deliveryTerm ?? '',
+                    items: nextItems,
+                    savedQuote: snapshot.savedQuote ?? null,
+                })
+                return nextItems
+            })
             if (!hasItemPolicyInfo(newItem)) {
                 setSaveError(
                     '적용 가능한 할인정책 정보를 불러오지 못했습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.',
@@ -128,20 +183,22 @@ const QuoteWritePage = () => {
             .finally(() => {
                 setAddingProduct(false)
                 catalogAddHandled.current = false
-                // search(?id=)는 유지하고 location.state만 비움 — pathname만 navigate하면 쿼리가 사라짐
                 const search =
-                    draft?.savedQuote?.id != null
-                        ? `?id=${draft.savedQuote.id}`
+                    formSnapshotRef.current?.savedQuote?.id != null
+                        ? `?id=${formSnapshotRef.current.savedQuote.id}`
                         : location.search
                 navigate({ pathname: location.pathname, search }, { replace: true, state: {} })
             })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state])
 
-    // URL ?id= 로 기존 견적 복원 (catalog 복귀가 아닐 때만)
+    // URL ?id= 로 기존 견적 복원 (로컬 draft 없을 때만)
     useEffect(() => {
         const idParam = searchParams.get('id')
         if (!idParam || location.state?.addProduct) return
+
+        const draft = loadQuoteWriteDraft()
+        if (draft?.savedQuote?.id === Number(idParam)) return
 
         let cancelled = false
         Promise.all([
@@ -213,16 +270,26 @@ const QuoteWritePage = () => {
     }
 
     const handleGoToCatalog = () => {
-        saveQuoteWriteDraft({
-            customer,
-            memo,
-            issuedDate,
-            validUntil,
-            deliveryTerm,
-            items,
-            savedQuote,
-        })
+        persistDraft()
         navigate('/catalog')
+    }
+
+    const handleResetForm = () => {
+        if (!window.confirm('작성 중인 내용을 모두 초기화할까요?\n저장하지 않은 변경사항은 사라집니다.')) return
+        clearQuoteWriteDraft()
+        setCustomer(initialCustomer)
+        setMemo('')
+        setMemoSummary('')
+        setSummaryError('')
+        setIssuedDate(todayLocal())
+        setValidUntil('')
+        setDeliveryTerm('')
+        setItems([])
+        setSavedQuote(null)
+        setSaveError(null)
+        setSubmitError(null)
+        setSubmitResult(null)
+        setSearchParams({}, { replace: true })
     }
 
     const validate = () => {
@@ -311,6 +378,7 @@ const QuoteWritePage = () => {
             const result = await completeQuote(updated.id)
             setSubmitResult(result)
             setSavedQuote(result)
+            clearQuoteWriteDraft()
         } catch (e) {
             setSubmitError(e?.response?.data?.message ?? '제출 중 오류가 발생했습니다.')
         } finally {
@@ -650,6 +718,16 @@ const QuoteWritePage = () => {
                         >
                             미리보기
                         </Button>
+                        {!isLocked && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="quote-page-actions__reset"
+                                onClick={handleResetForm}
+                            >
+                                작성 초기화
+                            </Button>
+                        )}
                     </div>
                     <Button
                         variant="primary"
