@@ -253,31 +253,44 @@ export default function DashboardPage() {
       {/* ── 본문 (로딩 중엔 반투명) ── */}
       <div style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s' }}>
 
-      {/* ── 요약 카드 ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <Card label="총 견적 수" value={`${num(summary?.totalQuotes)}건`} />
-        <Card label="승인 완료" value={`${num(summary?.approvedQuotes)}건`} accent="green" />
-        <Card label="반려" value={`${num(summary?.rejectedQuotes)}건`} accent="red" />
-        <Card label="발송 완료" value={`${num(summary?.sentQuotes)}건`} accent="blue" />
-        <Card label="총 견적 금액" value={won(summary?.totalAmount)} />
-        <Card label="총 공급가액" value={won(summary?.totalSupplyAmount)} />
-        <Card label="총 예상 이익금" value={won(summary?.totalProfitAmount)} accent="green"
-          info={<>
-            <b>예상 이익금</b> = 공급가액 − 원가 (= 판매가 − 사들인 원가). 각 견적의 이익금을 합산한 값입니다.
-            <br /><br />
-            ※ 견적금액 − 공급가액은 <b>부가세(VAT)</b>이며 이익이 아닙니다. 이익은 원가를 뺀 값입니다.
-          </>} />
-        <Card label="평균 할인율 / 이익률" value={
-            <span className="flex items-baseline gap-4">
-              <span className="flex items-baseline gap-1"><span className="text-[11px] font-medium text-[var(--color-text-muted)]">할인</span>{pct(summary?.averageDiscountRate)}</span>
-              <span className="flex items-baseline gap-1"><span className="text-[11px] font-medium text-[var(--color-text-muted)]">이익</span>{pct(summary?.averageProfitRate)}</span>
-            </span>
-          }
-          info={<>
-            <b>평균 할인율</b> = 각 견적의 (할인액 ÷ 공급가 합계 × 100)을 구해 견적끼리 단순 평균낸 값입니다. (공급가 0인 견적 제외, 견적 1건당 동일 비중)
-            <br /><br />
-            <b>평균 이익률</b> = 각 견적에 저장된 이익률(예상 이익금 기준)의 단순 평균입니다.
-          </>} />
+      {/* ── 상단: 견적 처리 현황(스파크라인) + 월별 견적 수 추이(막대+금액) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 좌: 견적 처리 현황 */}
+        <Panel title="견적 처리 현황">
+          <div className="grid grid-cols-2 gap-3">
+            <MiniStatCard label="총 견적 수" value={summary?.totalQuotes} color="var(--color-primary)" trend={trend} dataKey="quoteCount" />
+            <MiniStatCard label="승인 완료" value={summary?.approvedQuotes} color={CHART.approved} trend={trend} dataKey="approvedCount" />
+            <MiniStatCard label="반려" value={summary?.rejectedQuotes} color={CHART.rejected} trend={trend} dataKey="rejectedCount" />
+            <MiniStatCard label="발송 완료" value={summary?.sentQuotes} color="#2563EB" trend={trend} dataKey="sentCount" />
+          </div>
+        </Panel>
+
+        {/* 우: 월별 견적 수 추이 + 하단 금액 요약 */}
+        <Panel title="월별 견적 수 추이"
+          action={trend.length > 0 && <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>최근 {trend.length}개월</span>}>
+          {trendChart.length === 0 ? <Empty /> : (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={trendChart} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke={CHART.grid} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} allowDecimals={false} width={32} />
+                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} formatter={(v) => [`${num(v)}건`, '견적 수']} />
+                <RBar dataKey="quoteCount" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                  <LabelList dataKey="quoteCount" position="top" style={{ fontSize: 11, fill: CHART.axis }} />
+                  {trendChart.map((d) => (
+                    <Cell key={d.month} fill={d.isCurrent ? CHART.barLast : CHART.bar} />
+                  ))}
+                </RBar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          <div className="grid grid-cols-4 gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <MiniAmount label="총 견적 금액" value={wonShort(summary?.totalAmount)} />
+            <MiniAmount label="총 공급가액" value={wonShort(summary?.totalSupplyAmount)} />
+            <MiniAmount label="총 예상 이익금" value={wonShort(summary?.totalProfitAmount)} color="var(--color-success)" />
+            <MiniAmount label="할인율 / 이익률" value={`${pct(summary?.averageDiscountRate)} / ${pct(summary?.averageProfitRate)}`} />
+          </div>
+        </Panel>
       </div>
 
       {/* ── 영업 현황 분석 ── */}
@@ -295,26 +308,6 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ── 월별 견적 수 (세로 막대) ── */}
-        <Panel title="월별 견적 수">
-          {trendChart.length === 0 ? <Empty /> : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={trendChart} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke={CHART.grid} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} allowDecimals={false} width={32} />
-                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} formatter={(v) => [`${num(v)}건`, '견적 수']} />
-                <RBar dataKey="quoteCount" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                  <LabelList dataKey="quoteCount" position="top" style={{ fontSize: 11, fill: CHART.axis }} />
-                  {trendChart.map((d, i) => (
-                    <Cell key={i} fill={d.isCurrent ? CHART.barLast : CHART.bar} />
-                  ))}
-                </RBar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Panel>
-
         {/* ── 월별 견적 총액 및 추이 (꺾은선 + 영역) ── */}
         <Panel title="월별 견적 총액 및 추이"
           action={<span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>단위: {amountUnit.label}</span>}>
@@ -528,34 +521,58 @@ function amountTick(v, unit) {
   return n.toLocaleString('ko-KR', { maximumFractionDigits: unit.digits })
 }
 
-const ACCENT_COLOR = {
-  green: 'var(--color-success)',
-  red: 'var(--color-danger)',
-  blue: 'var(--color-primary)',
+// 금액 축약 (억/만원) — 요약 카드용 (정확값 아님). 음수(손실)도 부호 유지하며 축약
+function wonShort(v) {
+  const n = Number(v) || 0
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '-' : ''
+  if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(1).replace(/\.0$/, '')}억`
+  if (abs >= 1e4) return `${sign}${Math.round(abs / 1e4).toLocaleString('ko-KR')}만`
+  return `${n.toLocaleString('ko-KR')}원`
 }
-function Card({ label, value, accent, info }) {
+
+// 견적 처리 현황 카드: 값 + 최근 추이 스파크라인 (양끝 달 라벨 + 호버 툴팁)
+function MiniStatCard({ label, value, color, trend, dataKey }) {
+  const spark = (trend ?? []).map((t) => ({ month: monthLabel(t.month), v: Number(t[dataKey]) || 0 }))
   return (
-    <div className="rounded-[var(--radius-md)] px-5 py-4"
-      style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
-      <p className="text-xs text-[var(--color-text-sub)] mb-1 flex items-center gap-1">
-        {label}
-        {info && <InfoTip text={info} />}
+    <div className="rounded-[var(--radius-md)] px-4 py-3"
+      style={{ border: '1px solid var(--color-border)', background: 'var(--color-bg-white)' }}>
+      <p className="text-xs text-[var(--color-text-sub)] mb-1">{label}</p>
+      <p className="text-[22px] font-bold leading-none" style={{ color }}>
+        {num(value)}<span className="text-[12px] font-normal text-[var(--color-text-sub)] ml-1">건</span>
       </p>
-      <p className="text-[22px] font-bold leading-tight" style={{ color: ACCENT_COLOR[accent] ?? 'var(--color-text-main)' }}>{value}</p>
+      <div style={{ height: 36, marginTop: 6 }}>
+        {spark.length > 1 && (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+              <XAxis dataKey="month" hide />
+              <Tooltip formatter={(v, n) => [`${num(v)}건`, n]}
+                contentStyle={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }} />
+              <Area type="monotone" dataKey="v" name={label} stroke={color} strokeWidth={1.5}
+                fill={color} fillOpacity={0.12} dot={false} isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+      {spark.length > 1 ? (
+        <div className="flex justify-between text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
+          <span>{spark[0].month}</span>
+          <span>{spark[spark.length - 1].month}</span>
+        </div>
+      ) : (
+        <p className="text-[11px] text-[var(--color-text-muted)] mt-1">추이 데이터 부족</p>
+      )}
     </div>
   )
 }
 
-function InfoTip({ text }) {
+// 월별 추이 하단 금액 지표
+function MiniAmount({ label, value, color }) {
   return (
-    <span className="relative inline-flex group align-middle">
-      <span tabIndex={0} role="img" aria-label="계산 방식 설명"
-        className="cursor-help select-none text-[var(--color-text-muted)]" style={{ fontSize: '13px' }}>ⓘ</span>
-      <span className="hidden group-hover:block group-focus-within:block absolute z-50 right-0 top-5 w-64 p-3 text-xs leading-relaxed rounded-[var(--radius-sm)]"
-        style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-md)', color: 'var(--color-text-main)', fontWeight: 400 }}>
-        {text}
-      </span>
-    </span>
+    <div>
+      <p className="text-[11px] text-[var(--color-text-sub)] mb-0.5">{label}</p>
+      <p className="text-[15px] font-bold leading-tight" style={{ color: color ?? 'var(--color-text-main)' }}>{value}</p>
+    </div>
   )
 }
 
