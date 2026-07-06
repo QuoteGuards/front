@@ -59,6 +59,14 @@ const STATUS_LABEL = {
   REVISING: '수정중', SENT: '발송완료', EXPIRED: '만료', CANCELLED: '취소',
 }
 
+// 견적 흐름 단계 그룹 (작성 → 승인 → 발송 → 종료)
+const STATUS_PHASES = [
+  { key: 'write', title: '작성', color: '#3B82F6', statuses: ['DRAFT', 'SUBMITTED'] },
+  { key: 'approval', title: '승인', color: '#7C3AED', statuses: ['APPROVAL_NOT_REQUIRED', 'APPROVAL_PENDING', 'APPROVED', 'REJECTED', 'REVISING'] },
+  { key: 'send', title: '발송', color: '#22C55E', statuses: ['SENT'] },
+  { key: 'end', title: '종료', color: '#9CA3AF', statuses: ['EXPIRED', 'CANCELLED'] },
+]
+
 export default function DashboardPage() {
   const [period, setPeriod] = useState('')
   const [from, setFrom] = useState('')
@@ -78,6 +86,7 @@ export default function DashboardPage() {
   const [staffSearch, setStaffSearch] = useState('')
   const [staffPage, setStaffPage] = useState(0)
   const [dept, setDept] = useState([])
+  const [deptSort, setDeptSort] = useState('amount') // amount | quotes | name
 
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -123,7 +132,14 @@ export default function DashboardPage() {
     getPopularByViewsApi(10).then(setPopularViews).catch(() => {})
   }, [])
 
-  const maxStatus = useMemo(() => Math.max(1, ...statusCounts.map(s => s.count)), [statusCounts])
+  // 부서별: 정렬 옵션 (총액순/작성순/이름순)
+  const deptSorted = useMemo(() => {
+    const arr = [...dept]
+    if (deptSort === 'name') arr.sort((a, b) => String(a.department).localeCompare(String(b.department), 'ko'))
+    else if (deptSort === 'quotes') arr.sort((a, b) => (Number(b.totalQuotes) || 0) - (Number(a.totalQuotes) || 0))
+    else arr.sort((a, b) => (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0))
+    return arr
+  }, [dept, deptSort])
 
   // 차트용 월별 데이터 ("2026-06" → "6월", 이번 달 강조 플래그)
   const trendChart = useMemo(() => {
@@ -305,12 +321,12 @@ export default function DashboardPage() {
         {/* ── 승인 / 반려 비율 (도넛) ── */}
         <Panel title="승인 / 반려 비율">
           {donutTotal === 0 ? <Empty /> : (
-            <div className="flex items-center gap-4">
-              <div style={{ position: 'relative', width: 180, height: 180 }}>
+            <div className="flex items-center justify-center gap-6" style={{ minHeight: '240px' }}>
+              <div style={{ position: 'relative', width: 200, height: 200, flexShrink: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={donutData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                      innerRadius={56} outerRadius={80} paddingAngle={2} startAngle={90} endAngle={-270}>
+                      innerRadius={62} outerRadius={90} paddingAngle={2} startAngle={90} endAngle={-270}>
                       {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
                     </Pie>
                     <Tooltip formatter={(v, n) => [`${num(v)}건`, n]} />
@@ -341,19 +357,9 @@ export default function DashboardPage() {
           )}
         </Panel>
 
-        {/* ── 견적 상태별 건수 ── */}
-        <Panel title="견적 상태별 건수">
-          {statusCounts.length === 0 ? <Empty /> : (
-            <div className="space-y-1.5">
-              {statusCounts.map(s => (
-                <div key={s.status} className="flex items-center gap-2 text-xs">
-                  <span className="w-20 shrink-0 text-[var(--color-text-sub)]">{STATUS_LABEL[s.status] ?? s.status}</span>
-                  <Bar ratio={s.count / maxStatus} color="#8EA3CC" h={16} />
-                  <span className="w-10 text-right text-[var(--color-text-main)]">{num(s.count)}</span>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* ── 견적 상태별 건수 (흐름 파이프라인, 2×2 지그재그) ── */}
+        <Panel title="견적 상태별 건수 (진행 흐름)">
+          {statusCounts.length === 0 ? <Empty /> : <StatusFlow counts={statusCounts} />}
         </Panel>
 
         {/* ── 인기 제품 순위 (주문순 / 조회순) ── */}
@@ -440,14 +446,22 @@ export default function DashboardPage() {
         </Panel>
 
         {/* ── 부서별 통계 ── */}
-        <Panel title="부서별 통계">
+        <Panel title="부서별 통계"
+          action={dept.length > 0 && (
+            <select className="form-select" style={{ height: '30px', fontSize: '12px', width: '104px' }}
+              aria-label="부서 정렬 기준" value={deptSort} onChange={e => setDeptSort(e.target.value)}>
+              <option value="amount">총액순</option>
+              <option value="quotes">작성순</option>
+              <option value="name">이름순</option>
+            </select>
+          )}>
           {dept.length === 0 ? <Empty /> : (
             <table className="w-full text-sm">
               <thead className="text-xs text-[var(--color-text-muted)]">
                 <tr><th className="text-left py-1">부서</th><th className="text-right">작성</th><th className="text-right">승인율</th><th className="text-right">반려율</th><th className="text-right">견적 총액</th></tr>
               </thead>
               <tbody>
-                {dept.map(d => {
+                {deptSorted.map(d => {
                   const clickable = d.department !== '미지정'
                   const isSel = department === d.department
                   return (
@@ -538,16 +552,49 @@ function Panel({ title, action, children }) {
   )
 }
 
-function Bar({ ratio, color = 'var(--color-primary)', h = 10 }) {
-  const pctW = `${Math.max(0, Math.min(1, ratio || 0)) * 100}%`
-  return (
-    <div className="flex-1 rounded" style={{ height: h, background: '#F3F4F6' }}>
-      <div className="rounded" style={{ height: h, width: pctW, background: color }} />
-    </div>
-  )
-}
-
 function Empty() {
   return <p className="text-[var(--color-text-muted)] text-[13px] text-center py-8">데이터가 없습니다</p>
+}
+
+// 견적 상태 흐름: 2×2 지그재그 (작성→승인 ↓ 발송→종료)
+function StatusFlow({ counts }) {
+  const byStatus = {}
+  for (const s of counts) byStatus[s.status] = s.count
+
+  const renderCard = (phase) => {
+    const total = phase.statuses.reduce((sum, st) => sum + (byStatus[st] || 0), 0)
+    return (
+      <div key={phase.key} className="flex-1 rounded-[var(--radius-md)] p-3"
+        style={{ minWidth: 0, border: '1px solid var(--color-border)', borderTop: `3px solid ${phase.color}`, background: 'var(--color-bg-white)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold" style={{ color: phase.color }}>{phase.title}</span>
+          <span className="text-sm font-bold text-[var(--color-text-main)]">{num(total)}건</span>
+        </div>
+        <div className="space-y-1">
+          {phase.statuses.map(st => (
+            <div key={st} className="flex items-center justify-between text-xs">
+              <span className="text-[var(--color-text-sub)]">{STATUS_LABEL[st] ?? st}</span>
+              <span className={byStatus[st] ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}>{num(byStatus[st] || 0)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  const arrow = (ch) => (
+    <div className="flex items-center justify-center shrink-0 text-lg" style={{ color: 'var(--color-text-muted)' }}>{ch}</div>
+  )
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-stretch gap-1.5">
+        {renderCard(STATUS_PHASES[0])}{arrow('→')}{renderCard(STATUS_PHASES[1])}
+      </div>
+      {arrow('↙')}
+      <div className="flex items-stretch gap-1.5">
+        {renderCard(STATUS_PHASES[2])}{arrow('→')}{renderCard(STATUS_PHASES[3])}
+      </div>
+    </div>
+  )
 }
 
