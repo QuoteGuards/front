@@ -250,6 +250,40 @@ export function resolveMountQuoteDraft() {
 }
 
 
+const PENDING_ITEMS_KEY = 'quoteGuard.pendingQuoteItems'
+
+/** 제품 탐색 화면에서 "견적에 추가"로 담아둔 제품 목록 (sessionStorage, 견적 진입 시 병합) */
+export function getPendingQuoteItems() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_ITEMS_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 담은 제품 추가. 같은 productId면 수량 합산(누적).
+ * @returns 담긴 서로 다른 제품 종류 수 (배지 표시용)
+ */
+export function addPendingQuoteItem(product, quantity = 1) {
+  const qty = Math.max(1, Number(quantity) || 1)
+  const list = getPendingQuoteItems()
+  const idx = list.findIndex((it) => it.id === product.id)
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], quantity: (Number(list[idx].quantity) || 0) + qty }
+  } else {
+    list.push({ ...product, quantity: qty })
+  }
+  sessionStorage.setItem(PENDING_ITEMS_KEY, JSON.stringify(list))
+  return list.length
+}
+
+export function clearPendingQuoteItems() {
+  sessionStorage.removeItem(PENDING_ITEMS_KEY)
+}
+
+
 
 /** QuoteDetailResponse 견적 헤더 policy (strictest, 표시·fallback용) */
 

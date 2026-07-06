@@ -7,9 +7,13 @@ import SearchPanel, { SearchRow } from '../../components/common/SearchPanel'
 import Button from '../../components/common/Button'
 import Pagination from '../../components/common/Pagination'
 import ProductImage from '../../components/common/ProductImage'
+import Toast from '../../components/common/Toast'
+import { useToast } from '../../hooks/useToast'
+import { addPendingQuoteItem } from '../../utils/quoteItemUtils'
 
 export default function ProductSearchPage() {
   const navigate = useNavigate()
+  const { toast, showToast, hideToast } = useToast()
 
   const [keywordInput, setKeywordInput] = useState('')
   const [applied, setApplied] = useState({ keyword: '', categoryId: '', categoryName: '' })
@@ -96,7 +100,11 @@ export default function ProductSearchPage() {
   }
 
   const goDetail = (p) => navigate(`/catalog/${p.id}`)
-  const addToQuote = (p) => navigate('/quotes/new', { state: { addProduct: p } })
+  // 화면 이동 없이 담아두고 알림만 표시 (같은 제품이면 수량 합산은 유틸에서 처리)
+  const addToQuote = (p) => {
+    const count = addPendingQuoteItem(p, 1)
+    showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+  }
 
   const rows = pageData.content ?? []
   const totalPages = pageData.totalPages ?? 0
@@ -250,9 +258,9 @@ export default function ProductSearchPage() {
 
                     <div className="mt-3 flex flex-col gap-1.5">
                       <Button variant="outline" size="sm" className="w-full"
-                        onClick={() => goDetail(p)}>상세 보기</Button>
+                        onClick={(e) => { e.stopPropagation(); goDetail(p) }}>상세 보기</Button>
                       <Button variant="primary" size="sm" className="w-full"
-                        onClick={() => addToQuote(p)}>견적에 추가</Button>
+                        onClick={(e) => { e.stopPropagation(); addToQuote(p) }}>견적에 추가</Button>
                     </div>
                   </div>
                 </div>
@@ -263,6 +271,8 @@ export default function ProductSearchPage() {
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   )
 }

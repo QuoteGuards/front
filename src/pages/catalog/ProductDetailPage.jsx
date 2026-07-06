@@ -7,10 +7,14 @@ import { getActiveCategoryTreeApi } from '../../api/categoryApi'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
 import ProductImage from '../../components/common/ProductImage'
+import Toast from '../../components/common/Toast'
+import { useToast } from '../../hooks/useToast'
+import { addPendingQuoteItem } from '../../utils/quoteItemUtils'
 
 export default function ProductDetailPage() {
   const { productId } = useParams()
   const navigate = useNavigate()
+  const { toast, showToast, hideToast } = useToast()
 
   const [product, setProduct] = useState(null)
   const [related, setRelated] = useState([])
@@ -65,7 +69,11 @@ export default function ProductDetailPage() {
     }
   }
 
-  const addToQuote = () => navigate('/quotes/new', { state: { addProduct: { ...product, quantity: Number(qty) || 1 } } })
+  // 화면 이동 없이 담아두고 알림만 표시 (같은 제품이면 수량 합산)
+  const addToQuote = () => {
+    const count = addPendingQuoteItem(product, Number(qty) || 1)
+    showToast(`견적서에 추가되었습니다 (담은 제품 ${count}종)`)
+  }
 
   if (loading) return <div className="p-10 text-center text-[var(--color-text-muted)]">불러오는 중…</div>
   if (error && !product) return (
@@ -217,6 +225,8 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   )
 }
