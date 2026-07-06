@@ -260,7 +260,12 @@ export default function DashboardPage() {
             <br /><br />
             ※ 견적금액 − 공급가액은 <b>부가세(VAT)</b>이며 이익이 아닙니다. 이익은 원가를 뺀 값입니다.
           </>} />
-        <Card label="평균 할인율 / 이익률" value={`${pct(summary?.averageDiscountRate)} / ${pct(summary?.averageProfitRate)}`}
+        <Card label="평균 할인율 / 이익률" value={
+            <span className="flex items-baseline gap-4">
+              <span className="flex items-baseline gap-1"><span className="text-[11px] font-medium text-[var(--color-text-muted)]">할인</span>{pct(summary?.averageDiscountRate)}</span>
+              <span className="flex items-baseline gap-1"><span className="text-[11px] font-medium text-[var(--color-text-muted)]">이익</span>{pct(summary?.averageProfitRate)}</span>
+            </span>
+          }
           info={<>
             <b>평균 할인율</b> = 각 견적의 (할인액 ÷ 공급가 합계 × 100)을 구해 견적끼리 단순 평균낸 값입니다. (공급가 0인 견적 제외, 견적 1건당 동일 비중)
             <br /><br />
@@ -287,10 +292,10 @@ export default function DashboardPage() {
         <Panel title="월별 견적 수">
           {trendChart.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={trendChart} margin={{ top: 16, right: 8, left: -16, bottom: 0 }}>
+              <BarChart data={trendChart} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke={CHART.grid} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} allowDecimals={false} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} allowDecimals={false} width={32} />
                 <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} formatter={(v) => [`${num(v)}건`, '견적 수']} />
                 <RBar dataKey="quoteCount" radius={[4, 4, 0, 0]} maxBarSize={48}>
                   <LabelList dataKey="quoteCount" position="top" style={{ fontSize: 11, fill: CHART.axis }} />
@@ -308,7 +313,7 @@ export default function DashboardPage() {
           action={<span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>단위: {amountUnit.label}</span>}>
           {trendChart.length === 0 ? <Empty /> : (
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={trendChart} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
+              <AreaChart data={trendChart} margin={{ top: 16, right: 12, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="amountFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={CHART.area} stopOpacity={0.22} />
@@ -318,7 +323,7 @@ export default function DashboardPage() {
                 <CartesianGrid vertical={false} stroke={CHART.grid} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }} />
                 <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: CHART.axis }}
-                  tickFormatter={(v) => amountTick(v, amountUnit)} width={48} />
+                  tickFormatter={(v) => amountTick(v, amountUnit)} width={60} />
                 <Tooltip formatter={(v) => [won(v), '견적 총액']} />
                 <Area type="monotone" dataKey="totalAmount" stroke={CHART.line} strokeWidth={2.5}
                   fill="url(#amountFill)" dot={{ r: 3, fill: CHART.line }} activeDot={{ r: 5 }} />
