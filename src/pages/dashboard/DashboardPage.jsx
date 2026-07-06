@@ -578,13 +578,13 @@ function MiniAmount({ label, value, color }) {
 
 function Panel({ title, action, children }) {
   return (
-    <div className="rounded-[var(--radius-md)] px-6 py-5"
+    <div className="rounded-[var(--radius-md)] px-6 py-5 flex flex-col"
       style={{ background: 'var(--color-bg-white)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
       <div className="flex items-center justify-between gap-2 mb-4">
         <h2 className="text-sm font-bold text-[var(--color-text-main)]">{title}</h2>
         {action}
       </div>
-      {children}
+      <div className="flex-1 min-h-0">{children}</div>
     </div>
   )
 }
@@ -597,23 +597,37 @@ function Empty() {
 function StatusFlow({ counts }) {
   const byStatus = {}
   for (const s of counts) byStatus[s.status] = s.count
+  const grandTotal = Object.values(byStatus).reduce((sum, v) => sum + (Number(v) || 0), 0)
 
-  const renderCard = (phase) => {
+  const renderCard = (phase, step) => {
     const total = phase.statuses.reduce((sum, st) => sum + (byStatus[st] || 0), 0)
+    const share = grandTotal ? Math.round((total / grandTotal) * 100) : 0
     return (
-      <div key={phase.key} className="flex-1 rounded-[var(--radius-md)] p-3"
+      <div key={phase.key} className="flex-1 rounded-[var(--radius-md)] p-4 flex flex-col"
         style={{ minWidth: 0, border: '1px solid var(--color-border)', borderTop: `3px solid ${phase.color}`, background: 'var(--color-bg-white)' }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold" style={{ color: phase.color }}>{phase.title}</span>
-          <span className="text-sm font-bold text-[var(--color-text-main)]">{num(total)}건</span>
+        <div className="flex items-center justify-between mb-3">
+          <span className="flex items-center gap-2">
+            <span style={{ width: 22, height: 22, borderRadius: '50%', background: phase.color, color: '#fff', fontSize: '11px', fontWeight: 700, lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{step}</span>
+            <span className="text-[16px] font-bold" style={{ color: phase.color }}>{phase.title}</span>
+          </span>
+          <span className="text-[15px] font-bold text-[var(--color-text-main)]">{num(total)}건</span>
         </div>
         <div className="space-y-1">
           {phase.statuses.map(st => (
             <div key={st} className="flex items-center justify-between text-xs">
               <span className="text-[var(--color-text-sub)]">{STATUS_LABEL[st] ?? st}</span>
-              <span className={byStatus[st] ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}>{num(byStatus[st] || 0)}</span>
+              <span className={byStatus[st] ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}>{num(byStatus[st] || 0)}건</span>
             </div>
           ))}
+        </div>
+        {/* 하단: 단계 비율 막대 (전체 대비) — mt-auto로 카드 아래에 고정해 빈 공간 채움 */}
+        <div className="mt-auto pt-3">
+          <div className="flex items-center justify-between text-[10px] mb-1" style={{ color: 'var(--color-text-muted)' }}>
+            <span>단계 비율</span><span>{share}%</span>
+          </div>
+          <div style={{ height: 6, borderRadius: 999, background: '#F3F4F6', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${share}%`, background: phase.color, borderRadius: 999, transition: 'width 0.3s' }} />
+          </div>
         </div>
       </div>
     )
@@ -623,13 +637,13 @@ function StatusFlow({ counts }) {
   )
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 h-full justify-center">
       <div className="flex items-stretch gap-1.5">
-        {renderCard(STATUS_PHASES[0])}{arrow('→')}{renderCard(STATUS_PHASES[1])}
+        {renderCard(STATUS_PHASES[0], 1)}{arrow('→')}{renderCard(STATUS_PHASES[1], 2)}
       </div>
       {arrow('↙')}
       <div className="flex items-stretch gap-1.5">
-        {renderCard(STATUS_PHASES[2])}{arrow('→')}{renderCard(STATUS_PHASES[3])}
+        {renderCard(STATUS_PHASES[2], 3)}{arrow('→')}{renderCard(STATUS_PHASES[3], 4)}
       </div>
     </div>
   )
