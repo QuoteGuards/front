@@ -20,6 +20,8 @@ import {
     loadQuoteWriteDraft,
     clearQuoteWriteDraft,
     resolveMountQuoteDraft,
+    getPendingQuoteItems,
+    clearPendingQuoteItems,
 } from '../../utils/quoteItemUtils'
 import PageHeader from '../../components/common/PageHeader'
 import Button from '../../components/common/Button'
@@ -29,6 +31,10 @@ import './QuotePage.css'
 const initialCustomer = { id: null, companyName: '', contactName: '', email: '', phone: '', address: '' }
 
 const EDITABLE_STATUSES = ['DRAFT', 'REVISING']
+
+// 담은 제품 병합 시 원가/할인정책 정보가 없을 때 안내 (mount·?id 병합 경로 공용)
+const PENDING_POLICY_WARNING =
+    '적용 가능한 할인정책 정보를 불러오지 못한 제품이 있습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.'
 
 const QuoteWritePage = () => {
     const navigate = useNavigate()
@@ -129,68 +135,68 @@ const QuoteWritePage = () => {
         persistDraft()
     }, [persistDraft, restoring, addingProduct, savedQuote, location.state?.addProduct])
 
-    // catalog에서 견적에 추가 후 복귀: 기존 품목에 append
+    // 담아둔(pending) 제품을 최신 정보로 재조회 → 견적 항목으로 변환 (병합은 setItems 시점에)
+    const fetchPendingItems = async (pending) => {
+        const out = []
+        for (const p of pending) {
+            let product = p
+            try {
+                const detail = await getQuoteProductContextApi(p.id)
+                product = {
+                    ...detail,
+                    id: detail.productId ?? p.id,
+                    name: detail.productName ?? p.name,
+                    code: detail.productCode ?? p.code,
+                }
+            } catch {
+                // API 실패 시 담아둔 목록 데이터 사용
+            }
+            out.push(productToQuoteItem(product, Number(p.quantity) || 1))
+        }
+        return out
+    }
+
+    // prev 품목에 새 품목 병합 (같은 productId면 수량 합산)
+    const mergeItems = (prev, newItems) => {
+        const merged = prev.map((it) => ({ ...it }))
+        for (const ni of newItems) {
+            const existing = merged.find((it) => it.productId === ni.productId)
+            if (existing) {
+                existing.quantity = (Number(existing.quantity) || 0) + (Number(ni.quantity) || 1)
+            } else {
+                merged.push(ni)
+            }
+        }
+        return merged
+    }
+
+    // 제품 탐색에서 담아둔(pending) 제품을 현재 품목에 병합 (신규/작성중 draft 진입)
+    // (기존 견적 편집 ?id= 서버복원 경로는 아래 복원 effect가 로드 후 병합)
+    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
-        const addProduct = location.state?.addProduct
-        if (!addProduct || catalogAddHandled.current) return
+        if (catalogAddHandled.current || restoring) return
+        const pending = getPendingQuoteItems()
+        if (pending.length === 0) return
         catalogAddHandled.current = true
         setAddingProduct(true)
 
-        if (mountDraft?.savedQuote?.id && !searchParams.get('id')) {
-            setSearchParams({ id: String(mountDraft.savedQuote.id) }, { replace: true })
-        }
-
-        const appendProduct = async () => {
-            let product = addProduct
-            try {
-                const detail = await getQuoteProductContextApi(addProduct.id)
-                product = {
-                    ...detail,
-                    id: detail.productId ?? addProduct.id,
-                    name: detail.productName ?? addProduct.name,
-                    code: detail.productCode ?? addProduct.code,
-                    quantity: addProduct.quantity ?? 1,
+        fetchPendingItems(pending)
+            .then((newItems) => {
+                setItems((prev) => mergeItems(prev, newItems))
+                if (newItems.some((it) => !hasItemPolicyInfo(it))) {
+                    setSaveError(PENDING_POLICY_WARNING)
                 }
-            } catch {
-                // API 실패 시 catalog에서 넘긴 목록 데이터 사용
-            }
-            const newItem = productToQuoteItem(product, product.quantity ?? 1)
-            setItems((prev) => {
-                const nextItems = [...prev, newItem]
-                const snapshot = formSnapshotRef.current ?? {}
-                saveQuoteWriteDraft({
-                    customer: snapshot.customer ?? initialCustomer,
-                    memo: snapshot.memo ?? '',
-                    issuedDate: snapshot.issuedDate ?? todayLocal(),
-                    validUntil: snapshot.validUntil ?? '',
-                    deliveryTerm: snapshot.deliveryTerm ?? '',
-                    items: nextItems,
-                    savedQuote: snapshot.savedQuote ?? null,
-                })
-                return nextItems
             })
-            if (!hasItemPolicyInfo(newItem)) {
-                setSaveError(
-                    '적용 가능한 할인정책 정보를 불러오지 못했습니다. 할인 한도 검증 없이 진행되며, 임시저장 시 서버 기준으로 반영됩니다.',
-                )
-            }
-        }
-
-        appendProduct()
             .catch(() => {
                 setSaveError('제품 정보를 불러오지 못했습니다. 다시 추가해주세요.')
             })
             .finally(() => {
                 setAddingProduct(false)
-                catalogAddHandled.current = false
-                const search =
-                    formSnapshotRef.current?.savedQuote?.id != null
-                        ? `?id=${formSnapshotRef.current.savedQuote.id}`
-                        : location.search
-                navigate({ pathname: location.pathname, search }, { replace: true, state: {} })
+                clearPendingQuoteItems()
             })
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.state])
+    }, [])
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     // URL ?id= 로 기존 견적 복원 (로컬 draft 없을 때만)
     useEffect(() => {
@@ -205,7 +211,7 @@ const QuoteWritePage = () => {
             getQuoteById(idParam),
             getInternalAnalysis(idParam).catch(() => null),
         ])
-            .then(([data, analysis]) => {
+            .then(async ([data, analysis]) => {
                 if (cancelled) return
                 setCustomer({
                     id: data.customerId,
@@ -219,9 +225,25 @@ const QuoteWritePage = () => {
                 setIssuedDate(data.issuedDate ?? todayLocal())
                 setValidUntil(data.validUntil ?? '')
                 setDeliveryTerm(data.deliveryTerm ?? '')
-                setItems(itemsFromQuoteResponse(data, {
+
+                const serverItems = itemsFromQuoteResponse(data, {
                     costByItemId: costByItemIdFromAnalysis(analysis),
-                }))
+                })
+                // 편집 가능한 견적이면 제품 탐색에서 담아둔(pending) 제품을 병합
+                const pending = getPendingQuoteItems()
+                if (pending.length > 0 && EDITABLE_STATUSES.includes(data.status)) {
+                    const newItems = await fetchPendingItems(pending)
+                    if (cancelled) return
+                    setItems(mergeItems(serverItems, newItems))
+                    clearPendingQuoteItems()
+                    if (newItems.some((it) => !hasItemPolicyInfo(it))) {
+                        setSaveError(PENDING_POLICY_WARNING)
+                    }
+                } else {
+                    // 편집 불가(locked) 견적: 담은 제품은 병합하지 않고 그대로 보존(clear 안 함)
+                    // → 다음 편집 가능한 견적/신규 작성 진입 시 반영. 의도적으로 유지하는 정책.
+                    setItems(serverItems)
+                }
 
                 setSavedQuote({ id: data.id, quoteNumber: data.quoteNumber, status: data.status })
 
