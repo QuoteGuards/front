@@ -181,6 +181,7 @@ export default function DashboardPage() {
     ]
   }, [summary, statusCounts])
   const donutTotal = useMemo(() => donutData.reduce((a, b) => a + b.value, 0), [donutData])
+  const approvedValue = useMemo(() => donutData.find(d => d.name === '승인')?.value ?? 0, [donutData])
 
   const handlePeriodChange = (key) => {
     setPeriod(key)
@@ -341,25 +342,36 @@ export default function DashboardPage() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                  <span className="text-[20px] font-bold text-[var(--color-text-main)]">{num(donutTotal)}건</span>
-                  <span className="text-[11px] text-[var(--color-text-muted)]">합계</span>
+                  <span className="text-[28px] font-bold leading-none" style={{ color: CHART.approved }}>
+                    {donutTotal ? Math.round((approvedValue / donutTotal) * 100) : 0}%
+                  </span>
+                  <span className="text-[12px] text-[var(--color-text-sub)] mt-1">승인율</span>
                 </div>
               </div>
-              <div className="flex-1 space-y-2">
-                {donutData.map(d => (
-                  <div key={d.name} className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />
-                      <span className="text-[var(--color-text-sub)]">{d.name}</span>
-                    </span>
-                    <span className="text-[var(--color-text-main)]">
-                      <b>{num(d.value)}건</b>
-                      <span className="text-[var(--color-text-muted)] ml-1">
-                        ({donutTotal ? Math.round((d.value / donutTotal) * 100) : 0}%)
-                      </span>
-                    </span>
-                  </div>
-                ))}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-[var(--color-text-muted)] mb-2.5">전체 {num(donutTotal)}건</div>
+                <div className="space-y-2.5">
+                  {donutData.map(d => {
+                    const p = donutTotal ? Math.round((d.value / donutTotal) * 100) : 0
+                    return (
+                      <div key={d.name}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="flex items-center gap-2">
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: d.color }} />
+                            <span className="text-[var(--color-text-sub)]">{d.name}</span>
+                          </span>
+                          <span className="flex items-center gap-2 text-[var(--color-text-main)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                            <b style={{ display: 'inline-block', minWidth: '44px', textAlign: 'right' }}>{num(d.value)}건</b>
+                            <span className="text-[var(--color-text-muted)]" style={{ display: 'inline-block', minWidth: '36px', textAlign: 'right' }}>{p}%</span>
+                          </span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 999, background: '#F3F4F6', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${p}%`, background: d.color, borderRadius: 999, transition: 'width 0.3s' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}
