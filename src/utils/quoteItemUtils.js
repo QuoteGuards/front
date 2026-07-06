@@ -259,15 +259,19 @@ export function clearQuoteWriteDraft() {
 
 /** 로그아웃 시 다른 계정으로 draft가 노출되지 않도록 전체 삭제 */
 export function clearAllQuoteWriteDrafts() {
-  const keysToRemove = []
-  for (let i = 0; i < sessionStorage.length; i += 1) {
-    const key = sessionStorage.key(i)
-    if (key?.startsWith(QUOTE_WRITE_DRAFT_KEY_PREFIX)) {
-      keysToRemove.push(key)
+  try {
+    const keysToRemove = []
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith(QUOTE_WRITE_DRAFT_KEY_PREFIX)) {
+        keysToRemove.push(key)
+      }
     }
+    keysToRemove.forEach((key) => sessionStorage.removeItem(key))
+    sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
+  } catch {
+    // 프라이빗 모드·저장소 제한 등 — 로그아웃 흐름은 계속 진행
   }
-  keysToRemove.forEach((key) => sessionStorage.removeItem(key))
-  sessionStorage.removeItem(LEGACY_QUOTE_WRITE_DRAFT_KEY)
 }
 
 /** 마운트 시 sessionStorage draft를 동기 로드 (URL id와 일치할 때만) */

@@ -28,6 +28,9 @@ const APPROVAL_BADGE_CLASS = {
     REJECTED: 'quote-page-badge--rejected',
 }
 
+const BREADCRUMBS = ['견적', '내부 분석']
+const PAGE_TITLE = '내부 견적 분석'
+
 const deriveApprovalStatus = (histories) => {
     if (!histories || histories.length === 0) {
         return { status: 'NONE', lastMemo: null, approvalRequestId: null }
@@ -131,7 +134,7 @@ const QuoteInternalAnalysisPage = () => {
     if (loading) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbSep=">" breadcrumbs={['견적', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={BREADCRUMBS} title={PAGE_TITLE} />
                 <div className="quote-page-loading">내부 분석 데이터를 불러오는 중...</div>
             </div>
         )
@@ -140,7 +143,7 @@ const QuoteInternalAnalysisPage = () => {
     if (error && !analysis) {
         return (
             <div className="quote-page">
-                <PageHeader breadcrumbSep=">" breadcrumbs={['견적', '내부 분석']} title="내부 견적 분석" />
+                <PageHeader breadcrumbSep=">" breadcrumbs={BREADCRUMBS} title={PAGE_TITLE} />
                 <div className="quote-page-alert quote-page-alert--error">{error}</div>
             </div>
         )
@@ -155,8 +158,8 @@ const QuoteInternalAnalysisPage = () => {
         <div className="quote-page">
             <PageHeader
                 breadcrumbSep=">"
-                breadcrumbs={['견적', '내부 분석']}
-                title="내부 견적 분석"
+                breadcrumbs={BREADCRUMBS}
+                title={PAGE_TITLE}
             />
 
             <div className="quote-page__meta">

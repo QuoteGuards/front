@@ -300,7 +300,7 @@ const TrainingPage = () => {
                                     onSaveProgress={handleSaveProgress}
                                     onDurationChange={setDurationSeconds}
                                     onManualComplete={handleManualVideoComplete}
-                                    manualCompleteDone={Number(selectedVideo?.progressRate ?? 0) >= 100}
+                                    manualCompleteDone={Number(selectedVideo?.progressRate ?? 0) >= TRAINING_COMPLETE_THRESHOLD}
                                 />
                             </div>
                         </div>
