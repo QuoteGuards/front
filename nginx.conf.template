@@ -37,6 +37,20 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # app.storage.type=local(백엔드 로컬 디스크 저장) 사용 시 업로드 파일 서빙.
+    # nginx는 일반 prefix location보다 정규식 location(아래 확장자 캐시 규칙)을
+    # 우선 매칭하므로, "^~"를 붙여 이 prefix에 매칭되면 정규식 검사를 건너뛰고
+    # 곧바로 이 블록(백엔드 프록시)을 쓰도록 강제한다. 이게 없으면 /uploads/*.png
+    # 요청이 아래 확장자 regex에 걸려 프론트 dist 폴더에서 try_files 404가 난다.
+    location ^~ /uploads/ {
+        proxy_pass http://${BACKEND_HOST}/uploads/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # 정적 자산 캐시
     location ~* \.(?:css|js|svg|png|jpg|jpeg|gif|ico|woff|woff2)$ {
         try_files $uri =404;
