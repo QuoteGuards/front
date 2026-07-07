@@ -3,6 +3,7 @@ import {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
   issueSseToken,
   buildSubscribeUrl,
 } from '../api/notificationApi'
@@ -113,5 +114,14 @@ export const useNotifications = () => {
     }
   }, [load])
 
-  return { notifications, unreadCount, loading, readOne, readAll }
+  const remove = useCallback(async (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+    try {
+      await deleteNotification(id)
+    } catch {
+      load() // 실패 시 서버 상태로 복구
+    }
+  }, [load])
+
+  return { notifications, unreadCount, loading, readOne, readAll, remove }
 }

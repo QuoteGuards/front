@@ -31,6 +31,10 @@ export const markAllNotificationsRead = async () => {
   await apiClient.patch('/api/notifications/read-all')
 }
 
+export const deleteNotification = async (id) => {
+  await apiClient.delete(`/api/notifications/${id}`)
+}
+
 // SSE 구독용 단기 토큰 발급 (인증된 요청). 장기 JWT를 URL에 노출하지 않기 위함.
 export const issueSseToken = async () => {
   const { data } = await apiClient.post('/api/notifications/sse-token')
