@@ -7,11 +7,11 @@
 
 .training-page__shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 20px;
-  max-width: 1120px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 0 24px 40px;
+  padding: 0 32px 40px;
   align-items: start;
 }
 
@@ -624,6 +624,33 @@
 .training-loading__text {
   font-size: 14px;
   color: var(--color-text-muted);
+}
+
+@media (min-width: 1400px) {
+  .training-video-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .training-video-panel__title {
+    font-size: 19px;
+  }
+
+  .training-video-panel__sub {
+    font-size: 14px;
+  }
+
+  .training-video-panel__badge {
+    width: 72px;
+    height: 72px;
+  }
+
+  .training-video-panel__badge-value {
+    font-size: 18px;
+  }
+
+  .training-intro__desc {
+    font-size: 15px;
+  }
 }
 
 @media (max-width: 960px) {
