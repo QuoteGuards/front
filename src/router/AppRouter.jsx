@@ -11,6 +11,7 @@ import TrainingPage from '../pages/training/TrainingPage'
 import AdminApprovalPage from '../pages/approval/AdminApprovalPage'
 import AdminApprovalDetailPage from '../pages/approval/AdminApprovalDetailPage'
 import StaffApprovalPage from '../pages/approval/StaffApprovalPage'
+import StaffApprovalDetailPage from '../pages/approval/StaffApprovalDetailPage'
 import UserManagementPage from '../pages/admin/UserManagementPage'
 import AdminTrainingManagePage from '../pages/training/AdminTrainingManagePage'
 import AdminTrainingStatusPage from '../pages/training/AdminTrainingStatusPage'
@@ -110,6 +111,11 @@ export default function AppRouter() {
           <Route path="/staff/approval" element={
             <ProtectedRoute roles={['SALES_STAFF']}>
               <StaffApprovalPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff/approval/:quoteId" element={
+            <ProtectedRoute roles={['SALES_STAFF']}>
+              <StaffApprovalDetailPage />
             </ProtectedRoute>
           } />
 
