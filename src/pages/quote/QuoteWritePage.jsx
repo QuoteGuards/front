@@ -7,6 +7,7 @@ import TrainingGuideModal from '../../components/training/TrainingGuideModal'
 import { getQuoteWritingGuide } from '../../api/guideApi'
 import { createQuote, updateQuote, completeQuote, getQuoteById, getInternalAnalysis, getQuoteProductContextApi } from '../../api/quoteApi'
 import { summarizeConsultation } from '../../api/aiApi'
+import { renderInlineMarkdown } from '../../utils/aiMarkdown'
 import {
     calcLineAmounts,
     calcQuoteTotals,
@@ -428,8 +429,8 @@ const QuoteWritePage = () => {
                 result?.consultationSummary ??
                 ''
             )
-        } catch {
-            setSummaryError('상담 메모 요약에 실패했습니다.')
+        } catch (e) {
+            setSummaryError(e?.response?.data?.message ?? '상담 메모 요약에 실패했습니다.')
         } finally {
             setSummaryLoading(false)
         }
@@ -686,7 +687,9 @@ const QuoteWritePage = () => {
                     {memoSummary && (
                         <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[#F9FAFB] p-4">
                             <p className="text-sm font-semibold text-[var(--color-text-main)] mb-2">AI 요약 결과</p>
-                            <p className="text-sm text-[var(--color-text-sub)] whitespace-pre-line">{memoSummary}</p>
+                            <p className="text-sm text-[var(--color-text-sub)] whitespace-pre-line">
+                                {renderInlineMarkdown(memoSummary, 'font-semibold text-[var(--color-text-main)]')}
+                            </p>
                         </div>
                     )}
                 </div>
