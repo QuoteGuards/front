@@ -5,6 +5,11 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # nginx 기본값(1m)이 백엔드 multipart 한도(이미지 5MB, 영상 300MB,
+    # spring.servlet.multipart.max-request-size=315MB)보다 훨씬 작아 큰 업로드가
+    # 백엔드까지 가지도 못하고 여기서 413(Content Too Large)으로 막히므로 상향한다.
+    client_max_body_size 320m;
+
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
     gzip_min_length 1024;
@@ -30,6 +35,20 @@ server {
     # 백엔드 API 프록시 (BACKEND_HOST는 컨테이너 실행 시 env로 주입, 기본값 back:8080)
     location /api/ {
         proxy_pass http://${BACKEND_HOST}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # app.storage.type=local(백엔드 로컬 디스크 저장) 사용 시 업로드 파일 서빙.
+    # nginx는 일반 prefix location보다 정규식 location(아래 확장자 캐시 규칙)을
+    # 우선 매칭하므로, "^~"를 붙여 이 prefix에 매칭되면 정규식 검사를 건너뛰고
+    # 곧바로 이 블록(백엔드 프록시)을 쓰도록 강제한다. 이게 없으면 /uploads/*.png
+    # 요청이 아래 확장자 regex에 걸려 프론트 dist 폴더에서 try_files 404가 난다.
+    location ^~ /uploads/ {
+        proxy_pass http://${BACKEND_HOST}/uploads/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
