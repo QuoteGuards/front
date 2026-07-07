@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../../hooks/useNotifications'
 import './NotificationBell.css'
 
@@ -18,10 +19,23 @@ const formatTime = (iso) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// 알림 종류에 따라 이동할 화면 경로. 대상이 없으면 null(이동 없음).
+const resolvePath = (n) => {
+  switch (n.relatedType) {
+    case 'APPROVAL':
+      return n.relatedId ? `/admin/approval/${n.relatedId}` : null
+    case 'QUOTE':
+      return n.relatedId ? `/quotes/${n.relatedId}/detail` : null
+    default:
+      return null
+  }
+}
+
 const NotificationBell = () => {
-  const { notifications, unreadCount, loading, readOne, readAll } = useNotifications()
+  const { notifications, unreadCount, loading, readOne, readAll, remove } = useNotifications()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const navigate = useNavigate()
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -32,6 +46,20 @@ const NotificationBell = () => {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [open])
+
+  const handleItemClick = (n) => {
+    readOne(n.id)
+    const path = resolvePath(n)
+    if (path) {
+      setOpen(false)
+      navigate(path)
+    }
+  }
+
+  const handleDelete = (e, id) => {
+    e.stopPropagation() // 행 클릭(이동)과 분리
+    remove(id)
+  }
 
   return (
     <div className="noti" ref={ref}>
@@ -65,21 +93,35 @@ const NotificationBell = () => {
             ) : notifications.length === 0 ? (
               <p className="noti__empty">새 알림이 없습니다.</p>
             ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  className={`noti__item${n.isRead ? '' : ' noti__item--unread'}`}
-                  onClick={() => readOne(n.id)}
-                >
-                  {!n.isRead && <span className="noti__dot" aria-hidden="true" />}
-                  <span className="noti__item-body">
-                    <span className="noti__item-title">{n.title}</span>
-                    <span className="noti__item-msg">{n.message}</span>
-                    <span className="noti__item-time">{formatTime(n.createdAt)}</span>
-                  </span>
-                </button>
-              ))
+              notifications.map((n) => {
+                const clickable = resolvePath(n) !== null
+                return (
+                  <div key={n.id} className={`noti__item${n.isRead ? '' : ' noti__item--unread'}`}>
+                    <button
+                      type="button"
+                      className="noti__item-main"
+                      onClick={() => handleItemClick(n)}
+                      aria-label={clickable ? `${n.title} — 관련 화면으로 이동` : n.title}
+                    >
+                      {!n.isRead && <span className="noti__dot" aria-hidden="true" />}
+                      <span className="noti__item-body">
+                        <span className="noti__item-title">{n.title}</span>
+                        <span className="noti__item-msg">{n.message}</span>
+                        <span className="noti__item-time">{formatTime(n.createdAt)}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="noti__item-del"
+                      onClick={(e) => handleDelete(e, n.id)}
+                      aria-label="알림 삭제"
+                      title="삭제"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )
+              })
             )}
           </div>
         </div>

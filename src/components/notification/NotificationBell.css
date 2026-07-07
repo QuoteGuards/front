@@ -100,15 +100,10 @@
 
 .noti__item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: stretch;
   width: 100%;
-  padding: 12px 16px;
-  border: none;
   border-bottom: 1px solid var(--color-border, #f0f0f0);
   background: transparent;
-  text-align: left;
-  cursor: pointer;
   transition: background 0.12s;
 }
 
@@ -118,6 +113,39 @@
 
 .noti__item--unread {
   background: var(--color-primary-soft, #f5f3ff);
+}
+
+/* 클릭(이동/읽음) 영역 */
+.noti__item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 8px 12px 16px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+/* 삭제 버튼 */
+.noti__item-del {
+  flex: 0 0 auto;
+  width: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #aaa);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.noti__item-del:hover {
+  color: var(--color-danger, #e5484d);
 }
 
 .noti__dot {
