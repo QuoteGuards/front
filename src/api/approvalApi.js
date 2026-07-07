@@ -65,11 +65,34 @@ export const getApprovalHistories = (quoteId) =>
 export const getApprovalReasons = (quoteId) =>
   apiClient.get(`/api/quotes/${quoteId}/approval-reasons`)
 
+// Gemini 호출(간혹 Groq 폴백까지 순차로 이어짐)이 apiClient 기본 타임아웃(10초)보다
+// 오래 걸리는 경우가 있어 AI 요약 관련 호출만 더 긴 타임아웃을 적용한다.
+const AI_SUMMARY_TIMEOUT_MS = 30000
+
 // AI 리스크 요약 조회 (SUPER_ADMIN - 전체)
 export const getAiRiskSummary = (approvalRequestId) =>
-  apiClient.get(`/api/admin/approval-requests/${approvalRequestId}/ai-summary`)
+  apiClient.get(`/api/admin/approval-requests/${approvalRequestId}/ai-summary`, {
+    timeout: AI_SUMMARY_TIMEOUT_MS,
+  })
 
 // AI 리스크 요약 조회 (SALES_MANAGER - 동일 부서 영업사원만)
 export const getManagerAiRiskSummary = (approvalRequestId) =>
-  apiClient.get(`/api/manager/approval-requests/${approvalRequestId}/ai-summary`)
+  apiClient.get(`/api/manager/approval-requests/${approvalRequestId}/ai-summary`, {
+    timeout: AI_SUMMARY_TIMEOUT_MS,
+  })
 
+// AI 리스크 요약 재생성 (SUPER_ADMIN - 전체)
+export const regenerateAiRiskSummary = (approvalRequestId) =>
+  apiClient.post(
+    `/api/admin/approval-requests/${approvalRequestId}/ai-summary/regenerate`,
+    null,
+    { timeout: AI_SUMMARY_TIMEOUT_MS }
+  )
+
+// AI 리스크 요약 재생성 (SALES_MANAGER - 동일 부서 영업사원만)
+export const regenerateManagerAiRiskSummary = (approvalRequestId) =>
+  apiClient.post(
+    `/api/manager/approval-requests/${approvalRequestId}/ai-summary/regenerate`,
+    null,
+    { timeout: AI_SUMMARY_TIMEOUT_MS }
+  )

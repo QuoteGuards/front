@@ -7,6 +7,8 @@ import {
   rejectQuote,
   getAiRiskSummary,
   getManagerAiRiskSummary,
+  regenerateAiRiskSummary,
+  regenerateManagerAiRiskSummary,
 } from '../../api/approvalApi'
 import { useAuth } from '../../hooks/useAuth'
 import { useTrainingStatusContext } from '../../contexts/TrainingStatusContext'
@@ -89,6 +91,98 @@ function DiffRow({ label, before, after, format }) {
   )
 }
 
+// AI 리스크 요약 텍스트를 "핵심 리스크 / 권장 조치 / 체크포인트" 섹션으로 분리해
+// 헤드라인 + bullet 리스트 형태로 보여주기 위한 파서. 예상한 형식이 아니면 null을 반환해
+// 호출부에서 원문 그대로(줄바꿈 유지) 표시하도록 한다.
+const AI_SUMMARY_SECTION_TITLES = ['핵심 리스크', '권장 조치', '체크포인트']
+
+function parseAiSummary(text) {
+  if (!text) return null
+  const normalize = (line) => line.replace(/^[#*\-\d.\s"'“”]+|["'“”*\s]+$/g, '').trim()
+
+  let headline = ''
+  const sections = []
+  let current = null
+
+  for (const rawLine of text.split('\n')) {
+    const trimmed = rawLine.trim()
+    if (!trimmed) continue
+
+    const normalized = normalize(trimmed)
+    const matchedTitle = AI_SUMMARY_SECTION_TITLES.find((title) => normalized.startsWith(title))
+    if (matchedTitle) {
+      current = { title: matchedTitle, items: [] }
+      sections.push(current)
+      // "체크포인트: 확인 필요"처럼 제목과 내용이 한 줄에 같이 오는 경우 대비
+      const inlineItem = normalized.slice(matchedTitle.length).replace(/^[:\-\s]+/, '').trim()
+      if (inlineItem) current.items.push(inlineItem)
+      continue
+    }
+
+    if (current) {
+      const item = trimmed.replace(/^[-•*]\s*/, '').trim()
+      if (item) current.items.push(item)
+    } else {
+      headline = headline ? `${headline} ${trimmed}` : trimmed
+    }
+  }
+
+  if (sections.length === 0) return null
+  return { headline, sections }
+}
+
+// AI가 간혹 섞어 쓰는 "**굵게**" 마크다운만 가볍게 처리해 <strong>으로 바꿔준다.
+// 별도 마크다운 라이브러리 없이 볼드 표기만 지원하는 최소한의 인라인 렌더러.
+function renderInlineMarkdown(text) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-gray-800">
+          {part.slice(2, -2)}
+        </strong>
+      )
+    }
+    return part
+  })
+}
+
+function AiSummaryContent({ text }) {
+  const parsed = parseAiSummary(text)
+
+  if (!parsed) {
+    return (
+      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+        {renderInlineMarkdown(text)}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {parsed.headline && (
+        <p className="text-sm font-semibold text-gray-800 leading-snug">
+          {renderInlineMarkdown(parsed.headline)}
+        </p>
+      )}
+      {parsed.sections.map((section, idx) => (
+        <div key={idx}>
+          <p className="text-xs font-semibold text-gray-500 mb-1.5">{section.title}</p>
+          {section.items.length > 0 && (
+            <ul className="flex flex-col gap-1.5">
+              {section.items.map((item, itemIdx) => (
+                <li key={itemIdx} className="flex items-start gap-1.5 text-sm text-gray-700 leading-snug">
+                  <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-300 shrink-0" />
+                  <span>{renderInlineMarkdown(item)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function AdminApprovalDetailPage() {
   const { approvalRequestId } = useParams()
   const navigate = useNavigate()
@@ -104,6 +198,7 @@ export default function AdminApprovalDetailPage() {
   const [aiSummary, setAiSummary] = useState(null)
   const [aiLoading, setAiLoading] = useState(true)
   const [aiError, setAiError] = useState('')
+  const [aiRegenerating, setAiRegenerating] = useState(false)
   const [showItems, setShowItems] = useState(false)
   const [toast, setToast] = useState(null)
 
@@ -126,7 +221,11 @@ export default function AdminApprovalDetailPage() {
     let cancelled = false
     fetchAiSummary()
       .then((res) => { if (!cancelled) setAiSummary(res.data) })
-      .catch((e) => { if (!cancelled) setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.') })
+      .catch((e) => {
+        // 서버 응답 없이 실패하는 경우(타임아웃, 네트워크 오류 등) 콘솔에서 원인을 바로 확인할 수 있도록 로깅
+        if (!e.response) console.error('AI 리스크 요약 조회 실패(응답 없음):', e.message)
+        if (!cancelled) setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.')
+      })
       .finally(() => { if (!cancelled) setAiLoading(false) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,8 +236,30 @@ export default function AdminApprovalDetailPage() {
     setAiError('')
     fetchAiSummary()
       .then((res) => setAiSummary(res.data))
-      .catch((e) => setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.'))
+      .catch((e) => {
+        if (!e.response) console.error('AI 리스크 요약 재조회 실패(응답 없음):', e.message)
+        setAiError(e.response?.data?.message ?? 'AI 리스크 요약을 생성하지 못했습니다.')
+      })
       .finally(() => setAiLoading(false))
+  }
+
+  // 캐시된 요약이 있어도 무시하고 새로 생성 (중복 클릭 방지: aiRegenerating일 때 버튼 비활성화)
+  const handleRegenerateAiSummary = () => {
+    if (aiRegenerating) return
+    setAiRegenerating(true)
+    const regenerate = user?.role === 'SALES_MANAGER' ? regenerateManagerAiRiskSummary : regenerateAiRiskSummary
+    regenerate(approvalRequestId)
+      .then((res) => {
+        setAiSummary(res.data)
+        setAiError('')
+      })
+      .catch((e) => {
+        // 서버 응답 없이 실패(타임아웃/네트워크 오류 등)한 경우 원인 파악을 위해 콘솔에 남긴다.
+        // 이 경우 백엔드에서는 정상 처리가 계속 진행 중일 수 있어 서버 로그에 에러가 안 남을 수 있다.
+        if (!e.response) console.error('AI 리스크 요약 재생성 실패(응답 없음):', e.message)
+        setToast({ type: 'error', message: e.response?.data?.message ?? 'AI 리스크 요약을 재생성하지 못했습니다.' })
+      })
+      .finally(() => setAiRegenerating(false))
   }
 
   const handleSubmit = async () => {
@@ -484,12 +605,22 @@ export default function AdminApprovalDetailPage() {
 
             {!aiLoading && !aiError && aiSummary && (
               <div className="px-5 py-4">
-                {aiSummary.cached && (
-                  <p className="text-[11px] text-gray-300 mb-2">이전에 생성된 요약입니다</p>
-                )}
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {aiSummary.aiRiskSummary}
-                </p>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  {aiSummary.cached ? (
+                    <p className="text-[11px] text-gray-300">이전에 생성된 요약입니다</p>
+                  ) : <span />}
+                  <button
+                    type="button"
+                    onClick={handleRegenerateAiSummary}
+                    disabled={aiRegenerating}
+                    aria-label="AI 리스크 요약 재생성"
+                    title="최신 견적 기준으로 AI 리스크 요약을 다시 생성합니다"
+                    className="shrink-0 text-[11px] font-medium text-violet-600 hover:text-violet-700 disabled:text-gray-300 disabled:cursor-not-allowed focus:outline-none focus:underline"
+                  >
+                    {aiRegenerating ? '재생성 중...' : '↻ 재생성'}
+                  </button>
+                </div>
+                <AiSummaryContent text={aiSummary.aiRiskSummary} />
               </div>
             )}
 
