@@ -5,6 +5,11 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # nginx 기본값(1m)이 백엔드 multipart 한도(이미지 5MB, 영상 300MB,
+    # spring.servlet.multipart.max-request-size=315MB)보다 훨씬 작아 큰 업로드가
+    # 백엔드까지 가지도 못하고 여기서 413(Content Too Large)으로 막히므로 상향한다.
+    client_max_body_size 320m;
+
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
     gzip_min_length 1024;
