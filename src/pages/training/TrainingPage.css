@@ -9,8 +9,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
-  max-width: 1600px;
-  margin: 0 auto;
+  width: 100%;
   padding: 0 32px 40px;
   align-items: start;
 }
@@ -330,7 +329,7 @@
 
 .training-video-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
   align-items: start;
 }
@@ -343,7 +342,7 @@
   min-width: 0;
 }
 
-/* 영상 선택 목록 */
+/* 영상 선택 목록 (영상 위에 가로로 배치해 영상 자체는 항상 전체 너비를 사용) */
 .training-video-picker__label {
   margin: 0 0 8px;
   font-size: 12px;
@@ -353,7 +352,8 @@
 
 .training-video-picker {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -361,7 +361,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  flex: 1 1 220px;
+  max-width: 320px;
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -627,10 +628,6 @@
 }
 
 @media (min-width: 1400px) {
-  .training-video-layout {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-
   .training-video-panel__title {
     font-size: 19px;
   }
@@ -668,10 +665,6 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
-  }
-
-  .training-video-layout {
-    grid-template-columns: 1fr;
   }
 
   .training-guide-panel {
